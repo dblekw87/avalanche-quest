@@ -260,7 +260,6 @@ export function GameExperience() {
       await publicClient.waitForTransactionReceipt({ hash });
       setTransactionState('success');
       setMessage(`Successfully claimed ${formatEther(claim.tokenAmount)} AQT.${data.assetTycoon ? ' The ultra-rare Asset Tycoon class NFT dropped!' : data.loot ? ' Rare boss equipment dropped!' : ' No rare class dropped this time.'}`);
-      if (stage.number < stageIds.length) await continueToNextStage(true);
     } catch (error) {
       setTransactionState('error');
       setMessage(transactionErrorMessage(error));
@@ -289,6 +288,47 @@ export function GameExperience() {
   return (
     <main className="min-h-screen bg-[#0e110d] pt-16">
       <div className="mx-auto max-w-[1400px] px-2 py-3 sm:px-3 sm:py-5 md:px-6">
+        <section className="mb-4 overflow-hidden rounded-2xl border border-[#a8793d] bg-gradient-to-br from-[#211a10] via-[#101711] to-[#0b1c18] p-3 shadow-[0_18px_55px_rgba(0,0,0,.32)] sm:p-5">
+          <div className="mb-3 flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold tracking-[.22em] text-[#d0b47a]">PLAY EXPEDITION</p>
+              <h1 className="mt-1 truncate text-xl font-black text-[#fff2d2] sm:text-2xl">Stage {stage.number} · {stage.name}</h1>
+              <p className="mt-1 text-xs font-semibold text-[#aeb9ad]">{stage.subtitle} · {formatCharacterName(characterId)}</p>
+            </div>
+            {!attemptId ? (
+              <button type="button" onClick={() => void startStage()} disabled={starting} className="w-full rounded-xl border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-8 py-4 text-sm font-black text-white shadow-[0_0_22px_rgba(239,189,88,.28)] disabled:opacity-40 sm:w-auto sm:min-w-56">
+                {starting ? 'PREPARING…' : 'PLAY NOW'}
+              </button>
+            ) : (
+              <button type="button" onClick={resetRun} className="w-full rounded-xl border border-[#81715b] bg-[#17140f] px-8 py-4 text-sm font-extrabold text-[#eadcc0] sm:w-auto sm:min-w-56">NEW ATTEMPT</button>
+            )}
+          </div>
+          {attemptId ? (
+            <GameCanvas
+              key={attemptId}
+              attemptId={attemptId}
+              stageId={stageId}
+              onComplete={handleStageComplete}
+              onFailure={setFailure}
+              ownedSkillIds={activeOwnedSkillIds}
+              armorEquipped={armorOwned}
+              armorLevel={armorLevel}
+              aqtBalance={formatEther(aqtBalance)}
+              characterId={characterId}
+              upgradeLevels={upgradeLevels}
+              skillUpgradeLevels={skillUpgradeLevels}
+            />
+          ) : (
+            <div className="grid min-h-64 place-items-center rounded-xl border border-[#4f604f] bg-[#0d1813] p-5 text-center sm:aspect-[112/52] sm:min-h-0 sm:p-8">
+              <div className="flex flex-col items-center">
+                <p className="text-sm font-bold text-[#f1e2c6]">Your game screen will appear here.</p>
+                <p className="mt-2 max-w-md text-xs font-semibold leading-5 text-[#91a096]">Connect a wallet on Avalanche Fuji, choose a stage and class below, then press Play Now.</p>
+                <div className="mt-5"><ConnectButton showBalance={false} /></div>
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="mb-5 overflow-hidden rounded-2xl border border-[#5a5145] bg-gradient-to-r from-[#24090d] via-[#0b0d13] to-[#071a2b] p-4 shadow-xl sm:p-5">
           <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
             <div className="text-center sm:text-left">
@@ -314,10 +354,15 @@ export function GameExperience() {
             </div>
           </div>
         </section>
-        <div className="mb-4 grid gap-4 border-y border-[#4f4637] bg-[#1c1914] p-3 sm:p-4 lg:grid-cols-[1fr_auto]">
+        <details open className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#1c1914]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left marker:hidden sm:px-5">
+            <span><span className="block text-[10px] font-extrabold tracking-[.2em] text-[#a88350]">EXPEDITION SETUP</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Choose a stage and class</strong></span>
+            <span className="rounded-full border border-[#665946] px-3 py-1 text-[10px] font-bold text-[#c9b99c] group-open:bg-[#33271b]">OPEN / CLOSE</span>
+          </summary>
+          <div className="border-t border-[#4f4637] p-3 sm:p-5">
           <div>
             <span className="text-[10px] tracking-[.2em] text-[#a88350]">CHOOSE EXPEDITION</span>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <div className="mt-3 grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
               {(Object.keys(stages) as StageId[]).map((id) => (
                 <button
                   key={id}
@@ -336,13 +381,13 @@ export function GameExperience() {
                 <button key={group} type="button" disabled={attemptId !== null} onClick={() => { setCharacterGroup(group); setCharacterId(group === 'general' ? 'warrior' : 'conservative'); }} className={`flex-1 rounded-lg px-5 py-2.5 text-xs font-bold sm:flex-none ${characterGroup === group ? 'bg-[#e9dcc5] text-[#201c17]' : 'text-[#9f9583]'}`}>{label}</button>
               ))}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <div className="mt-3 grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {(characterGroup === 'general'
                 ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe']] as const)
                 : ([['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'], ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills']] as const)
               ).map(([id, name, role]) => {
                 const special = id === 'conservative' || id === 'progressive';
-                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`min-w-0 rounded-xl border px-3 py-3 text-center sm:px-4 sm:text-left ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 block text-[10px] text-[#6f685e]">{role}</span></button>;
+                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`flex h-full min-h-[92px] min-w-0 flex-col justify-center rounded-xl border px-3 py-3 text-center transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:text-left ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center justify-center text-[10px] leading-4 text-[#6f685e] sm:justify-start">{role}</span></button>;
               })}
             </div>
             {characterGroup === 'general' ? (
@@ -354,23 +399,18 @@ export function GameExperience() {
               </div>
             ) : null}
           </div>
-          <div className="flex w-full items-end justify-center gap-3 lg:w-auto lg:justify-end">
-            {!attemptId ? (
-              <button type="button" onClick={() => void startStage()} disabled={starting} className="w-full max-w-md border border-[#d0b47a] bg-[#a8793d] px-8 py-3.5 text-xs font-bold text-[#17120b] disabled:opacity-50 lg:w-auto lg:min-w-56">
-                {starting ? 'PREPARING…' : 'START STAGE'}
-              </button>
-            ) : (
-              <button type="button" onClick={resetRun} className="w-full max-w-md border border-[#675b48] px-8 py-3.5 text-xs text-[#c8b99c] lg:w-auto lg:min-w-56">NEW ATTEMPT</button>
-            )}
           </div>
-        </div>
+        </details>
 
         <div className="mb-4 flex flex-col items-center gap-1 border border-[#4f4637] bg-[#17140f] px-4 py-3 text-center sm:block sm:text-left">
           <strong className="text-[#e6d7ba]">{stage.name}</strong>
           <span className="text-xs text-[#938a7a] sm:ml-3">{stage.subtitle}</span>
         </div>
 
-        {isPoliticalCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · NFT LICENSE ACTIVE</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20 while this wallet owns the NFT.</p></section> : isGeneralCharacter(characterId) ? <SkillShop
+        <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
+          <div className="border-t border-[#4f4637] p-3 sm:p-4">
+        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · NFT LICENSE ACTIVE</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20 while this wallet owns the NFT.</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}
@@ -379,35 +419,37 @@ export function GameExperience() {
           characterId={characterId}
           refreshKey={`${transactionState}:${transactionHash ?? 'none'}`}
         /> : null}
-
-        <UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} />
-
-        {attemptId ? (
-          <GameCanvas
-            key={attemptId}
-            attemptId={attemptId}
-            stageId={stageId}
-            onComplete={handleStageComplete}
-            onFailure={setFailure}
-            ownedSkillIds={activeOwnedSkillIds}
-            armorEquipped={armorOwned}
-            armorLevel={armorLevel}
-            aqtBalance={formatEther(aqtBalance)}
-            characterId={characterId}
-            upgradeLevels={upgradeLevels}
-            skillUpgradeLevels={skillUpgradeLevels}
-          />
-        ) : (
-          <div className="grid min-h-72 place-items-center border border-[#675b48] bg-[#102019] p-5 text-center sm:aspect-[112/52] sm:min-h-0 sm:p-8">
-            <div className="flex flex-col items-center">
-              <p className="text-sm text-[#d8c8aa]">Connect a wallet on Avalanche Fuji, then start the expedition.</p>
-              <p className="mt-2 text-xs text-[#849087]">A server-issued attempt is required for token rewards.</p>
-              <div className="mt-5"><ConnectButton showBalance={false} /></div>
-            </div>
           </div>
-        )}
+        </details>
 
-        {result && showAdvancePrompt ? <div className="fixed inset-0 z-[80] grid place-items-center bg-black/65 p-5"><section role="dialog" aria-modal="true" aria-labelledby="stage-clear-title" className="w-full max-w-md rounded-2xl border border-[#d0b47a] bg-[#fffaf0] p-7 text-[#211b15] shadow-2xl"><p className="text-xs font-bold tracking-[.2em] text-[#9a6728]">STAGE {stage.number} CLEAR</p><h2 id="stage-clear-title" className="mt-3 text-3xl font-black">Boss Defeated!</h2><p className="mt-4 text-sm font-medium leading-6 text-[#6d6255]">{stage.number < stageIds.length ? 'Continue to the next stage? Advancing closes the current reward screen, so claim any rewards you need first.' : 'You completed every expedition. Review and claim the rewards from this stage.'}</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{stage.number < stageIds.length ? <button type="button" onClick={advanceToNextStage} className="rounded-lg bg-[#9a6728] px-5 py-3 text-sm font-extrabold text-white">Next Stage</button> : null}<button type="button" onClick={() => setShowAdvancePrompt(false)} className="rounded-lg border border-[#bbaa94] bg-white px-5 py-3 text-sm font-bold">View Rewards</button></div></section></div> : null}
+        <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">ENHANCEMENT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Character upgrades</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
+          <div className="border-t border-[#4f4637] p-3 sm:p-4"><UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} /></div>
+        </details>
+
+        {result && showAdvancePrompt ? (
+          <div className="fixed inset-0 z-[80] bg-black">
+            <section role="dialog" aria-modal="true" aria-labelledby="stage-clear-title" className="flex min-h-[100dvh] w-full items-center justify-center overflow-y-auto border border-[#d0b47a] bg-[radial-gradient(circle_at_center,#fffaf0_0%,#ead8b7_58%,#24190d_100%)] p-4 text-center text-[#211b15] shadow-2xl sm:p-8">
+              <div className="w-full max-w-2xl rounded-3xl border border-[#d0b47a]/70 bg-[#fffaf0]/90 p-6 shadow-[0_0_80px_rgba(154,103,40,.35)] backdrop-blur sm:p-9">
+                <p className="text-xs font-black tracking-[.24em] text-[#9a6728]">STAGE {stage.number} CLEAR</p>
+                <h2 id="stage-clear-title" className="mt-3 text-4xl font-black sm:text-6xl">Boss Defeated!</h2>
+                <p className="mx-auto mt-4 max-w-lg text-sm font-semibold leading-6 text-[#6d6255] sm:text-base">Claim AQT here. If an NFT item or the rare Asset Tycoon license dropped, its mint action will appear immediately after reward authorization.</p>
+                <div className="mx-auto mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
+                  <button type="button" disabled={transactionState === 'pending' || transactionState === 'success'} onClick={() => void claimReward()} className={`rounded-xl border border-[#8f641f] bg-gradient-to-r from-[#80551b] to-[#b17b2b] px-6 py-4 text-sm font-black text-white shadow-lg disabled:opacity-50 ${!loot && !assetTycoonDrop ? 'sm:col-span-2' : ''}`}>
+                    {transactionState === 'pending' ? 'CLAIMING AQT…' : transactionState === 'success' ? 'AQT CLAIMED' : 'CLAIM AQT'}
+                  </button>
+                  {loot && transactionState === 'success' ? <button type="button" disabled={lootTransactionState === 'pending' || lootTransactionState === 'success'} onClick={() => void mintLoot()} className="rounded-xl border border-[#4c91b6] bg-[#244f67] px-6 py-4 text-sm font-black text-white disabled:opacity-50">{lootTransactionState === 'pending' ? 'MINTING ITEM…' : lootTransactionState === 'success' ? 'ITEM MINTED' : `MINT ${loot.name.toUpperCase()}`}</button> : null}
+                  {assetTycoonDrop && transactionState === 'success' ? <button type="button" disabled={assetTycoonMintState === 'pending' || assetTycoonMintState === 'success'} onClick={() => void mintAssetTycoon()} className="rounded-xl border border-[#d7af2d] bg-[#6e5311] px-6 py-4 text-sm font-black text-white shadow-[0_0_22px_rgba(242,201,76,.3)] disabled:opacity-50 sm:col-span-2">{assetTycoonMintState === 'pending' ? 'MINTING CLASS…' : assetTycoonMintState === 'success' ? 'ASSET TYCOON ACTIVATED' : 'MINT ASSET TYCOON NFT'}</button> : null}
+                </div>
+                {message ? <p className={`mx-auto mt-4 max-w-xl rounded-lg border px-4 py-3 text-xs font-bold ${transactionState === 'error' || lootTransactionState === 'error' || assetTycoonMintState === 'error' ? 'border-[#a95d58] bg-[#fff0ec] text-[#8d302a]' : 'border-[#a89a70] bg-white/70 text-[#665735]'}`}>{message}</p> : null}
+                <div className="mx-auto mt-5 grid max-w-xl gap-3 sm:grid-cols-2">
+                  {stage.number < stageIds.length ? <button type="button" onClick={advanceToNextStage} disabled={transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'} className="rounded-xl bg-[#211b15] px-6 py-4 text-sm font-extrabold text-white disabled:opacity-40">Next Stage</button> : null}
+                  <button type="button" onClick={() => setShowAdvancePrompt(false)} className="rounded-xl border border-[#bbaa94] bg-white px-6 py-4 text-sm font-bold">Close Reward Screen</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         {result ? (
           <section className="mt-4 border border-[#6b5a3f] bg-[#241d15] p-5">
@@ -430,6 +472,16 @@ export function GameExperience() {
       </div>
     </main>
   );
+}
+
+function formatCharacterName(characterId: CharacterId) {
+  const labels: Record<CharacterId, string> = {
+    warrior: 'Warrior', mage: 'Mage', spellblade: 'Spellblade', archer: 'Archer', dualblade: 'Dualblade', brawler: 'Brawler',
+    dragonknight: 'Dragon Knight', gunslinger: 'Gunslinger', ssaulabi: 'Ssaulabi', kickfighter: 'Kickfighter', venomancer: 'Venomancer',
+    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', conservative: 'Conservative Faction',
+    progressive: 'Progressive Faction', assettycoon: 'Asset Tycoon',
+  };
+  return labels[characterId];
 }
 
 function readError(value: unknown, fallback: string) {

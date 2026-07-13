@@ -191,8 +191,14 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
           </div>
         ) : null}
       </div>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-[#4f4638] bg-[#12100d] p-2 sm:justify-end">
-        <button
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-[#4f4638] bg-[#12100d] p-2 sm:justify-between">
+        <div className="w-full min-w-0 px-2 text-center sm:mr-auto sm:w-auto sm:text-left">
+          <strong className="block text-xs font-black text-[#f1e2c6]">{gameCharacterLabel(characterId)}</strong>
+          <span className="mt-1 block text-[10px] font-semibold text-[#9f9583] sm:hidden">Touch Move · Jump · Dash · Attack · Skill buttons</span>
+          <span className="mt-1 hidden text-[10px] font-semibold text-[#9f9583] sm:block">Arrows Move · ↑ Double Jump · Shift Dash · Space Attack · Q/W/E/R/T Skills</span>
+        </div>
+        <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
+          <button
           type="button"
           onClick={() => setEquipmentParticlesEnabled((enabled) => !enabled)}
           className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
@@ -200,7 +206,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
         >
           Upgrade VFX {equipmentParticlesEnabled ? 'ON' : 'OFF'}
         </button>
-        <button
+          <button
           type="button"
           onClick={() => {
             const enabled = !audioEnabled;
@@ -212,8 +218,19 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
           aria-pressed={audioEnabled}
         >
           Sound {audioEnabled ? 'ON' : 'OFF'}
-        </button>
+          </button>
+        </div>
       </div>
     </div>
   );
+}
+
+function gameCharacterLabel(characterId: CharacterId) {
+  const labels: Record<CharacterId, string> = {
+    warrior: 'Warrior', mage: 'Mage', spellblade: 'Spellblade', archer: 'Archer', dualblade: 'Dualblade', brawler: 'Brawler',
+    dragonknight: 'Dragon Knight', gunslinger: 'Gunslinger', ssaulabi: 'Ssaulabi', kickfighter: 'Kickfighter', venomancer: 'Venomancer',
+    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', conservative: 'Conservative Faction',
+    progressive: 'Progressive Faction', assettycoon: 'Asset Tycoon',
+  };
+  return labels[characterId];
 }

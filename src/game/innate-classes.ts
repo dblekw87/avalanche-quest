@@ -52,7 +52,7 @@ export const innateClasses: Record<InnateCharacterId, InnateClassDefinition> = {
       { id: 'wingbreaker', key: 'W', name: 'Wingbreaker', description: 'Sweep the area ahead with crossing dragon-wing slashes.', cooldownMs: 3_400, damage: 5 },
       { id: 'inferno-breath', key: 'E', name: 'Inferno Breath', description: 'Unleash three spreading fire blasts.', cooldownMs: 4_800, damage: 5 },
       { id: 'dragonheart', key: 'R', name: 'Dragonheart', description: 'The only buff skill: gain draconic power and protection for 5 seconds.', cooldownMs: 11_000, damage: 0, buff: true },
-      { id: 'cataclysm-wyvern', key: 'T', name: 'Cataclysm Wyvern', description: 'Call down a colossal wyvern impact across the battlefield.', cooldownMs: 9_000, damage: 8 },
+      { id: 'cataclysm-wyvern', key: 'T', name: 'Cataclysm Wyvern', description: 'Summon a colossal dragon face from the left to breathe multi-hit fire across the battlefield.', cooldownMs: 9_000, damage: 8 },
     ],
   },
   gunslinger: {

@@ -19,7 +19,7 @@ export const warriorSkills = [
   skill('frost-nova', 'Spinning Slash', 'W', 'Spin a blade vortex through nearby enemies.', '35', [530, 110]),
   skill('flame-wave', 'Earth Slam', 'E', 'Smash the ground with a heavy shockwave.', '45', [530, 170]),
   skill('healing-light', 'Shield Guard', 'R', 'Raise a golden shield that reduces incoming damage.', '50', [530, 230]),
-  skill('starfall', 'Warrior Roar', 'T', 'Damage nearby enemies and become fully invulnerable for 3 seconds, plus 0.2 seconds per enhancement.', '70', [530, 289]),
+  skill('starfall', 'Wolf Sovereign Roar', 'T', 'Become invulnerable and summon a colossal roaring wolf that repeatedly damages the battlefield.', '70', [530, 289]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const mageSkills = [
@@ -27,7 +27,7 @@ export const mageSkills = [
   skill('ice-storm', 'Ice Storm', 'W', 'Raise freezing spikes around nearby enemies.', '35', [530, 459]),
   skill('chain-lightning', 'Chain Lightning', 'E', 'Chain purple lightning through every enemy.', '45', [530, 518]),
   skill('healing-circle', 'Healing Circle', 'R', 'Restore 3 vitality with a healing circle.', '50', [530, 578]),
-  skill('meteor', 'Meteor', 'T', 'Call a burning meteor onto every enemy.', '70', [530, 638]),
+  skill('meteor', 'Five-Element Cataclysm', 'T', 'Unite fire, water, wind, lightning, and earth to sweep the battlefield.', '70', [530, 638]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const spellbladeSkills = [
@@ -35,7 +35,7 @@ export const spellbladeSkills = [
   skill('twin-phantom', 'Blood Moon', 'W', 'Carve a wide blood-red crescent through nearby enemies.', '35', [0, 0]),
   skill('rune-step', 'Hellspike', 'E', 'Erupt jagged abyssal blades from the ground ahead.', '45', [0, 0]),
   skill('astral-counter', 'Crimson Pact', 'R', 'The spellblade’s only buff: reduce incoming damage for 4 seconds.', '50', [0, 0]),
-  skill('constellation-storm', 'Black Sun', 'T', 'Detonate a black sun in a devastating crimson blast.', '70', [0, 0]),
+  skill('constellation-storm', 'Crimson Demonblade Rain', 'T', 'Rain black-crimson demon swords across the entire battlefield.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const archerSkills = [
@@ -43,7 +43,7 @@ export const archerSkills = [
   skill('split-shot', 'Tri-Gale Volley', 'W', 'Loose three vivid emerald arrows in a wide spread.', '35', [0, 0]),
   skill('verdant-snare', 'Cyclone Bloom', 'E', 'Burst a cutting green cyclone around nearby enemies.', '45', [0, 0]),
   skill('feather-step', 'Sylvan Focus', 'R', 'The archer’s only buff: gain a protective wind veil for 4 seconds.', '50', [0, 0]),
-  skill('emerald-rain', 'Skyfall Barrage', 'T', 'Call a spectacular rain of arrows down from the sky.', '70', [0, 0]),
+  skill('emerald-rain', 'Emerald Tempest', 'T', 'Detonate a compressed wind core that expands across the battlefield.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const dualbladeSkills = [
@@ -67,7 +67,7 @@ export const dragonknightSkills = [
   skill('wingbreaker', 'Wingbreaker', 'W', 'Sweep the area ahead with crossing dragon-wing slashes.', '35', [0, 0]),
   skill('inferno-breath', 'Inferno Breath', 'E', 'Unleash three spreading fire blasts.', '45', [0, 0]),
   skill('dragonheart', 'Dragonheart', 'R', 'The only buff skill: gain draconic power and protection for 5 seconds.', '50', [0, 0]),
-  skill('cataclysm-wyvern', 'Cataclysm Wyvern', 'T', 'Call down a colossal wyvern impact across the battlefield.', '70', [0, 0]),
+  skill('cataclysm-wyvern', 'Cataclysm Wyvern', 'T', 'Summon a colossal dragon face from the left to breathe multi-hit fire across the battlefield.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const gunslingerSkills = [
