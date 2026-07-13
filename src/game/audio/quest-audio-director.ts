@@ -56,10 +56,12 @@ export class QuestAudioDirector {
   private step = 0;
   private enabled = true;
   private bossIntensity = false;
+  private stopped = false;
 
   constructor(private readonly stageNumber: number) {}
 
   setEnabled(enabled: boolean): void {
+    if (this.stopped) return;
     this.enabled = enabled;
     if (!enabled) {
       this.masterGain?.gain.setTargetAtTime(0, this.context?.currentTime ?? 0, 0.04);
@@ -70,7 +72,7 @@ export class QuestAudioDirector {
   }
 
   async unlock(): Promise<void> {
-    if (!this.enabled) return;
+    if (!this.enabled || this.stopped) return;
     if (!this.context) this.createGraph();
     if (!this.context) return;
     if (this.context.state === 'suspended') {
@@ -84,13 +86,14 @@ export class QuestAudioDirector {
   }
 
   setBossIntensity(enabled: boolean): void {
+    if (this.stopped) return;
     this.bossIntensity = enabled;
     if (!this.context || !this.musicGain) return;
     this.musicGain.gain.setTargetAtTime(enabled ? QuestAudioDirector.BOSS_MUSIC_VOLUME : QuestAudioDirector.MUSIC_VOLUME, this.context.currentTime, 0.3);
   }
 
   playSkill(characterId: CharacterId, skillId: string): void {
-    if (!this.enabled || !this.context || !this.sfxGain || this.context.state !== 'running') return;
+    if (!this.enabled || this.stopped || !this.context || !this.sfxGain || this.context.state !== 'running') return;
     const now = this.context.currentTime;
     const variation = skillVariation(skillId);
     if (characterId === 'warrior') {
@@ -122,6 +125,9 @@ export class QuestAudioDirector {
   }
 
   stop(): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.enabled = false;
     if (this.schedulerId !== null) window.clearInterval(this.schedulerId);
     this.schedulerId = null;
     const context = this.context;

@@ -42,25 +42,29 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
   const [result, setResult] = useState<StageResult | null>(null);
   const [failure, setFailure] = useState<StageFailure | null>(null);
   const [equipmentParticlesEnabled, setEquipmentParticlesEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setEquipmentParticlesEnabled(window.localStorage.getItem('aqt-equipment-particles') !== 'off');
-      setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+      setAudioEnabled(window.localStorage.getItem('aqt-game-audio-v2') === 'on');
+      setPreferencesReady(true);
     }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
+    if (!preferencesReady) return;
     window.localStorage.setItem('aqt-equipment-particles', equipmentParticlesEnabled ? 'on' : 'off');
     sceneRef.current?.setEquipmentParticlesEnabled(equipmentParticlesEnabled);
-  }, [equipmentParticlesEnabled]);
+  }, [equipmentParticlesEnabled, preferencesReady]);
 
   useEffect(() => {
-    window.localStorage.setItem('aqt-game-audio', audioEnabled ? 'on' : 'off');
+    if (!preferencesReady) return;
+    window.localStorage.setItem('aqt-game-audio-v2', audioEnabled ? 'on' : 'off');
     sceneRef.current?.setAudioEnabled(audioEnabled);
-  }, [audioEnabled]);
+  }, [audioEnabled, preferencesReady]);
 
   useEffect(() => {
     const unlockAudio = () => sceneRef.current?.unlockAudio();
@@ -103,7 +107,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
         if (scene && 'setEquipmentParticlesEnabled' in scene && 'setAudioEnabled' in scene && 'unlockAudio' in scene && 'setMobileAction' in scene && 'triggerMobileSkill' in scene) {
           sceneRef.current = scene as unknown as QuestSceneControls;
           sceneRef.current.setEquipmentParticlesEnabled(window.localStorage.getItem('aqt-equipment-particles') !== 'off');
-          sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+          sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio-v2') === 'on');
         }
         scene?.events.on('stage-completed', (payload: StageResult) => {
           setResult(payload);
@@ -151,13 +155,47 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
   };
 
   return (
-    <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden border border-[#675b48] bg-[#102019] shadow-[0_18px_50px_rgba(0,0,0,0.42)]">
-      <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
-      <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5 sm:right-3 sm:top-3">
+    <div>
+      <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden border border-[#675b48] bg-[#102019] shadow-[0_18px_50px_rgba(0,0,0,0.42)]">
+        <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
+        {!result && !failure ? (
+          <MobileGameControls
+            skills={questMobileSkills(characterId, ownedSkillIds)}
+            onAction={(action, active) => sceneRef.current?.setMobileAction(action, active)}
+            onSkill={(skillId) => sceneRef.current?.triggerMobileSkill(skillId)}
+            onFullscreen={() => void enterFullscreen()}
+          />
+        ) : null}
+        {result || failure ? (
+          <div className="absolute inset-0 z-40 grid place-items-center bg-[#17140f]/90 p-4 sm:p-6">
+            <div className="max-w-md text-center">
+              <p className="text-xs font-bold tracking-[0.24em] text-[#c8a96b]">
+                {result ? 'STAGE COMPLETE' : 'EXPEDITION FAILED'}
+              </p>
+              <h2 className="font-display mt-4 text-4xl text-[#f1e4c7]">
+                {result ? `${stages[stageId].name.toUpperCase()} CLEARED` : 'RETURN TO CAMP'}
+              </h2>
+              <p className="mt-4 text-sm leading-6 text-[#aaa08e]">
+                {result
+                  ? `Completion time ${(result.durationMs / 1000).toFixed(1)} seconds. The run log is ready for future verification.`
+                  : `You held out for ${((failure?.durationMs ?? 0) / 1000).toFixed(1)} seconds. Try again and defeat every hostile.`}
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mx-auto mt-7 block w-full max-w-xs border border-[#d0b47a] bg-[#a8793d] px-6 py-3 text-xs font-extrabold tracking-[0.14em] text-[#17120b] hover:bg-[#c49a5a] sm:w-auto"
+              >
+                {result ? 'PLAY AGAIN' : 'RETRY STAGE'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-[#4f4638] bg-[#12100d] p-2 sm:justify-end">
         <button
           type="button"
           onClick={() => setEquipmentParticlesEnabled((enabled) => !enabled)}
-          className="rounded border border-[#7f735f] bg-[#0b110d]/90 px-2.5 py-2 text-[9px] font-bold tracking-[.06em] text-[#e6d7ba] hover:border-[#d0b47a] sm:px-3 sm:text-[10px] sm:tracking-[.08em]"
+          className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={equipmentParticlesEnabled}
         >
           강화 효과 {equipmentParticlesEnabled ? 'ON' : 'OFF'}
@@ -170,44 +208,12 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
             if (enabled) sceneRef.current?.unlockAudio();
             setAudioEnabled(enabled);
           }}
-          className="rounded border border-[#7f735f] bg-[#0b110d]/90 px-2.5 py-2 text-[9px] font-bold tracking-[.06em] text-[#e6d7ba] hover:border-[#d0b47a] sm:px-3 sm:text-[10px] sm:tracking-[.08em]"
+          className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={audioEnabled}
         >
           사운드 {audioEnabled ? 'ON' : 'OFF'}
         </button>
       </div>
-      {!result && !failure ? (
-        <MobileGameControls
-          skills={questMobileSkills(characterId, ownedSkillIds)}
-          onAction={(action, active) => sceneRef.current?.setMobileAction(action, active)}
-          onSkill={(skillId) => sceneRef.current?.triggerMobileSkill(skillId)}
-          onFullscreen={() => void enterFullscreen()}
-        />
-      ) : null}
-      {result || failure ? (
-        <div className="absolute inset-0 z-40 grid place-items-center bg-[#17140f]/90 p-4 sm:p-6">
-          <div className="max-w-md text-center">
-            <p className="text-xs font-bold tracking-[0.24em] text-[#c8a96b]">
-              {result ? 'STAGE COMPLETE' : 'EXPEDITION FAILED'}
-            </p>
-            <h2 className="font-display mt-4 text-4xl text-[#f1e4c7]">
-              {result ? `${stages[stageId].name.toUpperCase()} CLEARED` : 'RETURN TO CAMP'}
-            </h2>
-            <p className="mt-4 text-sm leading-6 text-[#aaa08e]">
-              {result
-                ? `Completion time ${(result.durationMs / 1000).toFixed(1)} seconds. The run log is ready for future verification.`
-                : `You held out for ${((failure?.durationMs ?? 0) / 1000).toFixed(1)} seconds. Try again and defeat every hostile.`}
-            </p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="mx-auto mt-7 block w-full max-w-xs border border-[#d0b47a] bg-[#a8793d] px-6 py-3 text-xs font-extrabold tracking-[0.14em] text-[#17120b] hover:bg-[#c49a5a] sm:w-auto"
-            >
-              {result ? 'PLAY AGAIN' : 'RETRY STAGE'}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

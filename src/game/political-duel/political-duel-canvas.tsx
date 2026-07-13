@@ -27,19 +27,22 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<import('phaser').Game | null>(null);
   const sceneRef = useRef<DuelSceneControls | null>(null);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [audioPreferenceReady, setAudioPreferenceReady] = useState(false);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+      setAudioEnabled(window.localStorage.getItem('aqt-game-audio-v2') === 'on');
+      setAudioPreferenceReady(true);
     }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('aqt-game-audio', audioEnabled ? 'on' : 'off');
+    if (!audioPreferenceReady) return;
+    window.localStorage.setItem('aqt-game-audio-v2', audioEnabled ? 'on' : 'off');
     sceneRef.current?.setAudioEnabled(audioEnabled);
-  }, [audioEnabled]);
+  }, [audioEnabled, audioPreferenceReady]);
 
   useEffect(() => {
     const unlockAudio = () => sceneRef.current?.unlockAudio();
@@ -76,7 +79,7 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
         const scene = game?.scene.getScene('PoliticalDuelScene');
         if (scene && 'setAudioEnabled' in scene && 'unlockAudio' in scene && 'setMobileAction' in scene && 'triggerMobileSkill' in scene) {
           sceneRef.current = scene as unknown as DuelSceneControls;
-          sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+          sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio-v2') === 'on');
         }
       });
     }
@@ -113,6 +116,14 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
     <section className="space-y-3">
       <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden rounded-2xl border border-[#74664f] bg-[#080b12] shadow-[0_20px_70px_rgba(0,0,0,.55)]">
         <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
+        <MobileGameControls
+          skills={duelMobileSkills(faction)}
+          onAction={(action, active) => sceneRef.current?.setMobileAction(action, active)}
+          onSkill={(skillId) => sceneRef.current?.triggerMobileSkill(skillId)}
+          onFullscreen={() => void enterFullscreen()}
+        />
+      </div>
+      <div className="flex justify-center rounded-lg border border-[#4f4638] bg-[#12100d] p-2 sm:justify-end">
         <button
           type="button"
           onClick={() => {
@@ -121,17 +132,11 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
             if (enabled) sceneRef.current?.unlockAudio();
             setAudioEnabled(enabled);
           }}
-          className="absolute right-2 top-2 z-20 rounded border border-[#7f735f] bg-[#0b110d]/90 px-2.5 py-2 text-[9px] font-bold tracking-[.06em] text-[#e6d7ba] hover:border-[#d0b47a] sm:right-3 sm:top-3 sm:px-3 sm:text-[10px] sm:tracking-[.08em]"
+          className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={audioEnabled}
         >
           사운드 {audioEnabled ? 'ON' : 'OFF'}
         </button>
-        <MobileGameControls
-          skills={duelMobileSkills(faction)}
-          onAction={(action, active) => sceneRef.current?.setMobileAction(action, active)}
-          onSkill={(skillId) => sceneRef.current?.triggerMobileSkill(skillId)}
-          onFullscreen={() => void enterFullscreen()}
-        />
       </div>
       <button type="button" onClick={onExit} className="mx-auto block w-full max-w-sm rounded-lg border border-[#74664f] bg-[#211b15] px-5 py-3 text-xs font-bold text-[#e9dcc5] hover:bg-[#30271d] sm:mx-0 sm:w-auto">
         스페셜 대전 나가기

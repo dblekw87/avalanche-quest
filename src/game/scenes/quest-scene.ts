@@ -312,11 +312,13 @@ export class QuestScene extends Phaser.Scene {
       }
     }
     this.add.rectangle(WORLD_WIDTH / 2, 260, WORLD_WIDTH, 520, this.stage.backgroundColor, 0.16).setDepth(-9);
-    this.add.text(48, 42, `${this.stage.worldLabel} // STAGE ${String(this.stage.number).padStart(2, '0')}`, {
-      color: `#${this.stage.accentColor.toString(16).padStart(6, '0')}`, fontFamily: 'monospace', fontSize: '14px', letterSpacing: 2,
+    this.add.rectangle(40, 28, 690, 64, 0x050806, 0.92).setOrigin(0).setStrokeStyle(1, 0xffd98a, 0.55).setScrollFactor(0).setDepth(19);
+    this.add.text(52, 38, `${this.stage.worldLabel} // STAGE ${String(this.stage.number).padStart(2, '0')}`, {
+      color: '#ffe5a8', fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', letterSpacing: 2, stroke: '#000000', strokeThickness: 3,
     }).setScrollFactor(0).setDepth(20);
-    this.add.text(48, 68, `ARROWS: MOVE/DOUBLE JUMP  -  SHIFT: DASH  -  SPACE: ATTACK${this.ownedSkillIds.length > 0 ? '  -  Q/W/E/R/T: SKILLS' : ''}`, {
-      color: '#839088', fontFamily: 'monospace', fontSize: '11px',
+    const skillKeyGuide = isPoliticalCharacter(this.characterId) ? 'Q/W/E/R/Z/X/C/V' : 'Q/W/E/R/T';
+    this.add.text(52, 66, `ARROWS: MOVE/DOUBLE JUMP  -  SHIFT: DASH  -  SPACE: ATTACK${this.ownedSkillIds.length > 0 ? `  -  ${skillKeyGuide}: SKILLS` : ''}`, {
+      color: '#ffffff', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
     }).setScrollFactor(0).setDepth(20);
   }
 
