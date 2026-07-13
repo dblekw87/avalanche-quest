@@ -83,11 +83,11 @@ const SKILL_COOLDOWNS: Readonly<Record<string, number>> = {
 };
 
 const BOSS_PATTERN_SEQUENCES: readonly (readonly BossPattern[])[] = [
-  ['charge', 'fan', 'leap', 'burst', 'retreat-volley'],
-  ['teleport-left', 'retreat-volley', 'blink-barrage', 'fan', 'charge'],
-  ['leap', 'rain', 'burst', 'charge', 'fan'],
-  ['sky-dive', 'burst', 'charge', 'fan', 'rain'],
-  ['teleport-right', 'rain', 'retreat-volley', 'blink-barrage', 'burst'],
+  ['fan', 'charge', 'leap'],
+  ['fan', 'retreat-volley', 'charge', 'leap'],
+  ['rain', 'fan', 'charge', 'leap'],
+  ['charge', 'fan', 'leap', 'burst'],
+  ['rain', 'retreat-volley', 'fan', 'charge'],
   ['rain', 'charge', 'teleport-left', 'fan', 'leap'],
   ['sky-dive', 'retreat-volley', 'blink-barrage', 'fan', 'teleport-right'],
   ['teleport-left', 'blink-barrage', 'burst', 'retreat-volley', 'teleport-right'],
@@ -775,7 +775,7 @@ export class QuestScene extends Phaser.Scene {
         leftBound: definition.left,
         rightBound: definition.boss ? definition.right : Math.min(definition.right, BOSS_ARENA_START_X - 90),
         direction: -1, boss: definition.boss, healthBar,
-        nextSkillAt: this.time.now + BOSS_SKILL_COOLDOWN_MS,
+        nextSkillAt: this.time.now + this.bossSkillCooldownMs,
         nextJumpAt: this.time.now + 2_400,
         nextAttackAt: this.time.now + Phaser.Math.Between(500, 1_200),
         patternIndex: (this.stage.number - 1) % 5,
@@ -1072,8 +1072,8 @@ export class QuestScene extends Phaser.Scene {
 
       const actionDuration = this.castBossPattern(boss);
       const cooldown = boss.health <= boss.maxHealth / 2
-        ? BOSS_ENRAGED_SKILL_COOLDOWN_MS
-        : BOSS_SKILL_COOLDOWN_MS;
+        ? this.bossEnragedSkillCooldownMs
+        : this.bossSkillCooldownMs;
       boss.nextSkillAt = time + Math.max(actionDuration + 260, cooldown - this.stage.number * 38);
     });
   }
@@ -2088,7 +2088,7 @@ export class QuestScene extends Phaser.Scene {
       enemy.bossMotionUntil = time + 260;
       if (this.usesAnimatedBossSheet) enemy.sprite.play(this.bossAnimationKey('attack'), true);
     } else enemy.sprite.play(this.minionAnimationKey('attack'), true).setFlipX(this.player.x < enemy.sprite.x);
-    this.damagePlayer(time, enemy.boss ? 2 : 1, enemy.sprite.x);
+    this.damagePlayer(time, enemy.boss && this.stage.number > 5 ? 2 : 1, enemy.sprite.x);
   }
 
   private damagePlayer(time: number, damage: number, sourceX: number): void {
@@ -2173,7 +2173,16 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private get playerMaxHealth(): number {
-    return PLAYER_MAX_HEALTH + (this.armorEquipped ? 3 : 0) + this.upgradeLevels.vitality * 2 + this.armorLevel;
+    const introductoryHealthBonus = Math.max(0, 6 - this.stage.number);
+    return PLAYER_MAX_HEALTH + introductoryHealthBonus + (this.armorEquipped ? 3 : 0) + this.upgradeLevels.vitality * 2 + this.armorLevel;
+  }
+
+  private get bossSkillCooldownMs(): number {
+    return this.stage.number <= 5 ? 3_800 - this.stage.number * 300 : BOSS_SKILL_COOLDOWN_MS;
+  }
+
+  private get bossEnragedSkillCooldownMs(): number {
+    return this.stage.number <= 5 ? 2_800 - this.stage.number * 220 : BOSS_ENRAGED_SKILL_COOLDOWN_MS;
   }
 
   private get classSkillIds(): readonly string[] {

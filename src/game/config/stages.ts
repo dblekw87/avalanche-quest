@@ -59,8 +59,9 @@ function createPlatforms(stageNumber: number) {
   const random = createSeededRandom(stageNumber * 9_973 + 41);
   let x = 320 + Math.floor(random() * 45);
   let previousTier = Math.floor(random() * 2);
+  const introductoryStage = stageNumber <= 5;
   return Array.from({ length: 14 }, (_, index) => {
-    if (index > 0) x += 282 + Math.floor(random() * 76);
+    if (index > 0) x += introductoryStage ? 250 + Math.floor(random() * 48) : 282 + Math.floor(random() * 76);
     const tierDelta = random() < 0.28 ? -1 : random() > 0.7 ? 1 : 0;
     const tier = Math.max(0, Math.min(3, previousTier + tierDelta));
     previousTier = tier;
@@ -69,7 +70,7 @@ function createPlatforms(stageNumber: number) {
       // Four reachable height bands, raised 3px so characters sit cleanly on
       // the remastered terrain. Seeded randomness keeps every stage stable.
       y: 387 - tier * 45,
-      width: 190 + Math.floor(random() * 116),
+      width: introductoryStage ? 240 + Math.floor(random() * 80) : 190 + Math.floor(random() * 116),
     };
   });
 }
@@ -78,7 +79,8 @@ function createStage(id: StageId, index: number): StageDefinition {
   const number = index + 1;
   const platforms = createPlatforms(number);
   const random = createSeededRandom(number * 13_337 + 97);
-  const regularCount = Math.min(6 + Math.floor(number * 0.55), 17);
+  const introductoryStage = number <= 5;
+  const regularCount = introductoryStage ? 4 + Math.floor((number - 1) / 2) : Math.min(6 + Math.floor(number * 0.55), 17);
   const enemies = Array.from({ length: regularCount }, (_, enemyIndex) => {
     const routeProgress = regularCount <= 1 ? 0 : enemyIndex / (regularCount - 1);
     const platformIndex = Math.round(routeProgress * (platforms.length - 2));
@@ -92,8 +94,8 @@ function createStage(id: StageId, index: number): StageDefinition {
       id: `${id}-monster-${enemyIndex + 1}`,
       x,
       y: platform.y - 90,
-      health: 2 + Math.floor(number / 2) + Math.floor(enemyIndex / 4),
-      speed: 54 + number * 5 + (enemyIndex % 4) * 7,
+      health: introductoryStage ? 1 + Math.floor((number + enemyIndex) / 4) : 2 + Math.floor(number / 2) + Math.floor(enemyIndex / 4),
+      speed: introductoryStage ? 42 + number * 3 + (enemyIndex % 3) * 5 : 54 + number * 5 + (enemyIndex % 4) * 7,
       left,
       right,
       boss: false,
