@@ -1,0 +1,141 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
+import { MobileGameControls, duelMobileSkills, type MobileGameAction } from '@/game/mobile-game-controls';
+
+import type { PoliticalFaction } from './definitions';
+
+type DuelSceneControls = {
+  setAudioEnabled: (enabled: boolean) => void;
+  unlockAudio: () => void;
+  setMobileAction: (action: MobileGameAction, active: boolean) => void;
+  triggerMobileSkill: (skillId: string) => void;
+};
+
+type LockableScreenOrientation = ScreenOrientation & {
+  lock?: (orientation: 'landscape') => Promise<void>;
+};
+
+type PoliticalDuelCanvasProps = {
+  faction: PoliticalFaction;
+  onExit: () => void;
+};
+
+export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProps) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<import('phaser').Game | null>(null);
+  const sceneRef = useRef<DuelSceneControls | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('aqt-game-audio', audioEnabled ? 'on' : 'off');
+    sceneRef.current?.setAudioEnabled(audioEnabled);
+  }, [audioEnabled]);
+
+  useEffect(() => {
+    const unlockAudio = () => sceneRef.current?.unlockAudio();
+    window.addEventListener('pointerdown', unlockAudio, { capture: true });
+    window.addEventListener('keydown', unlockAudio, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio, { capture: true });
+      window.removeEventListener('keydown', unlockAudio, { capture: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let game: import('phaser').Game | undefined;
+
+    async function boot() {
+      const Phaser = await import('phaser');
+      const { PoliticalDuelScene } = await import('./political-duel-scene');
+      if (disposed || !containerRef.current) return;
+      game = new Phaser.Game({
+        type: Phaser.AUTO,
+        parent: containerRef.current,
+        width: 1120,
+        height: 520,
+        backgroundColor: '#080b12',
+        pixelArt: false,
+        roundPixels: true,
+        physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 1_050 }, debug: false } },
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+        scene: [new PoliticalDuelScene(faction)],
+      });
+      gameRef.current = game;
+      game.events.once(Phaser.Core.Events.READY, () => {
+        const scene = game?.scene.getScene('PoliticalDuelScene');
+        if (scene && 'setAudioEnabled' in scene && 'unlockAudio' in scene && 'setMobileAction' in scene && 'triggerMobileSkill' in scene) {
+          sceneRef.current = scene as unknown as DuelSceneControls;
+          sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio') !== 'off');
+        }
+      });
+    }
+
+    void boot();
+    return () => { disposed = true; gameRef.current = null; sceneRef.current = null; game?.destroy(true); };
+  }, [faction]);
+
+  useEffect(() => {
+    const refreshScale = () => window.requestAnimationFrame(() => gameRef.current?.scale.refresh());
+    window.addEventListener('orientationchange', refreshScale);
+    window.addEventListener('resize', refreshScale);
+    document.addEventListener('fullscreenchange', refreshScale);
+    return () => {
+      window.removeEventListener('orientationchange', refreshScale);
+      window.removeEventListener('resize', refreshScale);
+      document.removeEventListener('fullscreenchange', refreshScale);
+    };
+  }, []);
+
+  const enterFullscreen = async () => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    try {
+      if (!document.fullscreenElement) await frame.requestFullscreen();
+      const orientation = screen.orientation as LockableScreenOrientation;
+      await orientation.lock?.('landscape').catch(() => undefined);
+    } catch {
+      // Unsupported fullscreen/orientation APIs fall back to the inline layout.
+    }
+  };
+
+  return (
+    <section className="space-y-3">
+      <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden rounded-2xl border border-[#74664f] bg-[#080b12] shadow-[0_20px_70px_rgba(0,0,0,.55)]">
+        <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
+        <button
+          type="button"
+          onClick={() => {
+            const enabled = !audioEnabled;
+            sceneRef.current?.setAudioEnabled(enabled);
+            if (enabled) sceneRef.current?.unlockAudio();
+            setAudioEnabled(enabled);
+          }}
+          className="absolute right-2 top-2 z-20 rounded border border-[#7f735f] bg-[#0b110d]/90 px-2.5 py-2 text-[9px] font-bold tracking-[.06em] text-[#e6d7ba] hover:border-[#d0b47a] sm:right-3 sm:top-3 sm:px-3 sm:text-[10px] sm:tracking-[.08em]"
+          aria-pressed={audioEnabled}
+        >
+          사운드 {audioEnabled ? 'ON' : 'OFF'}
+        </button>
+        <MobileGameControls
+          skills={duelMobileSkills(faction)}
+          onAction={(action, active) => sceneRef.current?.setMobileAction(action, active)}
+          onSkill={(skillId) => sceneRef.current?.triggerMobileSkill(skillId)}
+          onFullscreen={() => void enterFullscreen()}
+        />
+      </div>
+      <button type="button" onClick={onExit} className="mx-auto block w-full max-w-sm rounded-lg border border-[#74664f] bg-[#211b15] px-5 py-3 text-xs font-bold text-[#e9dcc5] hover:bg-[#30271d] sm:mx-0 sm:w-auto">
+        스페셜 대전 나가기
+      </button>
+    </section>
+  );
+}

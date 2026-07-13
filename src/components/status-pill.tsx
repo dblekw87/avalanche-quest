@@ -1,0 +1,1 @@
+export function StatusPill({children}:{children:string}){return <span className="border border-[#88765c] bg-[#cbbb9c] px-2 py-1 text-[9px] font-bold tracking-[.12em] text-[#3a2d20]">{children}</span>}

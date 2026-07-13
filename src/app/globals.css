@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+:root { --ink:#201c17; --paper:#ffffff; --muted:#6f685e; --gold:#9a6728; --wood:#f3eee5; --line:#d9d0c3; }
+@theme inline { --font-sans:var(--font-display); --font-display:var(--font-display); --font-mono:var(--font-mono); }
+* { box-sizing:border-box; }
+html { background:#fff; }
+body {
+  margin:0; color:var(--ink); font-family:var(--font-display),sans-serif;
+  background:#fff;
+  overflow-x:hidden;
+}
+a { color:inherit; text-decoration:none; }
+button,input { font:inherit; }
+button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]) { cursor:pointer; }
+button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]) { transition:transform .14s ease,filter .18s ease,box-shadow .18s ease; }
+button:not(:disabled):hover, a[href]:hover, [role="button"]:not([aria-disabled="true"]):hover { filter:brightness(1.07); }
+button:not(:disabled):active, a[href]:active, [role="button"]:not([aria-disabled="true"]):active { transform:translateY(2px) scale(.98); filter:brightness(.94); }
+button:disabled { cursor:not-allowed; }
+::selection { background:#b98b49; color:#17140f; }
+.font-display { font-family:var(--font-display),sans-serif; font-weight:650; letter-spacing:-.04em; }
+.wood-panel { border:1px solid #d8cdbc; background:#fff; box-shadow:0 12px 30px #45351e12; }
+.paper-panel { color:#251e16; border:1px solid #d8cdbc; background:#faf7f1; box-shadow:0 10px 24px #45351e12; }
+.metal-line { border-color:#776b59; box-shadow:inset 0 1px #a4967d55; }
+.game-frame { box-shadow:inset 0 0 0 4px #2b2118,0 18px 50px #0008; }
+.game-map {
+  background:
+    linear-gradient(180deg,transparent 0 58%,#dbe7d4 58% 63%,#c8d7c1 63%),
+    radial-gradient(circle at 20% 24%,#e1b75d 0 4%,transparent 4.2%),
+    linear-gradient(180deg,#f8fbf4,#e8efe3 58%);
+}
+.game-map::before { content:"";position:absolute;inset:auto 0 36% 0;height:42%;opacity:.6;background:linear-gradient(145deg,transparent 0 35%,#b7c8af 35% 50%,transparent 50%) 0 0/240px 100%; }
+.game-map > .absolute.inset-0 { background:linear-gradient(90deg,#fffefbf2,#fffefb99,transparent)!important; }
+
+/* Light website chrome; preserve the dark Phaser canvas and its result overlay. */
+header { background:#fff!important; border-color:#e5ded3!important; color:#201c17!important; box-shadow:0 1px 12px #2b21100d; }
+header * { border-color:#e5ded3!important; }
+header [class*="text-[#"] { color:#51493f!important; }
+main { background:#fff!important; color:#201c17; }
+main :not(.game-frame, .game-frame *)[class*="bg-[#"] { background-color:#fff!important; }
+main :not(.game-frame, .game-frame *)[class*="text-[#"] { color:#51493f!important; }
+main :not(.game-frame, .game-frame *)[class*="border-[#"] { border-color:#ddd4c7!important; }
+main :not(.game-frame, .game-frame *) button[class*="bg-[#"] { background:#f1e3ca!important; color:#3d2c16!important; }
+main :not(.game-frame, .game-frame *) input { background:#fff!important; color:#201c17!important; border-color:#d8cdbc!important; }
+main :not(.game-frame, .game-frame *) [class*="text-[#e"],
+main :not(.game-frame, .game-frame *) [class*="text-[#f"] { color:#201c17!important; }
+main :not(.game-frame, .game-frame *) [class*="text-[#e7aaaa]"] { color:#a52f2f!important; }
+main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!important; }
+.upgrade-card { color:#f1e2c6!important; }
+.upgrade-card [class*="text-[#f1e2c6]"] { color:#f1e2c6!important; }
+.upgrade-card [class*="text-[#fff2b8]"] { color:#fff2b8!important; }
+.upgrade-card [class*="text-[#ead4ad]"] { color:#ead4ad!important; }
+.upgrade-card [class*="bg-[#0b0907]"] { background:#0b0907!important; }
+.upgrade-card button[class*="bg-[#211a11]"] { background:#211a11!important; color:#ead4ad!important; }
+.upgrade-card button[class*="bg-[#211a11]"]:hover { background:#342718!important; color:#fff!important; }
+.data-skeleton .animate-pulse div { background-color:#e5e7eb!important; border-color:#d1d5db!important; }
+@keyframes contract-skeleton-pulse {
+  0%,100% { opacity:.48; }
+  50% { opacity:.86; }
+}
+.contract-skeleton-pulse { animation:contract-skeleton-pulse 1.8s ease-in-out infinite; }
+.contract-skeleton-pulse [data-skeleton-block] {
+  border:1px solid #d7dbe0;
+  border-radius:4px;
+  background:#e5e7eb!important;
+  box-shadow:inset 0 1px #f8fafc;
+}
+@media (prefers-reduced-motion:reduce) { .contract-skeleton-pulse { animation:none; opacity:.72; } }
+.faction-conservative { color:#ff4d55!important; }
+.faction-progressive { color:#42a5ff!important; }
+.mobile-touch-controls { display:none; }
+.mobile-control-button,
+.mobile-skill-button {
+  display:grid;
+  min-width:48px;
+  height:48px;
+  place-items:center;
+  border:1px solid #ffffff66;
+  border-radius:14px;
+  background:#080b0dcc;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  box-shadow:0 4px 18px #0008,inset 0 1px #ffffff25;
+  backdrop-filter:blur(5px);
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.mobile-control-button--jump { border-color:#7dd3fcaa; background:#12455dcc; }
+.mobile-control-button--dash { border-color:#c4b5faaa; background:#3b2b67cc; }
+.mobile-control-button--attack { min-width:58px; border-color:#fca5a5bb; background:#732323dd; }
+.mobile-skill-button { min-width:38px; width:38px; height:38px; border-radius:10px; border-color:#f5cd76aa; background:#4e3519dd; }
+.mobile-skill-button:disabled { opacity:.32; }
+.mobile-game-stage:fullscreen {
+  width:100vw;
+  height:100dvh;
+  border:0;
+  border-radius:0;
+  background:#080b12;
+}
+.mobile-game-stage:fullscreen .game-canvas-host { width:100%; height:100%; aspect-ratio:auto; }
+
+@media (max-width:1024px), (hover:none) and (pointer:coarse) {
+  .mobile-touch-controls { display:block; }
+  .game-canvas-host canvas { touch-action:none; }
+}
+
+@media (max-width:767px) {
+  .mobile-scroll { overflow-x:auto; scrollbar-width:none; }
+  .mobile-game-stage { min-height:min(430px,calc(100dvh - 6rem)); }
+  .mobile-game-stage .game-canvas-host { height:100%; min-height:inherit; aspect-ratio:auto; }
+}
+
+@media (orientation:landscape) {
+  .mobile-landscape-prompt { display:none; }
+}
+
+@media (orientation:portrait) and (max-width:767px) {
+  .mobile-landscape-prompt { top:3.25rem; width:max-content; max-width:calc(100% - 2rem); text-align:center; }
+}
+
+@media (max-height:430px) and (orientation:landscape) {
+  .mobile-control-button { min-width:44px; height:44px; border-radius:12px; }
+  .mobile-control-button--attack { min-width:54px; }
+  .mobile-skill-button { min-width:34px; width:34px; height:34px; }
+}

@@ -1,0 +1,30 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next
+/out
+
+# builds and coverage
+/artifacts
+/cache
+/coverage
+/typechain-types
+/tmp
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+
+# deployment data containing local configuration
+/ignition/deployments
+
+# editor and operating system
+.DS_Store
+Thumbs.db
+*.log
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

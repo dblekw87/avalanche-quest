@@ -1,0 +1,8 @@
+{
+  "RewardSystem": {
+    "admin": "0x3028645d4D6A71DB84Caccbfc4a6c83E74aF5899",
+    "pauser": "0x3028645d4D6A71DB84Caccbfc4a6c83E74aF5899",
+    "rewardSigner": "0x426b90A13e1dB15F3515bcd695694c9D81d39293",
+    "tokenCap": "100000000000000000000000000"
+  }
+}

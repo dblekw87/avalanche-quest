@@ -1,0 +1,47 @@
+{
+  "name": "avalanche-quest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "contracts:compile": "hardhat compile",
+    "contracts:test": "hardhat test",
+    "contracts:deploy:fuji": "hardhat ignition deploy ignition/modules/RewardSystem.ts --network fuji --deployment-id fuji-rewards"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@supabase/supabase-js": "^2.110.2",
+    "@tanstack/react-query": "^5.101.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.24.0",
+    "next": "^16.2.10",
+    "phaser": "^3.90.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "viem": "^2.55.0",
+    "wagmi": "^2.19.5",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.10",
+    "hardhat": "^3.9.1",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^5.9.3"
+  }
+}
