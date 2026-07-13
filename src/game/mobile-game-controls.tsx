@@ -2,14 +2,15 @@
 
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
-import { isInnateCharacter, isPoliticalCharacter, type CharacterId, type GeneralCharacterId } from '@/game/characters';
+import { assetTycoonSkillIcon, assetTycoonSkills } from '@/game/asset-tycoon';
+import { isInnateCharacter, isPoliticalCharacter, isSecretCharacter, type CharacterId, type GeneralCharacterId } from '@/game/characters';
 import { innateClasses, innateSkillIcon } from '@/game/innate-classes';
 import { politicalFighters, type PoliticalFaction } from '@/game/political-duel/definitions';
 
 export type MobileGameAction = 'left' | 'right' | 'jump' | 'dash' | 'attack';
 export type MobileSkillButton = { id: string; label: string; name: string; iconUrl: string; disabled?: boolean };
 
-const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger'>, readonly string[]>> = {
+const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver'>, readonly string[]>> = {
   warrior: ['arcane-bolt', 'frost-nova', 'flame-wave', 'healing-light', 'starfall'],
   mage: ['magic-missile', 'ice-storm', 'chain-lightning', 'healing-circle', 'meteor'],
   spellblade: ['arcane-cleave', 'twin-phantom', 'rune-step', 'astral-counter', 'constellation-storm'],
@@ -17,6 +18,9 @@ const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 
 };
 
 export function questMobileSkills(characterId: CharacterId, ownedSkillIds: readonly string[]): readonly MobileSkillButton[] {
+  if (isSecretCharacter(characterId)) {
+    return assetTycoonSkills.map((skill) => ({ id: skill.id, label: skill.key, name: skill.name, iconUrl: assetTycoonSkillIcon(skill.id), disabled: !ownedSkillIds.includes(skill.id) }));
+  }
   if (isPoliticalCharacter(characterId)) {
     return politicalFighters[characterId].skills.map((skill) => {
       const id = `${characterId}-${skill.key.toLowerCase()}`;

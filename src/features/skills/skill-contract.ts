@@ -78,7 +78,55 @@ export const gunslingerSkills = [
   skill('bullet-tempest', 'Bullet Tempest', 'T', 'Blanket the battlefield with an explosive storm of bullets.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
-export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills, ...dragonknightSkills, ...gunslingerSkills] as const;
+export const ssaulabiSkills = [
+  skill('moonlit-draw', 'Moonlit Draw', 'Q', 'Release a swift silver-crimson sword wave.', '25', [0, 0]),
+  skill('tiger-step', 'Tiger Step', 'W', 'Rush through enemies with a tiger-shaped slash.', '35', [0, 0]),
+  skill('crimson-formation', 'Crimson Formation', 'E', 'Carve a field of crossing blade seals.', '45', [0, 0]),
+  skill('unbroken-resolve', 'Unbroken Resolve', 'R', 'Sharpen attack, speed and defense for 5 seconds.', '50', [0, 0]),
+  skill('heaven-sever', 'Heaven Sever', 'T', 'Split the battlefield with a colossal celestial slash.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const kickfighterSkills = [
+  skill('gale-kick', 'Gale Kick', 'Q', 'Launch a cutting crescent from a snapping kick.', '25', [0, 0]),
+  skill('rising-dragon', 'Rising Dragon', 'W', 'Drive enemies upward with a golden rising kick.', '35', [0, 0]),
+  skill('cyclone-heel', 'Cyclone Heel', 'E', 'Spin through nearby enemies in a teal heel vortex.', '45', [0, 0]),
+  skill('flow-state', 'Flow State', 'R', 'Accelerate movement and striking power for 5 seconds.', '50', [0, 0]),
+  skill('skybreaker-combo', 'Skybreaker Combo', 'T', 'Rain down a chain of spectacular aerial kick impacts.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const venomancerSkills = [
+  skill('venom-needle', 'Venom Needle', 'Q', 'Fire a piercing toxic needle.', '25', [0, 0]),
+  skill('plague-pool', 'Plague Pool', 'W', 'Create a poison pool that strikes repeatedly.', '35', [0, 0]),
+  skill('serpent-miasma', 'Serpent Miasma', 'E', 'Unleash a spreading toxic serpent cloud.', '45', [0, 0]),
+  skill('antidote-pact', 'Antidote Pact', 'R', 'Gain poison-forged attack and protection for 5 seconds.', '50', [0, 0]),
+  skill('deathbloom', 'Deathbloom', 'T', 'Detonate a gigantic poisonous skull flower.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const pyromancerSkills = [
+  skill('ember-lance', 'Ember Lance', 'Q', 'Hurl a high-speed lance of concentrated flame.', '25', [0, 0]),
+  skill('flame-pillar', 'Flame Pillar', 'W', 'Erupt pillars of fire ahead.', '35', [0, 0]),
+  skill('phoenix-spiral', 'Phoenix Spiral', 'E', 'Sweep enemies with a spiraling phoenix blaze.', '45', [0, 0]),
+  skill('burning-soul', 'Burning Soul', 'R', 'Amplify firepower and movement for 5 seconds.', '50', [0, 0]),
+  skill('solar-cataclysm', 'Solar Cataclysm', 'T', 'Crash a miniature sun into the battlefield.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const hammerguardSkills = [
+  skill('iron-crash', 'Iron Crash', 'Q', 'Smash the ground with a focused hammer impact.', '25', [0, 0]),
+  skill('seismic-march', 'Seismic March', 'W', 'Send successive fissures marching forward.', '35', [0, 0]),
+  skill('gravity-bell', 'Gravity Bell', 'E', 'Crush a wide area beneath a gravity-charged hammer.', '45', [0, 0]),
+  skill('adamant-guard', 'Adamant Guard', 'R', 'Gain exceptional defense and striking force for 5 seconds.', '50', [0, 0]),
+  skill('world-anvil', 'World Anvil', 'T', 'Call down a divine hammer that shatters the earth.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const axereaverSkills = [
+  skill('rending-arc', 'Rending Arc', 'Q', 'Launch a brutal green-gold axe wave.', '25', [0, 0]),
+  skill('predator-rush', 'Predator Rush', 'W', 'Charge forward behind a spectral wolf.', '35', [0, 0]),
+  skill('blood-cyclone', 'Blood Cyclone', 'E', 'Shred nearby enemies in a double-axe vortex.', '45', [0, 0]),
+  skill('berserker-oath', 'Berserker Oath', 'R', 'Increase attack, speed and resilience for 5 seconds.', '50', [0, 0]),
+  skill('ragnarok-cleaver', 'Ragnarok Cleaver', 'T', 'Split the battlefield with a colossal execution axe.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills, ...dragonknightSkills, ...gunslingerSkills, ...ssaulabiSkills, ...kickfighterSkills, ...venomancerSkills, ...pyromancerSkills, ...hammerguardSkills, ...axereaverSkills] as const;
 
 export const aegisArmor = {
   id: keccak256(toBytes('aegis-armor')),

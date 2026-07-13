@@ -1,19 +1,21 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
 import { rewardDistributorAbi } from '@/features/rewards/reward-contract';
+import { assetTycoonSkills } from '@/game/asset-tycoon';
+import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-contract';
 import { gameItemAbi } from '@/features/items/item-contract';
 import { SkillShop } from '@/features/skills/skill-shop';
 import { UpgradeShop } from '@/features/upgrades/upgrade-shop';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 import type { StageFailure, StageResult } from '@/game/bridge/events';
-import { isPoliticalCharacter, type CharacterGroup, type CharacterId } from '@/game/characters';
+import { isGeneralCharacter, isPoliticalCharacter, isSecretCharacter, type CharacterGroup, type CharacterId } from '@/game/characters';
 import { stageIds, stages, type StageId } from '@/game/config/stages';
 import { GameCanvas } from '@/game/game-canvas';
 import { PoliticalDuelCanvas } from '@/game/political-duel/political-duel-canvas';
@@ -32,6 +34,12 @@ type AuthorizedReward = {
   };
   signature: Hex;
   loot: AuthorizedLoot | null;
+  assetTycoon: AuthorizedAssetTycoon | null;
+};
+
+type AuthorizedAssetTycoon = {
+  claim: { claimId: Hex; attemptId: Hex; player: Hex; nonce: string; deadline: string };
+  signature: Hex;
 };
 
 type AuthorizedLoot = {
@@ -65,6 +73,10 @@ export function GameExperience() {
   const [upgradeLevels, setUpgradeLevels] = useState<UpgradeLevels>({ attack: 0, vitality: 0, defense: 0 });
   const [skillUpgradeLevels, setSkillUpgradeLevels] = useState<Readonly<Record<string, number>>>({});
   const [duelFaction, setDuelFaction] = useState<PoliticalFaction | null>(null);
+  const [ownsAssetTycoon, setOwnsAssetTycoon] = useState(false);
+  const [assetTycoonDrop, setAssetTycoonDrop] = useState<AuthorizedAssetTycoon | null>(null);
+  const [assetTycoonMintState, setAssetTycoonMintState] = useState<TransactionState>('idle');
+  const [assetTycoonHash, setAssetTycoonHash] = useState<Hex | null>(null);
   const handleUpgradeLevelsChange = useCallback((nextLevels: UpgradeLevels) => {
     setUpgradeLevels((current) => current.attack === nextLevels.attack && current.vitality === nextLevels.vitality && current.defense === nextLevels.defense ? current : nextLevels);
   }, []);
@@ -77,7 +89,24 @@ export function GameExperience() {
   const stage = stages[stageId];
   const activeOwnedSkillIds = isPoliticalCharacter(characterId)
     ? politicalFighters[characterId].skills.map((skill) => `${characterId}-${skill.key.toLowerCase()}`)
+    : isSecretCharacter(characterId) ? assetTycoonSkills.map((skill) => skill.id)
     : ownedSkillIds;
+
+  useEffect(() => {
+    const licenseValue = process.env.NEXT_PUBLIC_ASSET_TYCOON_LICENSE_ADDRESS;
+    if (!address || !publicClient || !licenseValue || !isAddress(licenseValue)) {
+      const timer = window.setTimeout(() => {
+        setOwnsAssetTycoon(false);
+        if (characterId === 'assettycoon') setCharacterId('warrior');
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    let cancelled = false;
+    void publicClient.readContract({ address: getAddress(licenseValue), abi: assetTycoonLicenseAbi, functionName: 'balanceOf', args: [address] })
+      .then((balance) => { if (!cancelled) setOwnsAssetTycoon(balance > 0n); })
+      .catch(() => { if (!cancelled) setOwnsAssetTycoon(false); });
+    return () => { cancelled = true; };
+  }, [address, assetTycoonHash, characterId, publicClient]);
   const handleStageComplete = useCallback((nextResult: StageResult) => { setResult(nextResult); setShowAdvancePrompt(true); }, []);
 
   const resetRun = useCallback(() => {
@@ -87,6 +116,7 @@ export function GameExperience() {
     setTransactionState('idle');
     setTransactionHash(null);
     setLoot(null); setLootTransactionState('idle'); setLootHash(null);
+    setAssetTycoonDrop(null); setAssetTycoonMintState('idle'); setAssetTycoonHash(null);
     setMessage(null);
   }, []);
 
@@ -170,6 +200,24 @@ export function GameExperience() {
     } catch (error) { setLootTransactionState('error'); setMessage(transactionErrorMessage(error)); }
   };
 
+  const mintAssetTycoon = async () => {
+    const licenseValue = process.env.NEXT_PUBLIC_ASSET_TYCOON_LICENSE_ADDRESS;
+    if (!assetTycoonDrop || !publicClient || !licenseValue || !isAddress(licenseValue)) {
+      setAssetTycoonMintState('error'); setMessage('Asset Tycoon license contract configuration is missing.'); return;
+    }
+    setAssetTycoonMintState('pending'); setMessage('Confirm the rare Asset Tycoon class NFT mint in your wallet.');
+    try {
+      const hash = await writeContractAsync({
+        address: getAddress(licenseValue), abi: assetTycoonLicenseAbi, functionName: 'mint',
+        args: [{ ...assetTycoonDrop.claim, player: getAddress(assetTycoonDrop.claim.player), nonce: BigInt(assetTycoonDrop.claim.nonce), deadline: BigInt(assetTycoonDrop.claim.deadline) }, assetTycoonDrop.signature],
+        chainId: avalancheFuji.id,
+      });
+      setAssetTycoonHash(hash); await publicClient.waitForTransactionReceipt({ hash });
+      setAssetTycoonMintState('success'); setOwnsAssetTycoon(true);
+      setMessage('Asset Tycoon NFT minted. The class is active while this wallet owns the NFT. Selling it transfers class access to the buyer.');
+    } catch (error) { setAssetTycoonMintState('error'); setMessage(transactionErrorMessage(error)); }
+  };
+
   const claimReward = async () => {
     const distributorValue = process.env.NEXT_PUBLIC_REWARD_DISTRIBUTOR_ADDRESS;
     if (!address || !result || !publicClient || !distributorValue || !isAddress(distributorValue)) {
@@ -190,6 +238,7 @@ export function GameExperience() {
         throw new Error(readError(data, 'Reward authorization failed.'));
       }
       setLoot(data.loot);
+      setAssetTycoonDrop(data.assetTycoon);
       if (!data.loot) setMessage('Your AQT reward is available, but this boss did not drop rare equipment.');
       setMessage('Confirm the reward claim transaction in your wallet.');
       const claim = {
@@ -210,7 +259,7 @@ export function GameExperience() {
       setMessage('Transaction submitted. Waiting for Fuji confirmation…');
       await publicClient.waitForTransactionReceipt({ hash });
       setTransactionState('success');
-      setMessage(`Successfully claimed ${formatEther(claim.tokenAmount)} AQT.${data.loot ? ' Rare boss equipment dropped!' : ' No rare boss equipment dropped this time.'}`);
+      setMessage(`Successfully claimed ${formatEther(claim.tokenAmount)} AQT.${data.assetTycoon ? ' The ultra-rare Asset Tycoon class NFT dropped!' : data.loot ? ' Rare boss equipment dropped!' : ' No rare class dropped this time.'}`);
       if (stage.number < stageIds.length) await continueToNextStage(true);
     } catch (error) {
       setTransactionState('error');
@@ -289,13 +338,21 @@ export function GameExperience() {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(characterGroup === 'general'
-                ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms']] as const)
+                ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe']] as const)
                 : ([['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'], ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills']] as const)
               ).map(([id, name, role]) => {
                 const special = id === 'conservative' || id === 'progressive';
                 return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`min-w-0 rounded-xl border px-3 py-3 text-center sm:px-4 sm:text-left ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 block text-[10px] text-[#6f685e]">{role}</span></button>;
               })}
             </div>
+            {characterGroup === 'general' ? (
+              <div className={`mt-3 rounded-xl border p-4 ${ownsAssetTycoon ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
+                <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
+                  <div><span className="text-[10px] font-extrabold tracking-[.2em] text-[#f2c94c]">ULTRA-RARE NFT CLASS · 1% ON VERIFIED STAGES 27–30</span><strong className="mt-1 block text-lg font-black text-[#fff0ad]">Asset Tycoon</strong><p className="mt-1 text-xs font-semibold text-[#b9aa83]">Male apex class · nine max-level skills · Attack/Vitality/Defense +20. Ownership and play access transfer with the ERC-721 NFT.</p></div>
+                  <button type="button" disabled={!ownsAssetTycoon || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="w-full rounded-lg border border-[#f2c94c] bg-[#6e5311] px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : 'NFT REQUIRED'}</button>
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="flex w-full items-end justify-center gap-3 lg:w-auto lg:justify-end">
             {!attemptId ? (
@@ -313,7 +370,7 @@ export function GameExperience() {
           <span className="text-xs text-[#938a7a] sm:ml-3">{stage.subtitle}</span>
         </div>
 
-        {isPoliticalCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : <SkillShop
+        {isPoliticalCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · NFT LICENSE ACTIVE</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20 while this wallet owns the NFT.</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}
@@ -321,7 +378,7 @@ export function GameExperience() {
           onBalanceChange={setAqtBalance}
           characterId={characterId}
           refreshKey={`${transactionState}:${transactionHash ?? 'none'}`}
-        />}
+        /> : null}
 
         <UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} />
 
@@ -350,7 +407,7 @@ export function GameExperience() {
           </div>
         )}
 
-        {result && showAdvancePrompt ? <div className="fixed inset-0 z-[80] grid place-items-center bg-black/65 p-5"><section role="dialog" aria-modal="true" aria-labelledby="stage-clear-title" className="w-full max-w-md rounded-2xl border border-[#d0b47a] bg-[#fffaf0] p-7 text-[#211b15] shadow-2xl"><p className="text-xs font-bold tracking-[.2em] text-[#9a6728]">STAGE {stage.number} CLEAR</p><h2 id="stage-clear-title" className="mt-3 text-3xl font-black">Boss Defeated!</h2><p className="mt-4 text-sm font-medium leading-6 text-[#6d6255]">{stage.number < 20 ? 'Continue to the next stage? Advancing closes the current reward screen, so claim any rewards you need first.' : 'You completed every expedition. Review and claim the rewards from this stage.'}</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{stage.number < 20 ? <button type="button" onClick={advanceToNextStage} className="rounded-lg bg-[#9a6728] px-5 py-3 text-sm font-extrabold text-white">Next Stage</button> : null}<button type="button" onClick={() => setShowAdvancePrompt(false)} className="rounded-lg border border-[#bbaa94] bg-white px-5 py-3 text-sm font-bold">View Rewards</button></div></section></div> : null}
+        {result && showAdvancePrompt ? <div className="fixed inset-0 z-[80] grid place-items-center bg-black/65 p-5"><section role="dialog" aria-modal="true" aria-labelledby="stage-clear-title" className="w-full max-w-md rounded-2xl border border-[#d0b47a] bg-[#fffaf0] p-7 text-[#211b15] shadow-2xl"><p className="text-xs font-bold tracking-[.2em] text-[#9a6728]">STAGE {stage.number} CLEAR</p><h2 id="stage-clear-title" className="mt-3 text-3xl font-black">Boss Defeated!</h2><p className="mt-4 text-sm font-medium leading-6 text-[#6d6255]">{stage.number < stageIds.length ? 'Continue to the next stage? Advancing closes the current reward screen, so claim any rewards you need first.' : 'You completed every expedition. Review and claim the rewards from this stage.'}</p><div className="mt-7 grid gap-3 sm:grid-cols-2">{stage.number < stageIds.length ? <button type="button" onClick={advanceToNextStage} className="rounded-lg bg-[#9a6728] px-5 py-3 text-sm font-extrabold text-white">Next Stage</button> : null}<button type="button" onClick={() => setShowAdvancePrompt(false)} className="rounded-lg border border-[#bbaa94] bg-white px-5 py-3 text-sm font-bold">View Rewards</button></div></section></div> : null}
 
         {result ? (
           <section className="mt-4 border border-[#6b5a3f] bg-[#241d15] p-5">
@@ -364,6 +421,7 @@ export function GameExperience() {
           </section>
         ) : null}
         {loot ? <section className="mt-4 border border-[#5c6f87] bg-[#151e29] p-5"><p className="text-[10px] tracking-[.2em] text-[#76d7ff]">BOSS DROP · {loot.rarityName.toUpperCase()}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-4"><div><strong className="text-xl text-[#eaf7ff]">{loot.name}</strong><p className="mt-1 text-xs text-[#9eb1c3]">{loot.typeName} · Power {loot.claim.power}</p></div><button type="button" disabled={lootTransactionState === 'pending' || lootTransactionState === 'success'} onClick={() => void mintLoot()} className="border border-[#76d7ff] bg-[#294e65] px-6 py-3 text-xs font-bold text-[#eaf7ff] disabled:opacity-50">{lootTransactionState === 'pending' ? 'MINTING…' : lootTransactionState === 'success' ? 'ITEM MINTED' : 'MINT NFT ITEM'}</button></div>{lootHash ? <a className="mt-3 block text-xs text-[#76d7ff] underline" href={`https://testnet.snowtrace.io/tx/${lootHash}`} target="_blank" rel="noreferrer">View item transaction</a> : null}</section> : null}
+        {assetTycoonDrop ? <section className="mt-4 overflow-hidden rounded-2xl border-2 border-[#f2c94c] bg-gradient-to-r from-[#3d2d07] via-[#17130a] to-[#4a3505] p-6 shadow-[0_0_35px_rgba(242,201,76,.25)]"><p className="text-[10px] font-black tracking-[.24em] text-[#f8db65]">ULTRA-RARE CLASS DROP · VERIFIED 1%</p><div className="mt-3 flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left"><div><strong className="text-2xl font-black text-[#fff4bd]">Asset Tycoon NFT License</strong><p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-[#cfbf91]">The culmination of repeated failures and earned experience. Minting activates the apex class for this wallet. Listing or selling the NFT transfers access to its new owner.</p></div><button type="button" disabled={assetTycoonMintState === 'pending' || assetTycoonMintState === 'success'} onClick={() => void mintAssetTycoon()} className="w-full rounded-lg border border-[#ffe482] bg-[#94721a] px-7 py-3.5 text-xs font-black text-white disabled:opacity-50 sm:w-auto">{assetTycoonMintState === 'pending' ? 'MINTING…' : assetTycoonMintState === 'success' ? 'CLASS ACTIVATED' : 'MINT CLASS NFT'}</button></div>{assetTycoonHash ? <a className="mt-3 block text-xs font-bold text-[#ffe482] underline" href={`https://testnet.snowtrace.io/tx/${assetTycoonHash}`} target="_blank" rel="noreferrer">View Asset Tycoon transaction</a> : null}</section> : null}
         {failure ? <p className="mt-4 border border-[#7d4444] bg-[#2b1919] p-4 text-sm text-[#e7aaaa]">Expedition failed after {(failure.durationMs / 1000).toFixed(1)}s. Start a new attempt to retry.</p> : null}
         {message ? <p className={`mt-4 border p-3 text-sm ${transactionState === 'error' ? 'border-[#7d4444] text-[#e7aaaa]' : 'border-[#5d684d] text-[#c9d6aa]'}`}>{message}</p> : null}
         {transactionHash ? <a className="mt-3 block text-xs text-[#c49a5a] underline" href={`https://testnet.snowtrace.io/tx/${transactionHash}`} target="_blank" rel="noreferrer">View transaction on Snowtrace</a> : null}
@@ -381,8 +439,8 @@ function readError(value: unknown, fallback: string) {
 }
 
 function isAuthorizedReward(value: unknown): value is AuthorizedReward {
-  if (!value || typeof value !== 'object' || !('claim' in value) || !('signature' in value) || !('loot' in value)) return false;
-  const candidate = value as { claim?: Partial<AuthorizedReward['claim']>; signature?: unknown; loot?: Partial<AuthorizedLoot> | null };
+  if (!value || typeof value !== 'object' || !('claim' in value) || !('signature' in value) || !('loot' in value) || !('assetTycoon' in value)) return false;
+  const candidate = value as { claim?: Partial<AuthorizedReward['claim']>; signature?: unknown; loot?: Partial<AuthorizedLoot> | null; assetTycoon?: { claim?: Partial<AuthorizedAssetTycoon['claim']>; signature?: unknown } | null };
   const validLoot = candidate.loot === null || (Boolean(candidate.loot)
     && typeof candidate.loot?.metadataURI === 'string'
     && typeof candidate.loot.signature === 'string'
@@ -399,6 +457,13 @@ function isAuthorizedReward(value: unknown): value is AuthorizedReward {
     && typeof candidate.loot.claim.metadataHash === 'string'
     && typeof candidate.loot.claim.nonce === 'string'
     && typeof candidate.loot.claim.deadline === 'string');
+  const validAssetTycoon = candidate.assetTycoon === null || (Boolean(candidate.assetTycoon)
+    && typeof candidate.assetTycoon?.signature === 'string'
+    && typeof candidate.assetTycoon.claim?.claimId === 'string'
+    && typeof candidate.assetTycoon.claim.attemptId === 'string'
+    && typeof candidate.assetTycoon.claim.player === 'string'
+    && typeof candidate.assetTycoon.claim.nonce === 'string'
+    && typeof candidate.assetTycoon.claim.deadline === 'string');
   return Boolean(candidate.claim)
     && typeof candidate.signature === 'string'
     && typeof candidate.claim?.claimId === 'string'
@@ -407,5 +472,6 @@ function isAuthorizedReward(value: unknown): value is AuthorizedReward {
     && typeof candidate.claim.tokenAmount === 'string'
     && typeof candidate.claim.nonce === 'string'
     && typeof candidate.claim.deadline === 'string'
-    && validLoot;
+    && validLoot
+    && validAssetTycoon;
 }

@@ -6,7 +6,7 @@ import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
-import { aegisArmor, archerSkills, armorEnhancementAbi, brawlerSkills, dragonknightSkills, dualbladeSkills, gameTokenAbi, gunslingerSkills, mageSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, warriorSkills } from '@/features/skills/skill-contract';
+import { aegisArmor, archerSkills, armorEnhancementAbi, axereaverSkills, brawlerSkills, dragonknightSkills, dualbladeSkills, gameTokenAbi, gunslingerSkills, hammerguardSkills, kickfighterSkills, mageSkills, pyromancerSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, ssaulabiSkills, venomancerSkills, warriorSkills, type SkillDefinition } from '@/features/skills/skill-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 import type { GeneralCharacterId } from '@/game/characters';
 
@@ -24,6 +24,19 @@ type SkillShopProps = {
 
 const SKILL_ENHANCEMENT_BASE_PRICE_AQT = 20;
 const SKILL_ENHANCEMENT_MAX_LEVEL = 7;
+const CLASS_SKILLS: Readonly<Record<GeneralCharacterId, readonly SkillDefinition[]>> = {
+  warrior: warriorSkills, mage: mageSkills, spellblade: spellbladeSkills, archer: archerSkills,
+  dualblade: dualbladeSkills, brawler: brawlerSkills, dragonknight: dragonknightSkills, gunslinger: gunslingerSkills,
+  ssaulabi: ssaulabiSkills, kickfighter: kickfighterSkills, venomancer: venomancerSkills,
+  pyromancer: pyromancerSkills, hammerguard: hammerguardSkills, axereaver: axereaverSkills,
+};
+const CLASS_LABELS: Readonly<Record<GeneralCharacterId, string>> = {
+  warrior: 'Warrior Skills', mage: 'Mage Skills', spellblade: 'Spellblade Skills', archer: 'Archer Skills',
+  dualblade: 'Dualblade Skills', brawler: 'Brawler Skills', dragonknight: 'Dragon Knight Skills', gunslinger: 'Gunslinger Skills',
+  ssaulabi: 'Ssaulabi Skills', kickfighter: 'Kickfighter Skills', venomancer: 'Venomancer Skills',
+  pyromancer: 'Pyromancer Skills', hammerguard: 'Hammerguard Skills', axereaver: 'Axe Reaver Skills',
+};
+const GENERATED_CLASS_IDS: readonly GeneralCharacterId[] = ['dualblade', 'brawler', 'dragonknight', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver'];
 const PURPLE_ARMOR_FRAME_CLASSES = [
   'border-[#6f617d] shadow-[0_0_12px_rgba(126,92,166,.18)]',
   'border-[#8062a4] shadow-[0_0_16px_rgba(139,92,246,.25)]',
@@ -51,22 +64,8 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [hash, setHash] = useState<Hex | null>(null);
-  const activeSkills = characterId === 'warrior' ? warriorSkills
-    : characterId === 'mage' ? mageSkills
-      : characterId === 'spellblade' ? spellbladeSkills
-        : characterId === 'archer' ? archerSkills
-          : characterId === 'dualblade' ? dualbladeSkills
-            : characterId === 'brawler' ? brawlerSkills
-              : characterId === 'dragonknight' ? dragonknightSkills
-                : gunslingerSkills;
-  const classLabel = characterId === 'warrior' ? 'Warrior Skills'
-    : characterId === 'mage' ? 'Mage Skills'
-      : characterId === 'spellblade' ? 'Spellblade Skills'
-        : characterId === 'archer' ? 'Archer Skills'
-          : characterId === 'dualblade' ? 'Dualblade Skills'
-            : characterId === 'brawler' ? 'Brawler Skills'
-              : characterId === 'dragonknight' ? 'Dragon Knight Skills'
-                : 'Gunslinger Skills';
+  const activeSkills = CLASS_SKILLS[characterId];
+  const classLabel = CLASS_LABELS[characterId];
 
   const skillCardFrame = characterId === 'spellblade'
     ? 'border-[#9d67e8] shadow-[inset_0_0_18px_rgba(126,68,196,.12),0_0_12px_rgba(126,68,196,.18)]'
@@ -251,7 +250,7 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
             ? `/assets/skill-effects-new/${entry.slug}-v2.png`
             : characterId === 'archer'
               ? `/assets/skill-effects-new/${entry.slug}.png`
-              : characterId === 'dualblade' || characterId === 'brawler' || characterId === 'dragonknight' || characterId === 'gunslinger'
+              : GENERATED_CLASS_IDS.includes(characterId)
                 ? `/assets/new-class-skills/${entry.slug}.png`
                 : `/assets/skills-v2/${entry.slug}.png`;
           return <article key={entry.slug} className={`flex flex-col border-2 bg-[#11160f] p-3 transition-shadow ${skillCardFrame} ${owned ? 'ring-1 ring-inset ring-white/20' : ''}`}>

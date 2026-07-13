@@ -3,6 +3,8 @@ export const stageIds = [
   'desert-tomb', 'sky-reach', 'blood-castle', 'abyssal-reef', 'thunder-coliseum',
   'plague-marsh', 'crystal-labyrinth', 'clockwork-fortress', 'sunken-dunes', 'celestial-aerie',
   'void-temple', 'mammoth-glacier', 'phoenix-caldera', 'leviathan-trench', 'avalanche-throne',
+  'obsidian-breach', 'spectral-exchange', 'iron-maelstrom', 'toxic-singularity', 'solar-ruin',
+  'gravity-vault', 'broken-fortune', 'chaos-ledger', 'extinction-market', 'last-compound',
 ] as const;
 
 export type StageId = (typeof stageIds)[number];
@@ -25,6 +27,8 @@ const bossNames = [
   'Desert Scorpion', 'Wind Harpy', 'Vampire Lord', 'Deep Kraken', 'Thunder Minotaur',
   'Plague Necromancer', 'Crystal Hydra', 'Clockwork Titan', 'Sand Wyrm', 'Celestial Griffin',
   'Void Witch', 'Frost Mammoth', 'Inferno Phoenix', 'Abyss Leviathan', 'Avalanche Emperor',
+  'Obsidian Behemoth', 'Spectral Broker', 'Iron Seraph', 'Toxic Singularity', 'Solar Devourer',
+  'Gravity Colossus', 'Ruin Sovereign', 'Chaos Auditor', 'Extinction Dragon', 'Compound Overlord',
 ] as const;
 
 const stageNames = [
@@ -32,6 +36,8 @@ const stageNames = [
   'Desert Tomb', 'Sky Reach', 'Blood Castle', 'Abyssal Reef', 'Thunder Coliseum',
   'Plague Marsh', 'Crystal Labyrinth', 'Clockwork Fortress', 'Sunken Dunes', 'Celestial Aerie',
   'Void Temple', 'Mammoth Glacier', 'Phoenix Caldera', 'Leviathan Trench', 'Avalanche Throne',
+  'Obsidian Breach', 'Spectral Exchange', 'Iron Maelstrom', 'Toxic Singularity', 'Solar Ruin',
+  'Gravity Vault', 'Broken Fortune', 'Chaos Ledger', 'Extinction Market', 'Last Compound',
 ] as const;
 
 const palettes = [
@@ -42,6 +48,10 @@ const palettes = [
   [0x202126, 0x41444d, 0xe5b65b], [0x2b2113, 0x554326, 0xf0c36c], [0x13263a, 0x284b68, 0xf2df87],
   [0x140f20, 0x30203a, 0x9c69f0], [0x101e2d, 0x24445f, 0xa9e9ff], [0x2b120d, 0x55241a, 0xff9c47],
   [0x071724, 0x17364a, 0x62b9ff], [0x111827, 0x27364d, 0xeaf7ff],
+  [0x100b16, 0x2b1d35, 0xff4f8b], [0x071a1c, 0x163e3e, 0x55ffe1], [0x17181d, 0x363842, 0xffd35e],
+  [0x101b0c, 0x2d4823, 0x9cff3e], [0x2a0d08, 0x5a2014, 0xff7a32], [0x090b20, 0x252b5b, 0x8e8cff],
+  [0x1c0b13, 0x461727, 0xff315f], [0x070f17, 0x152f46, 0x27ccff], [0x1b0808, 0x4c1612, 0xffb02e],
+  [0x08090e, 0x202532, 0xffe675],
 ] as const;
 
 function createSeededRandom(seed: number): () => number {
@@ -60,8 +70,9 @@ function createPlatforms(stageNumber: number) {
   let x = 320 + Math.floor(random() * 45);
   let previousTier = Math.floor(random() * 2);
   const introductoryStage = stageNumber <= 5;
+  const extremeStage = stageNumber >= 27;
   return Array.from({ length: 14 }, (_, index) => {
-    if (index > 0) x += introductoryStage ? 250 + Math.floor(random() * 48) : 282 + Math.floor(random() * 76);
+    if (index > 0) x += introductoryStage ? 250 + Math.floor(random() * 48) : extremeStage ? 315 + Math.floor(random() * 88) : 282 + Math.floor(random() * 76);
     const tierDelta = random() < 0.28 ? -1 : random() > 0.7 ? 1 : 0;
     const tier = Math.max(0, Math.min(3, previousTier + tierDelta));
     previousTier = tier;
@@ -70,7 +81,7 @@ function createPlatforms(stageNumber: number) {
       // Four reachable height bands, raised 3px so characters sit cleanly on
       // the remastered terrain. Seeded randomness keeps every stage stable.
       y: 387 - tier * 45,
-      width: introductoryStage ? 240 + Math.floor(random() * 80) : 190 + Math.floor(random() * 116),
+      width: introductoryStage ? 240 + Math.floor(random() * 80) : extremeStage ? 165 + Math.floor(random() * 88) : 190 + Math.floor(random() * 116),
     };
   });
 }
@@ -80,7 +91,8 @@ function createStage(id: StageId, index: number): StageDefinition {
   const platforms = createPlatforms(number);
   const random = createSeededRandom(number * 13_337 + 97);
   const introductoryStage = number <= 5;
-  const regularCount = introductoryStage ? 4 + Math.floor((number - 1) / 2) : Math.min(6 + Math.floor(number * 0.55), 17);
+  const hardStage = number >= 21;
+  const regularCount = introductoryStage ? 4 + Math.floor((number - 1) / 2) : hardStage ? Math.min(18 + Math.floor((number - 21) * 0.8), 25) : Math.min(6 + Math.floor(number * 0.55), 17);
   const enemies = Array.from({ length: regularCount }, (_, enemyIndex) => {
     const routeProgress = regularCount <= 1 ? 0 : enemyIndex / (regularCount - 1);
     const platformIndex = Math.round(routeProgress * (platforms.length - 2));
@@ -94,8 +106,8 @@ function createStage(id: StageId, index: number): StageDefinition {
       id: `${id}-monster-${enemyIndex + 1}`,
       x,
       y: platform.y - 90,
-      health: introductoryStage ? 1 + Math.floor((number + enemyIndex) / 4) : 2 + Math.floor(number / 2) + Math.floor(enemyIndex / 4),
-      speed: introductoryStage ? 42 + number * 3 + (enemyIndex % 3) * 5 : 54 + number * 5 + (enemyIndex % 4) * 7,
+      health: number <= 3 ? 1 : introductoryStage ? 1 + Math.floor((number + enemyIndex) / 4) : hardStage ? 20 + number + Math.floor(enemyIndex / 2) : 2 + Math.floor(number / 2) + Math.floor(enemyIndex / 4),
+      speed: introductoryStage ? 42 + number * 3 + (enemyIndex % 3) * 5 : hardStage ? 150 + number * 5 + (enemyIndex % 5) * 10 : 54 + number * 5 + (enemyIndex % 4) * 7,
       left,
       right,
       boss: false,
@@ -104,8 +116,8 @@ function createStage(id: StageId, index: number): StageDefinition {
   enemies.push({
     id: id === 'avalanche-throne' ? 'avalanche-emperor' : `${id}-boss`,
     x: 4880, y: 250,
-    health: 10 + number * 5,
-    speed: 88 + number * 4,
+    health: number <= 3 ? 7 + number * 2 : hardStage ? 180 + (number - 20) * 42 : 10 + number * 5,
+    speed: hardStage ? 190 + (number - 20) * 11 : 88 + number * 4,
     left: 4380, right: 5100,
     boss: true,
   });

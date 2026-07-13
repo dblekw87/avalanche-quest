@@ -16,13 +16,18 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { avalancheFuji } from 'viem/chains';
 
 import { rewardDistributorAbi } from '@/features/rewards/reward-contract';
+import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-contract';
 import { gameItemAbi } from '@/features/items/item-contract';
 import type { StageResult } from '@/game/bridge/events';
 import { isStageId, stageIds, stages, type StageId } from '@/game/config/stages';
 import { attemptStore } from '@/server/attempts/store';
 import { verifyStageResult } from '@/server/rewards/verify-stage-result';
 
-const rewards = Object.fromEntries(stageIds.map((id, index) => [id, parseEther(String(25 + index * 12))])) as Record<StageId, bigint>;
+const rewards = Object.fromEntries(stageIds.map((id, index) => {
+  const stageNumber = index + 1;
+  const amount = stageNumber <= 20 ? 25 + index * 12 : 400 + (stageNumber - 20) ** 2 * 45;
+  return [id, parseEther(String(amount))];
+})) as Record<StageId, bigint>;
 
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null);
@@ -118,6 +123,33 @@ export async function POST(request: Request) {
       });
       authorizedLoot = { claim: { ...itemClaim, nonce: itemClaim.nonce.toString(), deadline: itemClaim.deadline.toString() }, metadataURI, signature: itemSignature, name: rolledLoot.name, rarityName: rolledLoot.rarityName, typeName: rolledLoot.typeName };
     }
+    let assetTycoon = null;
+    const licenseAddressValue = process.env.NEXT_PUBLIC_ASSET_TYCOON_LICENSE_ADDRESS;
+    const extremeStage = stages[result.stageId].number >= 27;
+    if (extremeStage && licenseAddressValue && isAddress(licenseAddressValue) && randomInt(10_000) < 100) {
+      const licenseAddress = getAddress(licenseAddressValue);
+      const licenseNonce = await publicClient.readContract({ address: licenseAddress, abi: assetTycoonLicenseAbi, functionName: 'nonces', args: [normalizedPlayer] });
+      const licenseClaim = {
+        claimId: `0x${randomBytes(32).toString('hex')}` as Hex,
+        attemptId: result.attemptId as Hex,
+        player: normalizedPlayer,
+        nonce: licenseNonce,
+        deadline: BigInt(Math.floor(Date.now() / 1_000) + 15 * 60),
+      };
+      const licenseSignature = await signer.signTypedData({
+        domain: { name: 'Avalanche Quest Asset Tycoon', version: '1', chainId: avalancheFuji.id, verifyingContract: licenseAddress },
+        types: { MintClaim: [
+          { name: 'claimId', type: 'bytes32' }, { name: 'attemptId', type: 'bytes32' }, { name: 'player', type: 'address' },
+          { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint64' },
+        ] },
+        primaryType: 'MintClaim',
+        message: licenseClaim,
+      });
+      assetTycoon = {
+        claim: { ...licenseClaim, nonce: licenseClaim.nonce.toString(), deadline: licenseClaim.deadline.toString() },
+        signature: licenseSignature,
+      };
+    }
     attempt.status = 'verified';
     return NextResponse.json({
       claim: {
@@ -128,6 +160,7 @@ export async function POST(request: Request) {
       },
       signature,
       loot: authorizedLoot,
+      assetTycoon,
     });
   } catch {
     attempt.status = 'started';

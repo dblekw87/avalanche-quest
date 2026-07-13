@@ -27,6 +27,8 @@ export default buildModule('RewardSystem', (module) => {
   const armorEnhancement = module.contract('ArmorEnhancement', [gameToken, skillShop, admin]);
   const gameItem = module.contract('GameItem', [admin, rewardSigner]);
   const marketplace = module.contract('ItemMarketplace', [gameToken, gameItem]);
+  const assetTycoonLicense = module.contract('AssetTycoonLicense', [admin, rewardSigner]);
+  const assetTycoonMarketplace = module.contract('AssetTycoonMarketplace', [gameToken, assetTycoonLicense]);
   const arcaneBoltId = module.getParameter(
     'arcaneBoltId',
     '0x09b6e639b26336afd304d25b7e38127ddaf6faa875b117e2a07da20c9555f036',
@@ -77,6 +79,12 @@ export default buildModule('RewardSystem', (module) => {
     ['ricochet-round', '45'],
     ['deadeye', '50'],
     ['bullet-tempest', '70'],
+    ['moonlit-draw', '25'], ['tiger-step', '35'], ['crimson-formation', '45'], ['unbroken-resolve', '50'], ['heaven-sever', '70'],
+    ['gale-kick', '25'], ['rising-dragon', '35'], ['cyclone-heel', '45'], ['flow-state', '50'], ['skybreaker-combo', '70'],
+    ['venom-needle', '25'], ['plague-pool', '35'], ['serpent-miasma', '45'], ['antidote-pact', '50'], ['deathbloom', '70'],
+    ['ember-lance', '25'], ['flame-pillar', '35'], ['phoenix-spiral', '45'], ['burning-soul', '50'], ['solar-cataclysm', '70'],
+    ['iron-crash', '25'], ['seismic-march', '35'], ['gravity-bell', '45'], ['adamant-guard', '50'], ['world-anvil', '70'],
+    ['rending-arc', '25'], ['predator-rush', '35'], ['blood-cyclone', '45'], ['berserker-oath', '50'], ['ragnarok-cleaver', '70'],
   ] as const;
   newSkills.forEach(([slug, price]) => {
     const transactionId = `set_${slug.replaceAll('-', '_')}_price`;
@@ -85,5 +93,5 @@ export default buildModule('RewardSystem', (module) => {
     });
   });
 
-  return { gameToken, rewardDistributor, skillShop, characterUpgrade, characterUpgradeV2, characterUpgradeV3, skillEnhancement, armorEnhancement, gameItem, marketplace };
+  return { gameToken, rewardDistributor, skillShop, characterUpgrade, characterUpgradeV2, characterUpgradeV3, skillEnhancement, armorEnhancement, gameItem, marketplace, assetTycoonLicense, assetTycoonMarketplace };
 });
