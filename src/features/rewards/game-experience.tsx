@@ -12,8 +12,10 @@ import { SkillShop } from '@/features/skills/skill-shop';
 import { UpgradeShop } from '@/features/upgrades/upgrade-shop';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
+import { InnateClassLoadout } from '@/components/innate-class-loadout';
 import type { StageFailure, StageResult } from '@/game/bridge/events';
-import { isPoliticalCharacter, type CharacterGroup, type CharacterId } from '@/game/characters';
+import { isInnateCharacter, isPoliticalCharacter, type CharacterGroup, type CharacterId } from '@/game/characters';
+import { innateClasses } from '@/game/innate-classes';
 import { stageIds, stages, type StageId } from '@/game/config/stages';
 import { GameCanvas } from '@/game/game-canvas';
 import { PoliticalDuelCanvas } from '@/game/political-duel/political-duel-canvas';
@@ -77,7 +79,9 @@ export function GameExperience() {
   const stage = stages[stageId];
   const activeOwnedSkillIds = isPoliticalCharacter(characterId)
     ? politicalFighters[characterId].skills.map((skill) => `${characterId}-${skill.key.toLowerCase()}`)
-    : ownedSkillIds;
+    : isInnateCharacter(characterId)
+      ? innateClasses[characterId].skills.map((skill) => skill.id)
+      : ownedSkillIds;
   const handleStageComplete = useCallback((nextResult: StageResult) => { setResult(nextResult); setShowAdvancePrompt(true); }, []);
 
   const resetRun = useCallback(() => {
@@ -289,7 +293,7 @@ export function GameExperience() {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(characterGroup === 'general'
-                ? ([['warrior', '용사', '검과 근접 공격'], ['mage', '마법사', '마법과 원거리 연출'], ['spellblade', '마검사', '비전 검술과 순간 이동'], ['archer', '궁수', '활과 바람 원거리 공격']] as const)
+                ? ([['warrior', '용사', '검과 근접 공격'], ['mage', '마법사', '마법과 원거리 연출'], ['spellblade', '마검사', '비전 검술과 순간 이동'], ['archer', '궁수', '활과 바람 원거리 공격'], ['dualblade', '쌍검사', '쌍칼과 배후 이동 고속 공격'], ['brawler', '권격가', '주먹과 충격파 강타 공격']] as const)
                 : ([['conservative', '보수 진영', '남성 SD 검사 · 전용 스킬 8종'], ['progressive', '진보 진영', '여성 SD 마도사 · 전용 스킬 8종']] as const)
               ).map(([id, name, role]) => {
                 const special = id === 'conservative' || id === 'progressive';
@@ -313,7 +317,7 @@ export function GameExperience() {
           <span className="text-xs text-[#938a7a] sm:ml-3">{stage.subtitle}</span>
         </div>
 
-        {!isPoliticalCharacter(characterId) ? <SkillShop
+        {isPoliticalCharacter(characterId) ? <section className="mb-4 rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} 전용 스킬 8종</h3><p className="mt-2 text-xs text-[#aaa194]">Q/W/E/R/Z/X/C/V 스킬이 모두 해금되어 있으며 일반 스테이지의 일반 몬스터와 보스에게 사용할 수 있습니다.</p></section> : isInnateCharacter(characterId) ? <InnateClassLoadout characterId={characterId} /> : <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}
@@ -321,7 +325,7 @@ export function GameExperience() {
           onBalanceChange={setAqtBalance}
           characterId={characterId}
           refreshKey={`${transactionState}:${transactionHash ?? 'none'}`}
-        /> : <section className="mb-4 rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} 전용 스킬 8종</h3><p className="mt-2 text-xs text-[#aaa194]">Q/W/E/R/Z/X/C/V 스킬이 모두 해금되어 있으며 일반 스테이지의 일반 몬스터와 보스에게 사용할 수 있습니다.</p></section>}
+        />}
 
         <UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} />
 

@@ -2,13 +2,14 @@
 
 import type { PointerEvent as ReactPointerEvent } from 'react';
 
-import { isPoliticalCharacter, type CharacterId } from '@/game/characters';
+import { isInnateCharacter, isPoliticalCharacter, type CharacterId, type GeneralCharacterId } from '@/game/characters';
+import { innateClasses, innateSkillIcon } from '@/game/innate-classes';
 import { politicalFighters, type PoliticalFaction } from '@/game/political-duel/definitions';
 
 export type MobileGameAction = 'left' | 'right' | 'jump' | 'dash' | 'attack';
 export type MobileSkillButton = { id: string; label: string; name: string; iconUrl: string; disabled?: boolean };
 
-const GENERAL_SKILLS: Readonly<Record<'warrior' | 'mage' | 'spellblade' | 'archer', readonly string[]>> = {
+const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 'brawler'>, readonly string[]>> = {
   warrior: ['arcane-bolt', 'frost-nova', 'flame-wave', 'healing-light', 'starfall'],
   mage: ['magic-missile', 'ice-storm', 'chain-lightning', 'healing-circle', 'meteor'],
   spellblade: ['arcane-cleave', 'twin-phantom', 'rune-step', 'astral-counter', 'constellation-storm'],
@@ -21,6 +22,14 @@ export function questMobileSkills(characterId: CharacterId, ownedSkillIds: reado
       const id = `${characterId}-${skill.key.toLowerCase()}`;
       return { id, label: skill.key, name: skill.name, iconUrl: `/assets/political-duel/skill-vfx/${id}.png`, disabled: !ownedSkillIds.includes(id) };
     });
+  }
+  if (isInnateCharacter(characterId)) {
+    return innateClasses[characterId].skills.map((skill) => ({
+      id: skill.id,
+      label: skill.key,
+      name: skill.name,
+      iconUrl: innateSkillIcon(skill.id),
+    }));
   }
   const labels = ['Q', 'W', 'E', 'R', 'T'];
   return GENERAL_SKILLS[characterId].map((id, index) => ({ id, label: labels[index] ?? '?', name: id, iconUrl: `/assets/skills-v2/${id}.png`, disabled: !ownedSkillIds.includes(id) }));

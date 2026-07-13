@@ -2,8 +2,9 @@ import * as Phaser from 'phaser';
 
 import { QuestAudioDirector } from '@/game/audio/quest-audio-director';
 import type { StageResult, StageTelemetryEvent } from '@/game/bridge/events';
-import { isPoliticalCharacter, type CharacterId } from '@/game/characters';
+import { isInnateCharacter, isPoliticalCharacter, type CharacterId } from '@/game/characters';
 import { stages, type StageId } from '@/game/config/stages';
+import { innateClasses } from '@/game/innate-classes';
 import type { MobileGameAction } from '@/game/mobile-game-controls';
 import { politicalFighters } from '@/game/political-duel/definitions';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
@@ -80,6 +81,8 @@ const SKILL_COOLDOWNS: Readonly<Record<string, number>> = {
   'magic-missile': 1_200, 'ice-storm': 3_500, 'chain-lightning': 2_400, 'healing-circle': 8_000, meteor: 7_000,
   'arcane-cleave': 2_200, 'twin-phantom': 3_200, 'rune-step': 3_800, 'astral-counter': 8_000, 'constellation-storm': 7_500,
   'gale-arrow': 1_300, 'split-shot': 2_600, 'verdant-snare': 3_800, 'feather-step': 8_000, 'emerald-rain': 7_500,
+  'crescent-fang': 1_500, 'phantom-cross': 3_400, 'shadow-reversal': 5_200, 'azure-focus': 11_000, 'infinite-blades': 8_500,
+  'iron-jab': 1_400, 'hundred-fists': 3_600, 'titan-fist': 4_800, 'burning-spirit': 11_000, 'heaven-breaker': 8_800,
 };
 
 const BOSS_PATTERN_SEQUENCES: readonly (readonly BossPattern[])[] = [
@@ -130,6 +133,8 @@ export class QuestScene extends Phaser.Scene {
   private readonly skillCooldownBars = new Map<string, { fill: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }>();
   private skillLockedUntil = 0;
   private defenseUntil = 0;
+  private classPowerUntil = 0;
+  private classBuffAura?: Phaser.GameObjects.Ellipse;
   private dashUntil = 0;
   private lastDashAt = -DASH_COOLDOWN_MS;
   private lastDashTrailAt = 0;
@@ -192,6 +197,8 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists('quest-spellblade-sheet')) this.load.image('quest-spellblade-sheet', '/assets/home/spellblade.png');
     if (!this.textures.exists('quest-archer-sheet')) this.load.image('quest-archer-sheet', '/assets/home/archer.png');
     if (!this.textures.exists('quest-mage-sheet')) this.load.image('quest-mage-sheet', '/assets/sprites/mage.png');
+    if (!this.textures.exists('quest-dualblade-sheet')) this.load.image('quest-dualblade-sheet', '/assets/classes/dualblade-sheet.png');
+    if (!this.textures.exists('quest-brawler-sheet')) this.load.image('quest-brawler-sheet', '/assets/classes/brawler-sheet.png');
     if (!this.textures.exists('quest-goblin-sheet')) this.load.image('quest-goblin-sheet', '/assets/sprites/goblin.png');
     if (!this.textures.exists('quest-boss-sheet')) this.load.image('quest-boss-sheet', '/assets/sprites/boss.png');
     if (!this.textures.exists('political-conservative-sheet')) this.load.spritesheet('political-conservative-sheet', '/assets/political-duel/political-conservative-sheet.png', { frameWidth: 256, frameHeight: 256 });
@@ -228,6 +235,9 @@ export class QuestScene extends Phaser.Scene {
       const version = this.isSpellbladeSkill(skillId) ? '-v2' : '';
       if (!this.textures.exists(`quest-enhanced-${skillId}`)) this.load.image(`quest-enhanced-${skillId}`, `/assets/skill-effects-new/${skillId}${version}.png`);
       if (!this.textures.exists(`quest-skill-icon-${skillId}`)) this.load.image(`quest-skill-icon-${skillId}`, `/assets/skill-effects-new/${skillId}${version}.png`);
+    });
+    Object.values(innateClasses).flatMap((definition) => definition.skills).forEach((skill) => {
+      if (!this.textures.exists(`quest-skill-icon-${skill.id}`)) this.load.image(`quest-skill-icon-${skill.id}`, `/assets/new-class-skills/${skill.id}.png`);
     });
     ['gale-arrow', 'split-shot', 'verdant-snare', 'feather-step', 'emerald-rain'].forEach((skillId) => {
       const textureKey = `quest-archer-vfx-${skillId}`;
@@ -448,11 +458,11 @@ export class QuestScene extends Phaser.Scene {
 
   private createPlayer(platforms: Phaser.Physics.Arcade.StaticGroup): void {
     if (isPoliticalCharacter(this.characterId)) this.registerPoliticalClassAssets();
-    else if (this.characterId === 'warrior' || this.characterId === 'mage') this.registerHeroFramesAndAnimations();
+    else if (this.characterId === 'warrior' || this.characterId === 'mage' || isInnateCharacter(this.characterId)) this.registerHeroFramesAndAnimations();
     this.registerSkillEffectAnimations();
     this.registerClassVfxAnimations();
     const political = isPoliticalCharacter(this.characterId);
-    const animated = political || this.characterId === 'warrior' || this.characterId === 'mage';
+    const animated = political || this.characterId === 'warrior' || this.characterId === 'mage' || isInnateCharacter(this.characterId);
     if (!animated) this.registerNewClassAnimations();
     const textureKey = political ? `political-${this.characterId}-sheet` : animated ? `quest-${this.characterId}-sheet` : `quest-${this.characterId}-idle`;
     const initialFrame = political ? 0 : animated ? `${this.characterId}-idle-0` : undefined;
@@ -509,6 +519,13 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private updateEquipmentVisuals(): void {
+    if (this.classBuffAura?.active) {
+      this.classBuffAura.setPosition(this.player.x, this.player.y + 18);
+      if (this.time.now >= this.classPowerUntil) {
+        this.classBuffAura.destroy();
+        this.classBuffAura = undefined;
+      }
+    }
     const totalUpgradeLevel = this.upgradeLevels.attack + this.upgradeLevels.vitality + this.upgradeLevels.defense + this.armorLevel;
     if (!this.equipmentParticlesEnabled || totalUpgradeLevel <= 0) {
       this.upgradeParticle?.destroy();
@@ -852,14 +869,15 @@ export class QuestScene extends Phaser.Scene {
       this.playPlayerAnimation('dash');
       if (time - this.lastDashTrailAt >= 45) {
         this.lastDashTrailAt = time;
-        const trailColor = this.characterId === 'warrior' ? 0x8e8175 : 0x9a67ff;
+        const trailColor = this.characterId === 'warrior' ? 0x8e8175 : this.skillAccentColor;
         const trail = this.add.ellipse(this.player.x + (this.player.flipX ? 34 : -34), this.player.y + 38, 58, 16, trailColor, 0.42).setDepth(5);
         this.tweens.add({ targets: trail, alpha: 0, scaleX: 1.8, duration: 180, onComplete: () => trail.destroy() });
       }
       return;
     }
-    if (this.cursors.left.isDown || this.mobileLeft) this.player.setVelocityX(-225).setFlipX(true);
-    else if (this.cursors.right.isDown || this.mobileRight) this.player.setVelocityX(225).setFlipX(false);
+    const movementSpeed = time < this.classPowerUntil ? 270 : 225;
+    if (this.cursors.left.isDown || this.mobileLeft) this.player.setVelocityX(-movementSpeed).setFlipX(true);
+    else if (this.cursors.right.isDown || this.mobileRight) this.player.setVelocityX(movementSpeed).setFlipX(false);
     else this.player.setVelocityX(0);
     const body = this.player.body;
     if (body instanceof Phaser.Physics.Arcade.Body && body.blocked.down) this.jumpsRemaining = 2;
@@ -1318,10 +1336,15 @@ export class QuestScene extends Phaser.Scene {
     }
     const attackX = this.player.x + (this.player.flipX ? -64 : 64);
     if (this.characterId === 'spellblade') this.spawnEnemyAttackEffect(this.player.x, this.player.y, this.player.flipX ? -1 : 1);
+    if (this.characterId === 'dualblade' || this.characterId === 'brawler') {
+      this.spawnSkillImpactBurst(attackX, this.player.y + 4, this.skillAccentColor, this.characterId === 'dualblade' ? 0.58 : 0.72);
+      this.spawnCrossTwinkle(attackX, this.player.y, this.skillAccentColor, 0.65);
+    }
     this.attackVisual?.destroy();
     this.enemies.forEach((enemy) => {
       if (enemy.health <= 0) return;
-      const inRange = Math.abs(enemy.sprite.x - attackX) <= (enemy.boss ? 92 : 68);
+      const innateRangeBonus = this.characterId === 'dualblade' ? 18 : this.characterId === 'brawler' ? 10 : 0;
+      const inRange = Math.abs(enemy.sprite.x - attackX) <= (enemy.boss ? 92 : 68) + innateRangeBonus;
       if (inRange && this.combatFootDistance(enemy) <= 42) {
         this.damageEnemy(enemy, (enemy.boss ? Math.ceil(enemy.maxHealth / 3) : 1) + this.upgradeLevels.attack + this.armorLevel);
       }
@@ -1353,10 +1376,10 @@ export class QuestScene extends Phaser.Scene {
     this.skillLockedUntil = time + 620;
     void this.audioDirector.unlock().then(() => this.audioDirector.playSkill(this.characterId, skillId));
     this.playPlayerAnimation('skill');
-    if (this.characterId === 'warrior' || this.characterId === 'mage' || this.characterId === 'spellblade' || isPoliticalCharacter(this.characterId)) {
+    if (this.characterId === 'warrior' || this.characterId === 'mage' || this.characterId === 'spellblade' || isInnateCharacter(this.characterId) || isPoliticalCharacter(this.characterId)) {
       this.spawnSkillImpactBurst(this.player.x, this.player.y - 8, this.skillAccentColor, isPoliticalCharacter(this.characterId) ? 1 : 0.72);
     }
-    if (this.characterId === 'warrior' || this.characterId === 'mage' || isPoliticalCharacter(this.characterId)) {
+    if (this.characterId === 'warrior' || this.characterId === 'mage' || isInnateCharacter(this.characterId) || isPoliticalCharacter(this.characterId)) {
       this.spawnClassCastHalo(this.skillAccentColor, isPoliticalCharacter(this.characterId) ? 1.18 : 0.9);
       const flashColor = Phaser.Display.Color.ValueToColor(this.skillAccentColor);
       this.cameras.main.flash(90, flashColor.red, flashColor.green, flashColor.blue, false);
@@ -1370,6 +1393,10 @@ export class QuestScene extends Phaser.Scene {
 
     if (isPoliticalCharacter(this.characterId)) {
       this.castPoliticalStageSkill(skillId, time);
+      return;
+    }
+    if (isInnateCharacter(this.characterId)) {
+      this.castInnateClassSkill(skillId, time);
       return;
     }
     this.spawnEnhancedSkillEffect(skillId);
@@ -1397,6 +1424,167 @@ export class QuestScene extends Phaser.Scene {
     if (skillId === 'verdant-snare') { this.castIconArea(skillId, this.skillDamage(skillId, 4), 230); return; }
     if (skillId === 'feather-step') { this.castClassBuff(skillId, time); return; }
     if (skillId === 'emerald-rain') { this.castArrowRain(this.skillDamage(skillId, 6)); }
+  }
+
+  private castInnateClassSkill(skillId: string, time: number): void {
+    if (!isInnateCharacter(this.characterId)) return;
+    const definition = innateClasses[this.characterId].skills.find((skill) => skill.id === skillId);
+    if (!definition) return;
+    const damage = this.skillDamage(skillId, definition.damage);
+    const direction = this.player.flipX ? -1 : 1;
+
+    if (skillId === 'crescent-fang') {
+      this.launchInnateProjectile(skillId, damage, 720, time, 128);
+      this.spawnInnateParticles(this.player.x + direction * 62, this.player.y, 14, 110);
+      return;
+    }
+    if (skillId === 'phantom-cross') {
+      [0, 110, 220].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const x = this.player.x + direction * (35 + index * 24);
+        this.showInnateSkillEffect(skillId, x, this.player.y, 150 + index * 18, 440, direction * (index % 2 === 0 ? 18 : -18));
+        this.spawnInnateParticles(x, this.player.y, 12, 135);
+        this.damageEnemiesInArea(x, 145, Math.max(1, Math.ceil(damage / 2)));
+      }));
+      return;
+    }
+    if (skillId === 'shadow-reversal') {
+      this.castShadowReversal(damage, time);
+      return;
+    }
+    if (skillId === 'azure-focus' || skillId === 'burning-spirit') {
+      this.castInnateBuff(skillId, time);
+      return;
+    }
+    if (skillId === 'infinite-blades') {
+      const centerX = this.player.x + direction * 90;
+      [0, 90, 180, 270, 360].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const offset = (index - 2) * 78;
+        this.showInnateSkillEffect(skillId, centerX + offset, this.player.y - Math.abs(index - 2) * 10, 180 + index * 12, 620, index * 32);
+        this.spawnInnateParticles(centerX + offset, this.player.y, 18, 190);
+      }));
+      this.time.delayedCall(190, () => this.damageEnemiesInArea(centerX, 410, damage, 130));
+      this.cameras.main.shake(420, 0.013);
+      return;
+    }
+    if (skillId === 'iron-jab') {
+      const impactX = this.player.x + direction * 92;
+      this.showInnateSkillEffect(skillId, impactX, this.player.y, 142, 380, direction * 8);
+      this.spawnInnateParticles(impactX, this.player.y, 18, 150);
+      this.damageEnemiesInArea(impactX, 112, damage);
+      this.cameras.main.shake(120, 0.006);
+      return;
+    }
+    if (skillId === 'hundred-fists') {
+      [0, 75, 150, 225, 300].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const impactX = this.player.x + direction * (82 + index * 25);
+        this.showInnateSkillEffect(skillId, impactX, this.player.y + Phaser.Math.Between(-24, 20), 118 + index * 5, 300, direction * index * 7);
+        this.spawnInnateParticles(impactX, this.player.y, 10, 105);
+        this.damageEnemiesInArea(impactX, 94, Math.max(1, Math.ceil(damage / 3)));
+      }));
+      this.cameras.main.shake(360, 0.008);
+      return;
+    }
+    if (skillId === 'titan-fist') {
+      this.launchInnateProjectile(skillId, damage, 620, time, 156);
+      this.spawnInnateParticles(this.player.x + direction * 70, this.player.y, 20, 160);
+      return;
+    }
+    if (skillId === 'heaven-breaker') {
+      const impactX = this.player.x + direction * 72;
+      this.player.setVelocityY(-150);
+      this.time.delayedCall(170, () => {
+        if (this.finished) return;
+        this.showInnateSkillEffect(skillId, impactX, this.player.y + 42, 260, 760);
+        this.spawnInnateParticles(impactX, this.player.y + 30, 32, 260);
+        this.damageEnemiesInArea(impactX, 335, damage, 145);
+        this.cameras.main.shake(520, 0.018);
+        this.cameras.main.flash(120, 255, 169, 50, false);
+      });
+    }
+  }
+
+  private castShadowReversal(damage: number, time: number): void {
+    const target = this.enemies
+      .filter((enemy) => enemy.health > 0 && enemy.revealed && Math.abs(enemy.sprite.x - this.player.x) <= 580)
+      .sort((left, right) => Math.abs(left.sprite.x - this.player.x) - Math.abs(right.sprite.x - this.player.x))[0];
+    const startX = this.player.x;
+    const startY = this.player.y;
+    if (!target) {
+      const direction = this.player.flipX ? -1 : 1;
+      this.player.setX(Phaser.Math.Clamp(this.player.x + direction * 210, 40, WORLD_WIDTH - 40));
+      this.showInnateSkillEffect('shadow-reversal', this.player.x, this.player.y, 145, 420);
+      this.spawnInnateParticles((startX + this.player.x) / 2, startY, 22, 220);
+      return;
+    }
+    const approachedFromLeft = this.player.x < target.sprite.x;
+    const destination = Phaser.Math.Clamp(target.sprite.x + (approachedFromLeft ? 76 : -76), 40, WORLD_WIDTH - 40);
+    const body = this.player.body;
+    if (body instanceof Phaser.Physics.Arcade.Body) body.reset(destination, startY);
+    else this.player.setPosition(destination, startY);
+    this.player.setFlipX(approachedFromLeft);
+    this.player.setVelocity(0, 0);
+    this.defenseUntil = Math.max(this.defenseUntil, time + 700);
+    this.showInnateSkillEffect('shadow-reversal', startX, startY, 120, 360);
+    this.showInnateSkillEffect('shadow-reversal', destination, startY, 168, 520, approachedFromLeft ? -18 : 18);
+    this.spawnInnateParticles((startX + destination) / 2, startY, 28, Math.abs(destination - startX));
+    this.damageEnemy(target, damage);
+    this.cameras.main.flash(80, 70, 215, 255, false);
+  }
+
+  private castInnateBuff(skillId: string, time: number): void {
+    const duration = 5_000;
+    this.classPowerUntil = time + duration;
+    this.defenseUntil = Math.max(this.defenseUntil, time + duration);
+    this.classBuffAura?.destroy();
+    this.classBuffAura = this.add.ellipse(this.player.x, this.player.y + 18, 98, 124, this.skillAccentColor, 0.18)
+      .setStrokeStyle(4, this.skillAccentColor, 0.9)
+      .setDepth(7)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: this.classBuffAura, scaleX: 1.18, scaleY: 1.1, alpha: 0.36, duration: 420, yoyo: true, repeat: -1 });
+    this.showInnateSkillEffect(skillId, this.player.x, this.player.y, 180, 780);
+    this.spawnInnateParticles(this.player.x, this.player.y, 30, 170);
+    this.cameras.main.flash(120, this.characterId === 'dualblade' ? 55 : 255, this.characterId === 'dualblade' ? 200 : 155, this.characterId === 'dualblade' ? 255 : 45, false);
+  }
+
+  private launchInnateProjectile(skillId: string, damage: number, speed: number, time: number, displaySize: number): void {
+    const direction = this.player.flipX ? -1 : 1;
+    const projectile = this.physics.add.image(this.player.x + direction * 66, this.player.y - 4, `quest-skill-icon-${skillId}`)
+      .setDisplaySize(displaySize, displaySize)
+      .setDepth(13)
+      .setFlipX(direction < 0)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    projectile.body?.setAllowGravity(false);
+    if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(displaySize * 0.56, displaySize * 0.46, true);
+    projectile.setVelocityX(direction * speed);
+    this.playerSkillProjectiles.push({ sprite: projectile, expiresAt: time + PLAYER_SKILL_PROJECTILE_LIFETIME_MS, damage, piercing: skillId === 'crescent-fang', hitEnemyIds: new Set<string>() });
+    this.tweens.add({ targets: projectile, angle: direction * 360, duration: 520, repeat: -1 });
+  }
+
+  private showInnateSkillEffect(skillId: string, x: number, y: number, displaySize: number, duration: number, angle = 0): void {
+    const effect = this.add.image(x, y, `quest-skill-icon-${skillId}`)
+      .setDisplaySize(displaySize, displaySize)
+      .setDepth(14)
+      .setAngle(angle)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: effect, alpha: 0, scaleX: effect.scaleX * 1.4, scaleY: effect.scaleY * 1.4, angle: angle + 95, duration, ease: 'Cubic.Out', onComplete: () => effect.destroy() });
+  }
+
+  private spawnInnateParticles(x: number, y: number, count: number, spread: number): void {
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Phaser.Math.FloatBetween(-0.22, 0.22);
+      const distance = Phaser.Math.Between(Math.max(24, Math.round(spread * 0.35)), Math.max(30, spread));
+      const particle = this.add.circle(x, y, Phaser.Math.Between(2, 6), index % 3 === 0 ? 0xffffff : this.skillAccentColor, Phaser.Math.FloatBetween(0.65, 1)).setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: particle, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance * 0.72, alpha: 0, scale: 0.2, duration: Phaser.Math.Between(320, 680), ease: 'Cubic.Out', onComplete: () => particle.destroy() });
+    }
+  }
+
+  private damageEnemiesInArea(x: number, radius: number, damage: number, verticalRange = 96): void {
+    this.enemies
+      .filter((enemy) => enemy.health > 0 && Math.abs(enemy.sprite.x - x) <= radius && this.combatFootDistance(enemy) <= verticalRange)
+      .forEach((enemy) => this.damageEnemy(enemy, damage));
   }
 
   private castPoliticalStageSkill(skillId: string, time: number): void {
@@ -1795,11 +1983,12 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private skillDamage(skillId: string, baseDamage: number): number {
-    return baseDamage + (this.skillUpgradeLevels[skillId] ?? 0) * 2;
+    const damage = baseDamage + (this.skillUpgradeLevels[skillId] ?? 0) * 2;
+    return this.time.now < this.classPowerUntil ? Math.ceil(damage * 1.3) : damage;
   }
 
   private spawnEnhancedSkillEffect(skillId: string): void {
-    if (this.characterId === 'spellblade' || this.characterId === 'archer') return;
+    if (this.characterId === 'spellblade' || this.characterId === 'archer' || isInnateCharacter(this.characterId)) return;
     const level = this.skillUpgradeLevels[skillId] ?? 0;
     if (level <= 0) return;
     const direction = this.player.flipX ? -1 : 1;
@@ -2189,6 +2378,7 @@ export class QuestScene extends Phaser.Scene {
     if (this.characterId === 'warrior') return ['arcane-bolt', 'frost-nova', 'flame-wave', 'healing-light', 'starfall'];
     if (this.characterId === 'mage') return ['magic-missile', 'ice-storm', 'chain-lightning', 'healing-circle', 'meteor'];
     if (this.characterId === 'spellblade') return ['arcane-cleave', 'twin-phantom', 'rune-step', 'astral-counter', 'constellation-storm'];
+    if (isInnateCharacter(this.characterId)) return innateClasses[this.characterId].skills.map((skill) => skill.id);
     if (isPoliticalCharacter(this.characterId)) return politicalFighters[this.characterId].skills.map((skill) => `${this.characterId}-${skill.key.toLowerCase()}`);
     return ['gale-arrow', 'split-shot', 'verdant-snare', 'feather-step', 'emerald-rain'];
   }
@@ -2196,6 +2386,10 @@ export class QuestScene extends Phaser.Scene {
   private skillCooldownMs(skillId: string): number {
     if (isPoliticalCharacter(this.characterId)) {
       const skill = politicalFighters[this.characterId].skills.find((entry) => `${this.characterId}-${entry.key.toLowerCase()}` === skillId);
+      if (skill) return skill.cooldownMs;
+    }
+    if (isInnateCharacter(this.characterId)) {
+      const skill = innateClasses[this.characterId].skills.find((entry) => entry.id === skillId);
       if (skill) return skill.cooldownMs;
     }
     return SKILL_COOLDOWNS[skillId] ?? 1_000;
@@ -2258,7 +2452,7 @@ export class QuestScene extends Phaser.Scene {
       if (Math.abs(this.player.scaleX) !== 0.38 || this.player.scaleY !== 0.38) this.player.setScale(0.38);
       return;
     }
-    if (this.characterId === 'warrior' || this.characterId === 'mage') {
+    if (this.characterId === 'warrior' || this.characterId === 'mage' || isInnateCharacter(this.characterId)) {
       if (Math.abs(this.player.scaleX) !== 0.64 || this.player.scaleY !== 0.64) this.player.setScale(0.64);
       return;
     }
@@ -2286,6 +2480,8 @@ export class QuestScene extends Phaser.Scene {
     if (this.characterId === 'mage') return 0x9b7cff;
     if (this.characterId === 'spellblade') return 0xef294d;
     if (this.characterId === 'archer') return 0x8dff66;
+    if (this.characterId === 'dualblade') return 0x55ddff;
+    if (this.characterId === 'brawler') return 0xffad33;
     if (this.characterId === 'conservative') return 0xff4d55;
     return 0x42a5ff;
   }
@@ -2367,7 +2563,8 @@ export class QuestScene extends Phaser.Scene {
     animations.forEach((animation, row) => {
       for (let column = 0; column < 8; column += 1) {
         const frameName = `${this.characterId}-${animation}-${column}`;
-        if (!texture.has(frameName)) texture.add(frameName, 0, 3 + column * 156, 3 + row * 156, 156, 156);
+        const frameOffset = isInnateCharacter(this.characterId) ? 0 : 3;
+        if (!texture.has(frameName)) texture.add(frameName, 0, frameOffset + column * 156, frameOffset + row * 156, 156, 156);
       }
       const key = `${this.characterId}-${animation}`;
       if (!this.anims.exists(key)) {
@@ -2383,9 +2580,10 @@ export class QuestScene extends Phaser.Scene {
     });
     const dashKey = `${this.characterId}-dash`;
     if (!this.anims.exists(dashKey)) {
+      const dashAnimation = isInnateCharacter(this.characterId) ? 'jump' : 'run';
       this.anims.create({
         key: dashKey,
-        frames: Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-run-${index}` })),
+        frames: Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-${dashAnimation}-${index}` })),
         frameRate: 22,
         repeat: -1,
       });
