@@ -47,22 +47,38 @@ export const archerSkills = [
 ] as const satisfies readonly SkillDefinition[];
 
 export const dualbladeSkills = [
-  skill('crescent-fang', '초승달 쌍참', 'Q', '두 검의 푸른 검기를 전방으로 발사합니다.', '25', [0, 0]),
-  skill('phantom-cross', '환영 교차난무', 'W', '교차하는 잔상 검격으로 주변 적을 연속 베어냅니다.', '35', [0, 0]),
-  skill('shadow-reversal', '그림자 역습', 'E', '가장 가까운 적의 뒤로 이동해 기습 공격합니다.', '45', [0, 0]),
-  skill('azure-focus', '청명 집중', 'R', '5초 동안 공격과 이동 능력을 강화하는 유일한 버프입니다.', '50', [0, 0]),
-  skill('infinite-blades', '무한검무', 'T', '쌍검 소용돌이와 다중 참격으로 넓은 범위의 적을 베어냅니다.', '70', [0, 0]),
+  skill('crescent-fang', 'Crescent Fang', 'Q', 'Launch a blue twin-blade wave straight ahead.', '25', [0, 0]),
+  skill('phantom-cross', 'Phantom Cross', 'W', 'Carve through nearby enemies with crossing afterimage slashes.', '35', [0, 0]),
+  skill('shadow-reversal', 'Shadow Reversal', 'E', 'Teleport behind the nearest enemy and strike from its blind spot.', '45', [0, 0]),
+  skill('azure-focus', 'Azure Focus', 'R', 'The only buff skill: empower attacks and movement for 5 seconds.', '50', [0, 0]),
+  skill('infinite-blades', 'Infinite Blades', 'T', 'Sweep a wide area with a twin-blade vortex and repeated slashes.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const brawlerSkills = [
-  skill('iron-jab', '철권 정타', 'Q', '응축한 주먹으로 전방에 강한 타격을 가합니다.', '25', [0, 0]),
-  skill('hundred-fists', '백열연권', 'W', '수많은 주먹 잔상으로 전방의 적을 연속 타격합니다.', '35', [0, 0]),
-  skill('titan-fist', '거신권', 'E', '회전하지 않는 거대한 황금 주먹을 전방으로 발사합니다.', '45', [0, 0]),
-  skill('burning-spirit', '투혼 각성', 'R', '5초 동안 공격과 이동 능력을 강화하는 유일한 버프입니다.', '50', [0, 0]),
-  skill('heaven-breaker', '천붕지권', 'T', '제자리에서 지면을 내려쳐 거대한 원형 충격파를 일으킵니다.', '70', [0, 0]),
+  skill('iron-jab', 'Iron Jab', 'Q', 'Drive a concentrated fist into enemies directly ahead.', '25', [0, 0]),
+  skill('hundred-fists', 'Hundred Fists', 'W', 'Pummel the area ahead with a rapid barrage of fist afterimages.', '35', [0, 0]),
+  skill('titan-fist', 'Titan Fist', 'E', 'Fire a massive golden fist straight ahead without spinning.', '45', [0, 0]),
+  skill('burning-spirit', 'Burning Spirit', 'R', 'The only buff skill: empower attacks and movement for 5 seconds.', '50', [0, 0]),
+  skill('heaven-breaker', 'Heaven Breaker', 'T', 'Stand your ground and smash the earth with a circular shockwave.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
-export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills] as const;
+export const dragonknightSkills = [
+  skill('draconic-thrust', 'Draconic Thrust', 'Q', 'Pierce forward with a blazing lance wave.', '25', [0, 0]),
+  skill('wingbreaker', 'Wingbreaker', 'W', 'Sweep the area ahead with crossing dragon-wing slashes.', '35', [0, 0]),
+  skill('inferno-breath', 'Inferno Breath', 'E', 'Unleash three spreading fire blasts.', '45', [0, 0]),
+  skill('dragonheart', 'Dragonheart', 'R', 'The only buff skill: gain draconic power and protection for 5 seconds.', '50', [0, 0]),
+  skill('cataclysm-wyvern', 'Cataclysm Wyvern', 'T', 'Call down a colossal wyvern impact across the battlefield.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const gunslingerSkills = [
+  skill('quickdraw', 'Quickdraw', 'Q', 'Fire a lightning-fast piercing round.', '25', [0, 0]),
+  skill('scatter-burst', 'Scatter Burst', 'W', 'Fire five rounds in a wide fan.', '35', [0, 0]),
+  skill('ricochet-round', 'Ricochet Round', 'E', 'Launch a charged round that tears through multiple targets.', '45', [0, 0]),
+  skill('deadeye', 'Deadeye', 'R', 'The only buff skill: boost firepower and defense for 5 seconds.', '50', [0, 0]),
+  skill('bullet-tempest', 'Bullet Tempest', 'T', 'Blanket the battlefield with an explosive storm of bullets.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills, ...dragonknightSkills, ...gunslingerSkills] as const;
 
 export const aegisArmor = {
   id: keccak256(toBytes('aegis-armor')),

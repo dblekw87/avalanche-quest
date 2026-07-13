@@ -198,7 +198,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
           className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={equipmentParticlesEnabled}
         >
-          강화 효과 {equipmentParticlesEnabled ? 'ON' : 'OFF'}
+          Upgrade VFX {equipmentParticlesEnabled ? 'ON' : 'OFF'}
         </button>
         <button
           type="button"
@@ -211,7 +211,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
           className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={audioEnabled}
         >
-          사운드 {audioEnabled ? 'ON' : 'OFF'}
+          Sound {audioEnabled ? 'ON' : 'OFF'}
         </button>
       </div>
     </div>

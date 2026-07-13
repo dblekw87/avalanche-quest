@@ -127,6 +127,19 @@ export class QuestAudioDirector {
       this.noiseBurst(now + 0.045, 0.13, 720, 0.13);
       return;
     }
+    if (characterId === 'dragonknight') {
+      this.sweep(now, 170 + variation * 20, 520, 0.34, 'sawtooth', 0.15);
+      this.noiseBurst(now + 0.035, 0.18, 1_150, 0.12);
+      this.pulseTone(now + 0.07, midiToFrequency(41 + variation), 0.28, 'triangle', 0.13);
+      return;
+    }
+    if (characterId === 'gunslinger') {
+      [0, 0.07, 0.14].forEach((offset, index) => {
+        this.noiseBurst(now + offset, 0.045, 3_400 - index * 420, 0.1);
+        this.pulseTone(now + offset, midiToFrequency(76 + variation - index * 2), 0.09, 'square', 0.08);
+      });
+      return;
+    }
     if (characterId === 'conservative') {
       [0, 7, 12].forEach((offset) => this.pulseTone(now, midiToFrequency(43 + variation + offset), 0.34, 'square', 0.09));
       this.noiseBurst(now + 0.08, 0.14, 900, 0.08);

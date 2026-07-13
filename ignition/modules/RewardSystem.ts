@@ -67,6 +67,16 @@ export default buildModule('RewardSystem', (module) => {
     ['titan-fist', '45'],
     ['burning-spirit', '50'],
     ['heaven-breaker', '70'],
+    ['draconic-thrust', '25'],
+    ['wingbreaker', '35'],
+    ['inferno-breath', '45'],
+    ['dragonheart', '50'],
+    ['cataclysm-wyvern', '70'],
+    ['quickdraw', '25'],
+    ['scatter-burst', '35'],
+    ['ricochet-round', '45'],
+    ['deadeye', '50'],
+    ['bullet-tempest', '70'],
   ] as const;
   newSkills.forEach(([slug, price]) => {
     const transactionId = `set_${slug.replaceAll('-', '_')}_price`;

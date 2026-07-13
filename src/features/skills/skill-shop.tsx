@@ -6,7 +6,7 @@ import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
-import { aegisArmor, archerSkills, armorEnhancementAbi, brawlerSkills, dualbladeSkills, gameTokenAbi, mageSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, warriorSkills } from '@/features/skills/skill-contract';
+import { aegisArmor, archerSkills, armorEnhancementAbi, brawlerSkills, dragonknightSkills, dualbladeSkills, gameTokenAbi, gunslingerSkills, mageSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, warriorSkills } from '@/features/skills/skill-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 import type { GeneralCharacterId } from '@/game/characters';
 
@@ -56,13 +56,17 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
       : characterId === 'spellblade' ? spellbladeSkills
         : characterId === 'archer' ? archerSkills
           : characterId === 'dualblade' ? dualbladeSkills
-            : brawlerSkills;
-  const classLabel = characterId === 'warrior' ? '용사 전용 스킬'
-    : characterId === 'mage' ? '마법사 전용 스킬'
-      : characterId === 'spellblade' ? '마검사 전용 스킬'
-        : characterId === 'archer' ? '궁수 전용 스킬'
-          : characterId === 'dualblade' ? '쌍검사 전용 스킬'
-            : '권격가 전용 스킬';
+            : characterId === 'brawler' ? brawlerSkills
+              : characterId === 'dragonknight' ? dragonknightSkills
+                : gunslingerSkills;
+  const classLabel = characterId === 'warrior' ? 'Warrior Skills'
+    : characterId === 'mage' ? 'Mage Skills'
+      : characterId === 'spellblade' ? 'Spellblade Skills'
+        : characterId === 'archer' ? 'Archer Skills'
+          : characterId === 'dualblade' ? 'Dualblade Skills'
+            : characterId === 'brawler' ? 'Brawler Skills'
+              : characterId === 'dragonknight' ? 'Dragon Knight Skills'
+                : 'Gunslinger Skills';
 
   const skillCardFrame = characterId === 'spellblade'
     ? 'border-[#9d67e8] shadow-[inset_0_0_18px_rgba(126,68,196,.12),0_0_12px_rgba(126,68,196,.18)]'
@@ -72,7 +76,11 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
         ? 'border-[#62dff4] shadow-[inset_0_0_16px_rgba(98,223,244,.12),0_0_12px_rgba(98,223,244,.18)]'
         : characterId === 'brawler'
           ? 'border-[#f2a640] shadow-[inset_0_0_16px_rgba(242,166,64,.12),0_0_12px_rgba(242,166,64,.18)]'
-          : 'border-[#455238]';
+          : characterId === 'dragonknight'
+            ? 'border-[#ff6847] shadow-[inset_0_0_16px_rgba(255,90,54,.13),0_0_12px_rgba(255,90,54,.2)]'
+            : characterId === 'gunslinger'
+              ? 'border-[#65e7ff] shadow-[inset_0_0_16px_rgba(101,231,255,.12),0_0_12px_rgba(101,231,255,.2)]'
+              : 'border-[#455238]';
   const skillAreaFrame = characterId === 'warrior'
     ? 'border-[#9b5e35] shadow-[inset_0_0_24px_rgba(155,94,53,.12)]'
     : characterId === 'mage'
@@ -83,7 +91,11 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
           ? 'border-[#62ad5c] shadow-[inset_0_0_26px_rgba(98,173,92,.16)]'
           : characterId === 'dualblade'
             ? 'border-[#3aaec9] shadow-[inset_0_0_28px_rgba(58,174,201,.16)]'
-            : 'border-[#c5792c] shadow-[inset_0_0_28px_rgba(197,121,44,.16)]';
+            : characterId === 'brawler'
+              ? 'border-[#c5792c] shadow-[inset_0_0_28px_rgba(197,121,44,.16)]'
+              : characterId === 'dragonknight'
+                ? 'border-[#b83c27] shadow-[inset_0_0_28px_rgba(255,90,54,.18)]'
+                : 'border-[#318da1] shadow-[inset_0_0_28px_rgba(101,231,255,.17)]';
   const skillIconFrame = characterId === 'spellblade'
     ? 'border-[#ad7af0] shadow-[0_0_16px_rgba(157,103,232,.32)]'
     : characterId === 'archer'
@@ -92,7 +104,11 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
         ? 'border-[#62dff4] shadow-[0_0_16px_rgba(98,223,244,.30)]'
         : characterId === 'brawler'
           ? 'border-[#f2a640] shadow-[0_0_16px_rgba(242,166,64,.30)]'
-          : 'border-[#665844] shadow-[0_0_14px_rgba(120,170,255,.14)]';
+          : characterId === 'dragonknight'
+            ? 'border-[#ff6847] shadow-[0_0_16px_rgba(255,90,54,.32)]'
+            : characterId === 'gunslinger'
+              ? 'border-[#65e7ff] shadow-[0_0_16px_rgba(101,231,255,.3)]'
+              : 'border-[#665844] shadow-[0_0_14px_rgba(120,170,255,.14)]';
   const skillImageFrame = characterId === 'spellblade'
     ? 'rounded border-2 border-[#c08cff] shadow-[inset_0_0_10px_rgba(90,36,145,.65),0_0_10px_rgba(192,140,255,.38)]'
     : characterId === 'archer'
@@ -101,7 +117,11 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
         ? 'rounded border-2 border-[#75e7f7] shadow-[inset_0_0_10px_rgba(20,96,120,.65),0_0_10px_rgba(117,231,247,.36)]'
         : characterId === 'brawler'
           ? 'rounded border-2 border-[#ffb74d] shadow-[inset_0_0_10px_rgba(110,58,12,.65),0_0_10px_rgba(255,183,77,.36)]'
-          : 'rounded border border-[#78694f]';
+          : characterId === 'dragonknight'
+            ? 'rounded border-2 border-[#ff7252] shadow-[inset_0_0_10px_rgba(105,24,15,.65),0_0_10px_rgba(255,114,82,.38)]'
+            : characterId === 'gunslinger'
+              ? 'rounded border-2 border-[#78edff] shadow-[inset_0_0_10px_rgba(15,75,90,.65),0_0_10px_rgba(120,237,255,.38)]'
+              : 'rounded border border-[#78694f]';
   const usesPurpleArmorFrame = characterId === 'spellblade' || characterId === 'archer';
   const armorFrameClass = usesPurpleArmorFrame
     ? PURPLE_ARMOR_FRAME_CLASSES[Math.min(armorLevel, PURPLE_ARMOR_FRAME_CLASSES.length - 1)]
@@ -153,15 +173,15 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
       const tokenAddress = getAddress(tokenValue);
       const allowance = await publicClient.readContract({ address: tokenAddress, abi: gameTokenAbi, functionName: 'allowance', args: [address, shopAddress] });
       if (allowance < entry.price) {
-        setMessage(`${formatEther(entry.price)} AQT 사용 승인을 지갑에서 확인해 주세요.`);
+        setMessage(`Confirm permission to use ${formatEther(entry.price)} AQT in your wallet.`);
         const approvalHash = await writeContractAsync({ address: tokenAddress, abi: gameTokenAbi, functionName: 'approve', args: [shopAddress, entry.price], chainId: avalancheFuji.id });
         setHash(approvalHash); await publicClient.waitForTransactionReceipt({ hash: approvalHash });
       }
-      setMessage(`${entry.name} 구매 거래를 지갑에서 확인해 주세요.`);
+      setMessage(`Confirm the ${entry.name} purchase in your wallet.`);
       const nonce = await publicClient.getTransactionCount({ address, blockTag: 'pending' });
       const purchaseHash = await writeContractAsync({ address: shopAddress, abi: skillShopAbi, functionName: 'purchaseSkill', args: [entry.id], chainId: avalancheFuji.id, nonce });
       setHash(purchaseHash); await publicClient.waitForTransactionReceipt({ hash: purchaseHash });
-      setState('success'); setMessage(entry.key ? `${entry.name} 구매에 성공하였습니다. 스테이지에서 ${entry.key} 키로 사용할 수 있습니다.` : `${entry.name} 구매 및 장착에 성공하였습니다.`); await refresh();
+      setState('success'); setMessage(entry.key ? `${entry.name} purchased. Use the ${entry.key} key during a stage.` : `${entry.name} purchased and equipped.`); await refresh();
     } catch (error) {
       setState('error'); setMessage(transactionErrorMessage(error));
     } finally { setActiveSkill(null); }
@@ -176,15 +196,15 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
     if (level >= SKILL_ENHANCEMENT_MAX_LEVEL) return;
     const enhancement = getAddress(enhancementValue); const token = getAddress(tokenValue);
     const price = await publicClient.readContract({ address: enhancement, abi: skillEnhancementAbi, functionName: 'priceFor', args: [level] });
-    if (balance < price) { setState('error'); setMessage(`${formatEther(price)} AQT가 필요합니다.`); return; }
-    setState('pending'); setActiveSkill(`enhance:${entry.slug}`); setMessage(`${entry.name} +${level + 1} 강화를 준비합니다.`);
+    if (balance < price) { setState('error'); setMessage(`You need ${formatEther(price)} AQT.`); return; }
+    setState('pending'); setActiveSkill(`enhance:${entry.slug}`); setMessage(`Preparing the ${entry.name} +${level + 1} enhancement.`);
     try {
       const allowance = await publicClient.readContract({ address: token, abi: gameTokenAbi, functionName: 'allowance', args: [address, enhancement] });
       if (allowance < price) { const approvalHash = await writeContractAsync({ address: token, abi: gameTokenAbi, functionName: 'approve', args: [enhancement, price], chainId: avalancheFuji.id }); await publicClient.waitForTransactionReceipt({ hash: approvalHash }); }
       const nonce = await publicClient.getTransactionCount({ address, blockTag: 'pending' });
       const enhancementHash = await writeContractAsync({ address: enhancement, abi: skillEnhancementAbi, functionName: 'enhanceSkill', args: [entry.id], chainId: avalancheFuji.id, nonce });
       setHash(enhancementHash); await publicClient.waitForTransactionReceipt({ hash: enhancementHash });
-      setState('success'); setMessage(`${entry.name} +${level + 1} 강화에 성공했습니다.`); await refresh();
+      setState('success'); setMessage(`${entry.name} successfully enhanced to +${level + 1}.`); await refresh();
     } catch (error) { setState('error'); setMessage(transactionErrorMessage(error)); }
     finally { setActiveSkill(null); }
   };
@@ -192,26 +212,26 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
   const enhanceArmor = async () => {
     const enhancementValue = process.env.NEXT_PUBLIC_ARMOR_ENHANCEMENT_ADDRESS;
     const tokenValue = process.env.NEXT_PUBLIC_GAME_TOKEN_ADDRESS;
-    if (!armorOwned) { setState('error'); setMessage('갑옷을 먼저 구매해 주세요.'); return; }
-    if (!address || !publicClient || !enhancementValue || !tokenValue || !isAddress(enhancementValue) || !isAddress(tokenValue)) { setState('error'); setMessage('갑옷 전용 강화 컨트랙트 설정이 없습니다.'); return; }
-    if (chainId !== avalancheFuji.id) { setState('error'); setMessage('Avalanche Fuji 네트워크로 변경해 주세요.'); return; }
+    if (!armorOwned) { setState('error'); setMessage('Purchase the armor first.'); return; }
+    if (!address || !publicClient || !enhancementValue || !tokenValue || !isAddress(enhancementValue) || !isAddress(tokenValue)) { setState('error'); setMessage('Armor enhancement contract configuration is missing.'); return; }
+    if (chainId !== avalancheFuji.id) { setState('error'); setMessage('Switch to the Avalanche Fuji network.'); return; }
     if (armorLevel >= 5) return;
     const enhancement = getAddress(enhancementValue); const token = getAddress(tokenValue);
-    setState('pending'); setActiveSkill('armor-enhance'); setMessage('갑옷 전용 강화 비용을 확인하고 있습니다.');
+    setState('pending'); setActiveSkill('armor-enhance'); setMessage('Checking the armor enhancement cost.');
     try {
       const price = await publicClient.readContract({ address: enhancement, abi: armorEnhancementAbi, functionName: 'priceFor', args: [armorLevel] });
-      if (balance < price) throw new Error(`갑옷 +${armorLevel + 1} 강화에는 ${formatEther(price)} AQT가 필요합니다.`);
+      if (balance < price) throw new Error(`Armor +${armorLevel + 1} requires ${formatEther(price)} AQT.`);
       const allowance = await publicClient.readContract({ address: token, abi: gameTokenAbi, functionName: 'allowance', args: [address, enhancement] });
       if (allowance < price) {
-        setMessage(`${formatEther(price)} AQT 사용 승인을 확인해 주세요.`);
+        setMessage(`Confirm permission to use ${formatEther(price)} AQT.`);
         const approvalHash = await writeContractAsync({ address: token, abi: gameTokenAbi, functionName: 'approve', args: [enhancement, price], chainId: avalancheFuji.id });
         await publicClient.waitForTransactionReceipt({ hash: approvalHash });
       }
-      setMessage(`갑옷 +${armorLevel + 1} 강화를 지갑에서 확인해 주세요.`);
+      setMessage(`Confirm the Armor +${armorLevel + 1} enhancement in your wallet.`);
       const nonce = await publicClient.getTransactionCount({ address, blockTag: 'pending' });
       const upgradeHash = await writeContractAsync({ address: enhancement, abi: armorEnhancementAbi, functionName: 'enhanceArmor', chainId: avalancheFuji.id, nonce });
       setHash(upgradeHash); await publicClient.waitForTransactionReceipt({ hash: upgradeHash });
-      setState('success'); setMessage(`갑옷 전용 +${armorLevel + 1} 강화가 완료되었습니다.`); await refresh();
+      setState('success'); setMessage(`Armor enhancement +${armorLevel + 1} completed.`); await refresh();
     } catch (error) { setState('error'); setMessage(transactionErrorMessage(error)); }
     finally { setActiveSkill(null); }
   };
@@ -231,7 +251,7 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
             ? `/assets/skill-effects-new/${entry.slug}-v2.png`
             : characterId === 'archer'
               ? `/assets/skill-effects-new/${entry.slug}.png`
-              : characterId === 'dualblade' || characterId === 'brawler'
+              : characterId === 'dualblade' || characterId === 'brawler' || characterId === 'dragonknight' || characterId === 'gunslinger'
                 ? `/assets/new-class-skills/${entry.slug}.png`
                 : `/assets/skills-v2/${entry.slug}.png`;
           return <article key={entry.slug} className={`flex flex-col border-2 bg-[#11160f] p-3 transition-shadow ${skillCardFrame} ${owned ? 'ring-1 ring-inset ring-white/20' : ''}`}>
@@ -254,14 +274,14 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
               {owned ? 'OWNED' : activeSkill === entry.slug ? 'PURCHASING…' : 'BUY'}
             </button>
             <button type="button" onClick={() => void enhanceSkill(entry)} disabled={!owned || state === 'pending' || (skillLevels[entry.slug] ?? 0) >= SKILL_ENHANCEMENT_MAX_LEVEL} className="mt-2 rounded border border-[#d0a55f] bg-[#3a2711] px-3 py-2 text-xs font-bold text-[#ffe2a1] shadow-[0_0_12px_rgba(208,165,95,.16)] disabled:opacity-40">
-              {(skillLevels[entry.slug] ?? 0) >= SKILL_ENHANCEMENT_MAX_LEVEL ? '강화 MAX' : activeSkill === `enhance:${entry.slug}` ? '강화 중…' : `+ 강화 ${(skillLevels[entry.slug] ?? 0)}/${SKILL_ENHANCEMENT_MAX_LEVEL} · ${skillEnhancementPriceAqt(skillLevels[entry.slug] ?? 0)} AQT`}
+              {(skillLevels[entry.slug] ?? 0) >= SKILL_ENHANCEMENT_MAX_LEVEL ? 'MAX ENHANCEMENT' : activeSkill === `enhance:${entry.slug}` ? 'ENHANCING…' : `ENHANCE +${(skillLevels[entry.slug] ?? 0)}/${SKILL_ENHANCEMENT_MAX_LEVEL} · ${skillEnhancementPriceAqt(skillLevels[entry.slug] ?? 0)} AQT`}
             </button>
           </article>;
         })}
       </div>
       <div className={`mt-3 flex flex-col items-center justify-between gap-5 border-2 bg-[#211b12] p-4 text-center sm:flex-row sm:text-left ${usesPurpleArmorFrame ? 'border-[#9b63d4] shadow-[inset_0_0_24px_rgba(139,92,246,.14),0_0_14px_rgba(139,92,246,.16)]' : 'border-[#9a7b45] shadow-[inset_0_0_22px_rgba(208,180,122,.10)]'}`}>
-        <div className="flex flex-col items-center gap-4 sm:flex-row"><div className={`relative size-20 shrink-0 overflow-hidden rounded-xl border-2 bg-black transition-all duration-300 ${armorFrameClass}`}><Image src={`/assets/armor-tiers/armor-${armorLevel}.png`} alt={`Aegis Armor enhancement level ${armorLevel}`} width={80} height={80} unoptimized className={`size-full rounded-lg border-2 object-contain ${armorFrameClass}`}/></div><div><span className="text-[10px] tracking-[.18em] text-[#d0b47a]">SEPARATE ARMOR FORGE · +{armorLevel}/5</span><strong className="mt-2 block text-[#f0dfbd]">{aegisArmor.name}</strong><p className="mt-1 text-xs text-[#a99c87]">캐릭터 강화와 별개로 진화합니다. 단계마다 갑옷 능력과 전용 파티클이 증가합니다.</p></div></div>
-        <div className="mx-auto flex w-full max-w-md flex-col gap-2 sm:mx-0 sm:w-auto sm:min-w-64"><button type="button" onClick={() => void purchase(aegisArmor)} disabled={armorOwned || state === 'pending'} className="w-full border border-[#d0b47a] bg-[#6b512e] px-7 py-3.5 text-xs font-bold text-[#fff0d1] disabled:opacity-50">{armorOwned ? 'OWNED · EQUIPPED' : activeSkill === aegisArmor.slug ? 'PURCHASING…' : 'BUY ARMOR'}</button><button type="button" onClick={() => void enhanceArmor()} disabled={!armorOwned || state === 'pending' || armorLevel >= 5} className="w-full border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-7 py-3.5 text-xs font-bold text-white shadow-[0_0_18px_rgba(239,189,88,.22)] disabled:opacity-40">{activeSkill === 'armor-enhance' ? '갑옷 강화 중…' : armorLevel >= 5 ? 'ARMOR MAX' : `갑옷 +${armorLevel + 1} 강화 · ${200 + armorLevel * 200} AQT`}</button></div>
+        <div className="flex flex-col items-center gap-4 sm:flex-row"><div className={`relative size-20 shrink-0 overflow-hidden rounded-xl border-2 bg-black transition-all duration-300 ${armorFrameClass}`}><Image src={`/assets/armor-tiers/armor-${armorLevel}.png`} alt={`Aegis Armor enhancement level ${armorLevel}`} width={80} height={80} unoptimized className={`size-full rounded-lg border-2 object-contain ${armorFrameClass}`}/></div><div><span className="text-[10px] font-bold tracking-[.18em] text-[#d0b47a]">SEPARATE ARMOR FORGE · +{armorLevel}/5</span><strong className="mt-2 block font-extrabold text-[#f0dfbd]">{aegisArmor.name}</strong><p className="mt-1 text-xs font-medium text-[#a99c87]">Evolves separately from character upgrades. Each level improves armor power and its exclusive particles.</p></div></div>
+        <div className="mx-auto flex w-full max-w-md flex-col gap-2 sm:mx-0 sm:w-auto sm:min-w-64"><button type="button" onClick={() => void purchase(aegisArmor)} disabled={armorOwned || state === 'pending'} className="w-full border border-[#d0b47a] bg-[#6b512e] px-7 py-3.5 text-xs font-bold text-[#fff0d1] disabled:opacity-50">{armorOwned ? 'OWNED · EQUIPPED' : activeSkill === aegisArmor.slug ? 'PURCHASING…' : 'BUY ARMOR'}</button><button type="button" onClick={() => void enhanceArmor()} disabled={!armorOwned || state === 'pending' || armorLevel >= 5} className="w-full border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-7 py-3.5 text-xs font-bold text-white shadow-[0_0_18px_rgba(239,189,88,.22)] disabled:opacity-40">{activeSkill === 'armor-enhance' ? 'ENHANCING ARMOR…' : armorLevel >= 5 ? 'ARMOR MAX' : `ENHANCE ARMOR +${armorLevel + 1} · ${200 + armorLevel * 200} AQT`}</button></div>
       </div>
       {message ? <p className={`mt-3 text-xs ${state === 'error' ? 'text-[#e7aaaa]' : 'text-[#c9d6aa]'}`}>{message}</p> : null}
       {hash ? <a className="mt-2 block text-xs text-[#c49a5a] underline" href={`https://testnet.snowtrace.io/tx/${hash}`} target="_blank" rel="noreferrer">View latest transaction on Snowtrace</a> : null}

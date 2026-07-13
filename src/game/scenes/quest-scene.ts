@@ -199,6 +199,9 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists('quest-mage-sheet')) this.load.image('quest-mage-sheet', '/assets/sprites/mage.png');
     if (!this.textures.exists('quest-dualblade-sheet')) this.load.image('quest-dualblade-sheet', '/assets/classes/dualblade-sheet.png');
     if (!this.textures.exists('quest-brawler-sheet')) this.load.image('quest-brawler-sheet', '/assets/classes/brawler-sheet.png');
+    if (!this.textures.exists('quest-brawler-jump-sheet')) this.load.image('quest-brawler-jump-sheet', '/assets/classes/brawler-jump-strip.png');
+    if (!this.textures.exists('quest-dragonknight-sheet')) this.load.image('quest-dragonknight-sheet', '/assets/classes/dragonknight-sheet.png');
+    if (!this.textures.exists('quest-gunslinger-sheet')) this.load.image('quest-gunslinger-sheet', '/assets/classes/gunslinger-sheet.png');
     if (!this.textures.exists('quest-goblin-sheet')) this.load.image('quest-goblin-sheet', '/assets/sprites/goblin.png');
     if (!this.textures.exists('quest-boss-sheet')) this.load.image('quest-boss-sheet', '/assets/sprites/boss.png');
     if (!this.textures.exists('political-conservative-sheet')) this.load.spritesheet('political-conservative-sheet', '/assets/political-duel/political-conservative-sheet.png', { frameWidth: 256, frameHeight: 256 });
@@ -1334,16 +1337,21 @@ export class QuestScene extends Phaser.Scene {
       });
       return;
     }
+    if (this.characterId === 'gunslinger') {
+      this.launchInnateProjectile('quickdraw', 1 + this.upgradeLevels.attack + this.armorLevel, 820, time, 54);
+      this.spawnInnateParticles(this.player.x + (this.player.flipX ? -48 : 48), this.player.y - 5, 8, 70);
+      return;
+    }
     const attackX = this.player.x + (this.player.flipX ? -64 : 64);
     if (this.characterId === 'spellblade') this.spawnEnemyAttackEffect(this.player.x, this.player.y, this.player.flipX ? -1 : 1);
-    if (this.characterId === 'dualblade' || this.characterId === 'brawler') {
+    if (isInnateCharacter(this.characterId)) {
       this.spawnSkillImpactBurst(attackX, this.player.y + 4, this.skillAccentColor, this.characterId === 'dualblade' ? 0.58 : 0.72);
       this.spawnCrossTwinkle(attackX, this.player.y, this.skillAccentColor, 0.65);
     }
     this.attackVisual?.destroy();
     this.enemies.forEach((enemy) => {
       if (enemy.health <= 0) return;
-      const innateRangeBonus = this.characterId === 'dualblade' ? 18 : this.characterId === 'brawler' ? 10 : 0;
+      const innateRangeBonus = this.characterId === 'dualblade' ? 18 : this.characterId === 'dragonknight' ? 26 : this.characterId === 'brawler' ? 10 : 0;
       const inRange = Math.abs(enemy.sprite.x - attackX) <= (enemy.boss ? 92 : 68) + innateRangeBonus;
       if (inRange && this.combatFootDistance(enemy) <= 42) {
         this.damageEnemy(enemy, (enemy.boss ? Math.ceil(enemy.maxHealth / 3) : 1) + this.upgradeLevels.attack + this.armorLevel);
@@ -1452,7 +1460,7 @@ export class QuestScene extends Phaser.Scene {
       this.castShadowReversal(damage, time);
       return;
     }
-    if (skillId === 'azure-focus' || skillId === 'burning-spirit') {
+    if (skillId === 'azure-focus' || skillId === 'burning-spirit' || skillId === 'dragonheart' || skillId === 'deadeye') {
       this.castInnateBuff(skillId, time);
       return;
     }
@@ -1502,6 +1510,69 @@ export class QuestScene extends Phaser.Scene {
         this.cameras.main.shake(520, 0.018);
         this.cameras.main.flash(120, 255, 169, 50, false);
       });
+      return;
+    }
+    if (skillId === 'draconic-thrust') {
+      this.launchInnateProjectile(skillId, damage, 700, time, 132);
+      this.spawnInnateParticles(this.player.x + direction * 76, this.player.y, 20, 170);
+      return;
+    }
+    if (skillId === 'wingbreaker') {
+      [0, 125, 250].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const x = this.player.x + direction * (72 + index * 48);
+        this.showInnateSkillEffect(skillId, x, this.player.y - 8, 170 + index * 18, 470, direction * (index % 2 === 0 ? 22 : -22));
+        this.spawnInnateParticles(x, this.player.y, 16, 170);
+        this.damageEnemiesInArea(x, 138, Math.max(1, Math.ceil(damage / 2)), 120);
+      }));
+      return;
+    }
+    if (skillId === 'inferno-breath') {
+      [-0.18, 0, 0.18].forEach((angle) => this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 2)), 590, time, 112, angle));
+      this.spawnInnateParticles(this.player.x + direction * 82, this.player.y - 5, 28, 210);
+      return;
+    }
+    if (skillId === 'cataclysm-wyvern') {
+      const centerX = this.player.x + direction * 165;
+      [0, 120, 240, 360].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const x = centerX + (index - 1.5) * 105;
+        this.showInnateSkillEffect(skillId, x, this.player.y - 38, 235 + index * 16, 720, index * 34);
+        this.spawnInnateParticles(x, this.player.y, 25, 260);
+      }));
+      this.time.delayedCall(220, () => this.damageEnemiesInArea(centerX, 440, damage, 175));
+      this.cameras.main.shake(560, 0.02);
+      this.cameras.main.flash(150, 255, 75, 38, false);
+      return;
+    }
+    if (skillId === 'quickdraw') {
+      this.launchInnateProjectile(skillId, damage, 920, time, 64);
+      this.spawnInnateParticles(this.player.x + direction * 58, this.player.y - 4, 10, 90);
+      return;
+    }
+    if (skillId === 'scatter-burst') {
+      [-0.3, -0.15, 0, 0.15, 0.3].forEach((angle) => this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 2)), 690, time, 58, angle));
+      this.spawnInnateParticles(this.player.x + direction * 56, this.player.y, 18, 130);
+      return;
+    }
+    if (skillId === 'ricochet-round') {
+      this.launchInnateProjectile(skillId, damage, 760, time, 105);
+      this.showInnateSkillEffect(skillId, this.player.x + direction * 70, this.player.y, 126, 390);
+      return;
+    }
+    if (skillId === 'bullet-tempest') {
+      const centerX = this.player.x + direction * 120;
+      for (let index = 0; index < 12; index += 1) {
+        this.time.delayedCall(index * 55, () => {
+          if (this.finished) return;
+          const angle = -0.48 + (index % 6) * 0.19;
+          this.launchInnateProjectile('bullet-tempest', Math.max(1, Math.ceil(damage / 3)), 760 + (index % 3) * 45, this.time.now, 72, angle);
+          const x = centerX + Phaser.Math.Between(-170, 170);
+          this.showInnateSkillEffect(skillId, x, this.player.y + Phaser.Math.Between(-55, 35), 92, 360, index * 20);
+        });
+      }
+      this.time.delayedCall(330, () => this.damageEnemiesInArea(centerX, 410, damage, 150));
+      this.cameras.main.shake(620, 0.014);
     }
   }
 
@@ -1545,10 +1616,11 @@ export class QuestScene extends Phaser.Scene {
     this.tweens.add({ targets: this.classBuffAura, scaleX: 1.18, scaleY: 1.1, alpha: 0.36, duration: 420, yoyo: true, repeat: -1 });
     this.showInnateSkillEffect(skillId, this.player.x, this.player.y, 180, 780);
     this.spawnInnateParticles(this.player.x, this.player.y, 30, 170);
-    this.cameras.main.flash(120, this.characterId === 'dualblade' ? 55 : 255, this.characterId === 'dualblade' ? 200 : 155, this.characterId === 'dualblade' ? 255 : 45, false);
+    const flash = this.characterId === 'dualblade' ? [55, 200, 255] : this.characterId === 'dragonknight' ? [255, 72, 35] : this.characterId === 'gunslinger' ? [80, 225, 255] : [255, 155, 45];
+    this.cameras.main.flash(120, flash[0], flash[1], flash[2], false);
   }
 
-  private launchInnateProjectile(skillId: string, damage: number, speed: number, time: number, displaySize: number): void {
+  private launchInnateProjectile(skillId: string, damage: number, speed: number, time: number, displaySize: number, angle = 0): void {
     const direction = this.player.flipX ? -1 : 1;
     const projectile = this.physics.add.image(this.player.x + direction * 66, this.player.y - 4, `quest-skill-icon-${skillId}`)
       .setDisplaySize(displaySize, displaySize)
@@ -1557,8 +1629,9 @@ export class QuestScene extends Phaser.Scene {
       .setBlendMode(Phaser.BlendModes.ADD);
     projectile.body?.setAllowGravity(false);
     if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(displaySize * 0.56, displaySize * 0.46, true);
-    projectile.setVelocityX(direction * speed);
-    this.playerSkillProjectiles.push({ sprite: projectile, expiresAt: time + PLAYER_SKILL_PROJECTILE_LIFETIME_MS, damage, piercing: skillId === 'crescent-fang', hitEnemyIds: new Set<string>() });
+    projectile.setVelocity(direction * Math.cos(angle) * speed, Math.sin(angle) * speed);
+    const piercing = skillId === 'crescent-fang' || skillId === 'draconic-thrust' || skillId === 'ricochet-round' || skillId === 'quickdraw';
+    this.playerSkillProjectiles.push({ sprite: projectile, expiresAt: time + PLAYER_SKILL_PROJECTILE_LIFETIME_MS, damage, piercing, hitEnemyIds: new Set<string>() });
     if (skillId === 'crescent-fang') {
       this.tweens.add({ targets: projectile, angle: direction * 360, duration: 520, repeat: -1 });
     } else {
@@ -2411,7 +2484,7 @@ export class QuestScene extends Phaser.Scene {
       idle: 145, walk: 146, run: 143, dash: 143, jump: 140, attack: 140, skill: 143, hit: 130, death: 125,
     };
     const brawlerBaselines: Readonly<Record<string, number>> = {
-      idle: 144, walk: 130, run: 110, dash: 105, jump: 105, attack: 118, skill: 129, hit: 135, death: 125,
+      idle: 144, walk: 130, run: 110, dash: 144, jump: 144, attack: 118, skill: 129, hit: 135, death: 125,
     };
     const targetBaseline = this.characterId === 'warrior' ? 149 : this.characterId === 'mage' ? 145 : 144;
     const baselines = this.characterId === 'warrior' ? warriorBaselines : this.characterId === 'mage' ? mageBaselines : brawlerBaselines;
@@ -2489,6 +2562,8 @@ export class QuestScene extends Phaser.Scene {
     if (this.characterId === 'archer') return 0x8dff66;
     if (this.characterId === 'dualblade') return 0x55ddff;
     if (this.characterId === 'brawler') return 0xffad33;
+    if (this.characterId === 'dragonknight') return 0xff5a36;
+    if (this.characterId === 'gunslinger') return 0x65e7ff;
     if (this.characterId === 'conservative') return 0xff4d55;
     return 0x42a5ff;
   }
@@ -2566,6 +2641,14 @@ export class QuestScene extends Phaser.Scene {
   private registerHeroFramesAndAnimations(): void {
     const textureKey = `quest-${this.characterId}-sheet`;
     const texture = this.textures.get(textureKey);
+    const fixedBrawlerJumpTextureKey = 'quest-brawler-jump-sheet';
+    if (this.characterId === 'brawler') {
+      const jumpTexture = this.textures.get(fixedBrawlerJumpTextureKey);
+      for (let column = 0; column < 8; column += 1) {
+        const frameName = `brawler-jump-fixed-${column}`;
+        if (!jumpTexture.has(frameName)) jumpTexture.add(frameName, 0, column * 156, 0, 156, 156);
+      }
+    }
     const animations = ['idle', 'walk', 'run', 'jump', 'attack', 'skill', 'hit', 'death'] as const;
     animations.forEach((animation, row) => {
       for (let column = 0; column < 8; column += 1) {
@@ -2579,6 +2662,8 @@ export class QuestScene extends Phaser.Scene {
           key,
           frames: animation === 'idle'
             ? [{ key: textureKey, frame: `${this.characterId}-idle-0` }]
+            : this.characterId === 'brawler' && animation === 'jump'
+              ? Array.from({ length: 8 }, (_, index) => ({ key: fixedBrawlerJumpTextureKey, frame: `brawler-jump-fixed-${index}` }))
             : Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-${animation}-${index}` })),
           frameRate: animation === 'run' ? 13 : animation === 'attack' ? 14 : 9,
           repeat: animation === 'idle' || animation === 'walk' || animation === 'run' ? -1 : 0,
@@ -2590,7 +2675,9 @@ export class QuestScene extends Phaser.Scene {
       const dashAnimation = isInnateCharacter(this.characterId) ? 'jump' : 'run';
       this.anims.create({
         key: dashKey,
-        frames: Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-${dashAnimation}-${index}` })),
+        frames: this.characterId === 'brawler'
+          ? Array.from({ length: 8 }, (_, index) => ({ key: fixedBrawlerJumpTextureKey, frame: `brawler-jump-fixed-${index}` }))
+          : Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-${dashAnimation}-${index}` })),
         frameRate: 22,
         repeat: -1,
       });

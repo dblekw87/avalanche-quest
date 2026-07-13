@@ -496,7 +496,7 @@ export class PoliticalDuelScene extends Phaser.Scene {
   }
 
   private bossDashCombo(time: number): void {
-    this.statusText.setText('PATTERN 09 · 연속 돌진 베기');
+    this.statusText.setText('PATTERN 09 · CHAIN DASH SLASH');
     [0, 180, 360].forEach((delay) => this.time.delayedCall(delay, () => {
       if (this.ended) return;
       this.boss.sprite.setVelocityX((this.player.sprite.x > this.boss.sprite.x ? 1 : -1) * 560);
@@ -506,7 +506,7 @@ export class PoliticalDuelScene extends Phaser.Scene {
   }
 
   private bossLeapSlam(time: number): void {
-    this.statusText.setText('PATTERN 10 · 도약 광역 강타');
+    this.statusText.setText('PATTERN 10 · LEAPING AREA SMASH');
     this.boss.sprite.setVelocityY(-620);
     this.motion(this.boss, 'jump');
     this.time.delayedCall(620, () => this.zoneBurst(this.boss, this.player, { ...politicalFighters[this.boss.faction].skills[4]!, damage: 12 }, true, 5));
@@ -514,13 +514,13 @@ export class PoliticalDuelScene extends Phaser.Scene {
   }
 
   private bossCrossfire(time: number): void {
-    this.statusText.setText('PATTERN 11 · 교차 탄막');
+    this.statusText.setText('PATTERN 11 · CROSS BARRAGE');
     [0, 150, 300, 450].forEach((delay) => this.time.delayedCall(delay, () => this.projectileVolley(this.boss, this.player, { ...politicalFighters[this.boss.faction].skills[0]!, damage: 7 }, true, 3)));
     this.boss.nextActionAt = time + 1_500;
   }
 
   private bossTeleportBurst(time: number): void {
-    this.statusText.setText('PATTERN 12 · 순간 이동 폭발');
+    this.statusText.setText('PATTERN 12 · TELEPORT EXPLOSION');
     this.boss.sprite.setAlpha(0.15);
     this.time.delayedCall(220, () => {
       this.boss.sprite.setPosition(Phaser.Math.Clamp(this.player.sprite.x + Phaser.Math.RND.pick([-160, 160]), 80, WIDTH - 80), FLOOR_Y - 62).setAlpha(1);
@@ -655,8 +655,8 @@ export class PoliticalDuelScene extends Phaser.Scene {
     const title = playerWon ? 'SPECIAL DUEL VICTORY' : 'HARD BOSS DEFEAT';
     const panel = this.add.rectangle(WIDTH / 2, HEIGHT / 2, 560, 210, 0x080b12, 0.94).setStrokeStyle(2, playerWon ? politicalFighters[this.player.faction].color : politicalFighters[this.boss.faction].color).setDepth(30);
     this.add.text(WIDTH / 2, HEIGHT / 2 - 45, title, { fontFamily: 'monospace', fontSize: '30px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31);
-    this.add.text(WIDTH / 2, HEIGHT / 2 + 12, playerWon ? '12개 하드 패턴을 돌파했습니다.' : '상대 진영의 패턴을 읽고 다시 도전하세요.', { fontFamily: 'sans-serif', fontSize: '16px', color: '#d8cdb8' }).setOrigin(0.5).setDepth(31);
-    this.add.text(WIDTH / 2, HEIGHT / 2 + 62, '화면 아래의 나가기 버튼으로 진영을 다시 선택할 수 있습니다.', { fontFamily: 'sans-serif', fontSize: '12px', color: '#9e9586' }).setOrigin(0.5).setDepth(31);
+    this.add.text(WIDTH / 2, HEIGHT / 2 + 12, playerWon ? 'You conquered all 12 hard patterns.' : 'Read the opposing faction patterns and try again.', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d8cdb8' }).setOrigin(0.5).setDepth(31);
+    this.add.text(WIDTH / 2, HEIGHT / 2 + 62, 'Use the exit button below to choose a faction again.', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#9e9586' }).setOrigin(0.5).setDepth(31);
     panel.setInteractive();
   }
 }

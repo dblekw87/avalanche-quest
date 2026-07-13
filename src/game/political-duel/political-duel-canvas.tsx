@@ -135,11 +135,11 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
           className="min-w-32 rounded border border-[#7f735f] bg-[#211c15] px-3 py-2 text-[10px] font-bold tracking-[.08em] text-[#f2dfbd] hover:border-[#d0b47a]"
           aria-pressed={audioEnabled}
         >
-          사운드 {audioEnabled ? 'ON' : 'OFF'}
+          Sound {audioEnabled ? 'ON' : 'OFF'}
         </button>
       </div>
       <button type="button" onClick={onExit} className="mx-auto block w-full max-w-sm rounded-lg border border-[#74664f] bg-[#211b15] px-5 py-3 text-xs font-bold text-[#e9dcc5] hover:bg-[#30271d] sm:mx-0 sm:w-auto">
-        스페셜 대전 나가기
+        Exit Special Duel
       </button>
     </section>
   );

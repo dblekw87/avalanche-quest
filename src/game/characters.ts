@@ -1,7 +1,7 @@
 import type { PoliticalFaction } from '@/game/political-duel/definitions';
 
-export type GeneralCharacterId = 'warrior' | 'mage' | 'spellblade' | 'archer' | 'dualblade' | 'brawler';
-export type InnateCharacterId = 'dualblade' | 'brawler';
+export type GeneralCharacterId = 'warrior' | 'mage' | 'spellblade' | 'archer' | 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger';
+export type InnateCharacterId = 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger';
 export type CharacterId = GeneralCharacterId | PoliticalFaction;
 export type CharacterGroup = 'general' | 'special';
 
@@ -10,5 +10,5 @@ export function isPoliticalCharacter(characterId: CharacterId): characterId is P
 }
 
 export function isInnateCharacter(characterId: CharacterId): characterId is InnateCharacterId {
-  return characterId === 'dualblade' || characterId === 'brawler';
+  return characterId === 'dualblade' || characterId === 'brawler' || characterId === 'dragonknight' || characterId === 'gunslinger';
 }

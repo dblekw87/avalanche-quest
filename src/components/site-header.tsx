@@ -7,10 +7,10 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const links = [
-  ['/game', '모험'],
-  ['/inventory', '가방'],
-  ['/marketplace', '거래소'],
-  ['/history', '기록'],
+  ['/game', 'Adventure'],
+  ['/inventory', 'Inventory'],
+  ['/marketplace', 'Marketplace'],
+  ['/history', 'History'],
 ] as const;
 
 export function SiteHeader() {
@@ -53,7 +53,7 @@ export function SiteHeader() {
             {({ account, chain, mounted, openAccountModal, openChainModal, openConnectModal }) => {
               const connected = mounted && account && chain;
               const action = !connected ? openConnectModal : chain.unsupported ? openChainModal : openAccountModal;
-              const label = !connected ? '지갑 연결' : chain.unsupported ? '네트워크 변경' : `${account.address.slice(0, 4)}…${account.address.slice(-3)}`;
+              const label = !connected ? 'Connect Wallet' : chain.unsupported ? 'Switch Network' : `${account.address.slice(0, 4)}…${account.address.slice(-3)}`;
               return (
                 <button type="button" onClick={action} className="rounded-lg border border-[#d7c9b6] bg-[#f6f2eb] px-2.5 py-2 text-[10px] font-bold text-[#6f4b22]">
                   {label}
@@ -62,7 +62,7 @@ export function SiteHeader() {
             }}
           </ConnectButton.Custom>
         </div>
-        <button type="button" className="ml-1 grid size-10 place-items-center rounded-xl bg-[#f6f2eb] text-[#51493f] md:hidden" onClick={() => setOpen(!open)} aria-label="메뉴 열기">
+        <button type="button" className="ml-1 grid size-10 place-items-center rounded-xl bg-[#f6f2eb] text-[#51493f] md:hidden" onClick={() => setOpen(!open)} aria-label="Open menu">
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>

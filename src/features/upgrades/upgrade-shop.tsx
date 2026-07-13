@@ -36,16 +36,16 @@ export function UpgradeShop({ onLevelsChange, disabled = false, refreshKey = 0 }
     setLevels(nextLevels); setPrices(nextPrices); onLevelsChange(nextLevels);
   }, [address, onLevelsChange, publicClient]);
 
-  useEffect(() => { const timeout = window.setTimeout(() => void refresh().catch(() => setMessage('강화 정보를 불러오지 못했습니다.')), 0); return () => window.clearTimeout(timeout); }, [refresh, refreshKey]);
+  useEffect(() => { const timeout = window.setTimeout(() => void refresh().catch(() => setMessage('Could not load upgrade information.')), 0); return () => window.clearTimeout(timeout); }, [refresh, refreshKey]);
 
   const purchase = async (index: 0 | 1 | 2) => {
     const upgradeValue = process.env.NEXT_PUBLIC_CHARACTER_UPGRADE_ADDRESS;
     const tokenValue = process.env.NEXT_PUBLIC_GAME_TOKEN_ADDRESS;
-    if (!address || !publicClient || !upgradeValue || !tokenValue || !isAddress(upgradeValue) || !isAddress(tokenValue)) { setState('error'); setMessage('강화 컨트랙트 설정이 없습니다.'); return; }
-    if (chainId !== avalancheFuji.id) { setState('error'); setMessage('Avalanche Fuji 네트워크로 변경해 주세요.'); return; }
+    if (!address || !publicClient || !upgradeValue || !tokenValue || !isAddress(upgradeValue) || !isAddress(tokenValue)) { setState('error'); setMessage('Upgrade contract configuration is missing.'); return; }
+    if (chainId !== avalancheFuji.id) { setState('error'); setMessage('Switch to the Avalanche Fuji network.'); return; }
     const price = prices[index] ?? 0n;
     if (price === 0n) return;
-    setState('pending'); setActive(upgradeDefinitions[index].key); setMessage('AQT 사용 승인을 확인하고 있습니다.');
+    setState('pending'); setActive(upgradeDefinitions[index].key); setMessage('Checking AQT spending approval.');
     try {
       const upgrade = getAddress(upgradeValue); const token = getAddress(tokenValue);
       const allowance = await publicClient.readContract({ address: token, abi: gameTokenAbi, functionName: 'allowance', args: [address, upgrade] });
@@ -53,11 +53,11 @@ export function UpgradeShop({ onLevelsChange, disabled = false, refreshKey = 0 }
         const approvalHash = await writeContractAsync({ address: token, abi: gameTokenAbi, functionName: 'approve', args: [upgrade, price], chainId: avalancheFuji.id });
         await publicClient.waitForTransactionReceipt({ hash: approvalHash });
       }
-      setMessage('강화 거래를 지갑에서 승인해 주세요.');
+      setMessage('Confirm the upgrade transaction in your wallet.');
       const nonce = await publicClient.getTransactionCount({ address, blockTag: 'pending' });
       const hash: Hex = await writeContractAsync({ address: upgrade, abi: characterUpgradeAbi, functionName: 'purchaseUpgrade', args: [index], chainId: avalancheFuji.id, nonce });
       await publicClient.waitForTransactionReceipt({ hash });
-      setState('success'); setMessage('강화에 성공했습니다. 다음 스테이지부터 적용됩니다.'); await refresh();
+      setState('success'); setMessage('Upgrade complete. It will apply from the next stage.'); await refresh();
     } catch (error) { setState('error'); setMessage(transactionErrorMessage(error)); }
     finally { setActive(null); }
   };
@@ -65,8 +65,8 @@ export function UpgradeShop({ onLevelsChange, disabled = false, refreshKey = 0 }
   return (
     <section className="mb-4 border border-[#756747] bg-[#211b15] p-4">
       <div className="flex flex-col items-center justify-between gap-2 text-center sm:flex-row sm:text-left">
-        <div><p className="text-[10px] tracking-[.2em] text-[#c49a5a]">AQT CHARACTER FORGE</p><h2 className="mt-2 text-lg text-[#eadcc0]">캐릭터 강화</h2></div>
-        <span className="text-xs text-[#9f9583]">최대 {CHARACTER_UPGRADE_MAX_LEVEL}단계</span>
+        <div><p className="text-[10px] font-bold tracking-[.2em] text-[#c49a5a]">AQT CHARACTER FORGE</p><h2 className="mt-2 text-lg font-extrabold text-[#eadcc0]">Character Upgrades</h2></div>
+        <span className="text-xs font-semibold text-[#9f9583]">Maximum Level {CHARACTER_UPGRADE_MAX_LEVEL}</span>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {upgradeDefinitions.map((entry) => {
@@ -81,7 +81,7 @@ export function UpgradeShop({ onLevelsChange, disabled = false, refreshKey = 0 }
               <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><strong className="min-w-0 text-base text-[#f1e2c6] sm:text-lg">{entry.name}</strong><span className="inline-flex min-w-11 shrink-0 items-center justify-center rounded-md border border-[#c99a48] bg-gradient-to-b from-[#8a581b] to-[#4d2e0d] px-2.5 py-1 font-mono text-base font-bold text-[#fff2b8] shadow-[inset_0_1px_0_rgba(255,241,188,.25),0_0_14px_rgba(208,165,95,.3)] sm:min-w-12 sm:px-3 sm:text-lg">+{level}</span></div><div className="mt-4 grid grid-cols-10 gap-1">{Array.from({ length: CHARACTER_UPGRADE_MAX_LEVEL }, (_, index) => <span key={index} className={`h-2 rounded-full border ${index < level ? 'border-[#f2c66d] bg-gradient-to-r from-[#a66b20] to-[#f2c66d] shadow-[0_0_9px_rgba(242,198,109,.6)]' : 'border-[#4a4032] bg-[#29231b]'}`}/>)}</div></div>
             </div>
             <p className="relative z-10 mt-4 min-h-10 text-xs leading-5 text-white">{entry.description}</p>
-            <button type="button" disabled={disabled || state === 'pending' || level >= CHARACTER_UPGRADE_MAX_LEVEL} onClick={() => void purchase(entry.id)} className="relative z-10 mt-4 w-full rounded-md border border-[#8c7146] bg-[#211a11] py-2.5 text-xs font-bold text-[#ead4ad] transition hover:border-[#d0a55f] hover:bg-[#342718] hover:text-white disabled:opacity-50">{level >= CHARACTER_UPGRADE_MAX_LEVEL ? 'MAX LEVEL' : active === entry.key ? '강화 중...' : `${formatEther(price)} AQT로 강화`}</button>
+            <button type="button" disabled={disabled || state === 'pending' || level >= CHARACTER_UPGRADE_MAX_LEVEL} onClick={() => void purchase(entry.id)} className="relative z-10 mt-4 w-full rounded-md border border-[#8c7146] bg-[#211a11] py-2.5 text-xs font-bold text-[#ead4ad] transition hover:border-[#d0a55f] hover:bg-[#342718] hover:text-white disabled:opacity-50">{level >= CHARACTER_UPGRADE_MAX_LEVEL ? 'MAX LEVEL' : active === entry.key ? 'UPGRADING...' : `UPGRADE FOR ${formatEther(price)} AQT`}</button>
           </article>;
         })}
       </div>

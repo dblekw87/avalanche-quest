@@ -25,5 +25,5 @@ function errorText(value: unknown, depth = 0): string {
 export function transactionErrorMessage(error: unknown): string {
   const normalized = errorText(error).toLowerCase();
   const wasRejected = REJECTION_MARKERS.some((marker) => normalized.includes(marker));
-  return wasRejected ? '트랜잭션을 취소하였습니다.' : '트랜잭션에 실패하였습니다.';
+  return wasRejected ? 'Transaction cancelled.' : 'Transaction failed.';
 }
