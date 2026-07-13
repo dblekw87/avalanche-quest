@@ -6,6 +6,20 @@ Avalanche Fuji Testnet에서 동작하는 사이드 스크롤 Web3 액션 RPG입
 > 프로젝트 상태: 포트폴리오 / 테스트넷 MVP<br>
 > 배포 주소: [https://avalanche-quest.vercel.app](https://avalanche-quest.vercel.app)
 
+## MetaMask에 AQT 토큰 추가
+
+먼저 지갑 네트워크를 **Avalanche Fuji Testnet**으로 변경한 다음, MetaMask의 `토큰 가져오기`에서 아래 정보를 입력합니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 네트워크 | Avalanche Fuji Testnet |
+| Chain ID | `43113` |
+| 토큰 컨트랙트 주소 | `0xD182A7E85E201412D9f69D98Be3127eC126F05f9` |
+| 토큰 기호 | `AQT` |
+| 소수점 | `18` |
+
+컨트랙트는 [Snowtrace에서 확인](https://testnet.snowtrace.io/address/0xD182A7E85E201412D9f69D98Be3127eC126F05f9)할 수 있습니다. 이 AQT는 Fuji 테스트넷용 게임 토큰이므로 Avalanche Mainnet에서는 잔액이 표시되지 않습니다.
+
 ## 프로젝트 화면
 
 ### 메인 화면
