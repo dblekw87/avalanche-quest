@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { formatEther, getAddress, isAddress, parseEther, type Address, type Hex } from 'viem';
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
@@ -91,15 +92,18 @@ export function AssetTycoonMarket() {
   };
 
   return (
-    <section className="mt-10 rounded-2xl border-2 border-[#cda842] bg-gradient-to-r from-[#302307] via-[#15120b] to-[#302307] p-5">
-      <p className="text-[10px] font-black tracking-[.22em] text-[#f2c94c]">APEX CLASS LICENSE MARKET</p>
-      <h2 className="mt-2 text-2xl font-black text-[#fff0ad]">Asset Tycoon NFT</h2>
-      <p className="mt-2 text-xs font-semibold leading-5 text-[#bbaa81]">The NFT is the class license. Escrow removes the seller&apos;s access; purchase transfers access to the buyer.</p>
-      {ownedTokens.map((tokenId) => <div key={tokenId.toString()} className="mt-4 flex flex-col gap-3 rounded-xl border border-[#806d35] bg-black/20 p-4 sm:flex-row sm:items-center"><strong className="text-[#ffe482]">Owned AQTYCOON #{tokenId.toString()}</strong><input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" aria-label="Listing price in AQT" className="min-w-0 flex-1 rounded border border-[#6d6040] bg-[#100e09] px-3 py-2 text-sm text-white"/><button disabled={state === 'pending'} onClick={() => void list(tokenId)} className="rounded border border-[#f2c94c] bg-[#735713] px-5 py-2 text-xs font-black text-white disabled:opacity-50">LIST FOR AQT</button></div>)}
+    <section className="relative mt-10 overflow-hidden rounded-2xl border-2 border-[#cda842] bg-gradient-to-r from-[#302307] via-[#15120b] to-[#302307] p-5 sm:min-h-[290px] sm:p-7">
+      <Image src="/assets/asset-tycoon/market-portrait.png" alt="Asset Tycoon class portrait" width={946} height={900} className="pointer-events-none absolute -bottom-20 -right-20 z-0 w-72 max-w-none opacity-20 sm:-bottom-32 sm:-right-10 sm:w-[430px] sm:opacity-55 lg:-bottom-44 lg:right-3 lg:w-[520px] lg:opacity-90" />
+      <div className="relative z-10 lg:max-w-[calc(100%-28rem)]">
+      <p className="text-[10px] font-black tracking-[.22em] !text-white">APEX CLASS LICENSE MARKET</p>
+      <h2 className="mt-2 text-2xl font-black !text-white">Asset Tycoon NFT</h2>
+      <p className="mt-2 text-xs font-bold leading-5 !text-white">The NFT is the class license. Escrow removes the seller&apos;s access; purchase transfers access to the buyer.</p>
+      {ownedTokens.map((tokenId) => <div key={tokenId.toString()} className="mt-4 flex flex-col gap-3 rounded-xl border border-[#806d35] bg-black/50 p-4 sm:flex-row sm:items-center"><strong className="font-black text-white">Owned AQTYCOON #{tokenId.toString()}</strong><input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" aria-label="Listing price in AQT" className="min-w-0 flex-1 rounded border border-[#6d6040] bg-[#100e09] px-3 py-2 text-sm text-white"/><button disabled={state === 'pending'} onClick={() => void list(tokenId)} className="rounded border border-[#f2c94c] bg-[#735713] px-5 py-2 text-xs font-black text-white disabled:opacity-50">LIST FOR AQT</button></div>)}
       <div className="mt-5 grid gap-3">{listings.map((listing) => <article key={listing.id.toString()} className="flex flex-col justify-between gap-3 rounded-xl border border-[#665936] bg-[#100e09]/80 p-4 sm:flex-row sm:items-center"><div><strong className="text-[#fff0ad]">Asset Tycoon #{listing.tokenId.toString()}</strong><p className="mt-1 text-xs text-[#9f9478]">Seller {listing.seller.slice(0, 6)}…{listing.seller.slice(-4)}</p></div><span className="font-mono font-bold text-[#f2c94c]">{formatEther(listing.price)} AQT</span>{address?.toLowerCase() === listing.seller.toLowerCase() ? <button disabled={state === 'pending'} onClick={() => void cancel(listing.id)} className="rounded border border-[#9c6666] px-5 py-2 text-xs font-bold text-[#efb0a5]">CANCEL</button> : <button disabled={!address || state === 'pending'} onClick={() => void buy(listing)} className="rounded border border-[#f2c94c] bg-[#735713] px-5 py-2 text-xs font-black text-white disabled:opacity-50">BUY LICENSE</button>}</article>)}</div>
-      {listings.length === 0 ? <p className="mt-4 text-xs font-semibold text-[#8f8466]">No Asset Tycoon licenses are currently listed.</p> : null}
+      {listings.length === 0 ? <p className="mt-4 text-xs font-bold !text-white">No Asset Tycoon licenses are currently listed.</p> : null}
       {message ? <p className={`mt-4 text-xs font-semibold ${state === 'error' ? 'text-[#efaaa2]' : 'text-[#d7c99f]'}`}>{message}</p> : null}
       {hash ? <a className="mt-2 block text-xs text-[#ffe482] underline" href={`https://testnet.snowtrace.io/tx/${hash}`} target="_blank" rel="noreferrer">View transaction</a> : null}
+      </div>
     </section>
   );
 }

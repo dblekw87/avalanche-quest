@@ -291,9 +291,9 @@ export function GameExperience() {
         <section className="mb-4 overflow-hidden rounded-2xl border border-[#a8793d] bg-gradient-to-br from-[#211a10] via-[#101711] to-[#0b1c18] p-3 shadow-[0_18px_55px_rgba(0,0,0,.32)] sm:p-5">
           <div className="mb-3 flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
             <div className="min-w-0">
-              <p className="text-[10px] font-extrabold tracking-[.22em] text-[#d0b47a]">PLAY EXPEDITION</p>
-              <h1 className="mt-1 truncate text-xl font-black text-[#fff2d2] sm:text-2xl">Stage {stage.number} · {stage.name}</h1>
-              <p className="mt-1 text-xs font-semibold text-[#aeb9ad]">{stage.subtitle} · {formatCharacterName(characterId)}</p>
+              <p className="text-[10px] font-extrabold tracking-[.22em] !text-white">PLAY EXPEDITION</p>
+              <h1 className="mt-1 truncate text-xl font-black !text-white sm:text-2xl">Stage {stage.number} · {stage.name}</h1>
+              <p className="mt-1 text-xs font-bold !text-white">{stage.subtitle} · {formatCharacterName(characterId)}</p>
             </div>
             {!attemptId ? (
               <button type="button" onClick={() => void startStage()} disabled={starting} className="w-full rounded-xl border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-8 py-4 text-sm font-black text-white shadow-[0_0_22px_rgba(239,189,88,.28)] disabled:opacity-40 sm:w-auto sm:min-w-56">
