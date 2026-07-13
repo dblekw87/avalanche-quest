@@ -155,7 +155,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
   };
 
   return (
-    <div>
+    <div className="mobile-game-shell">
       <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden border border-[#675b48] bg-[#102019] shadow-[0_18px_50px_rgba(0,0,0,0.42)]">
         <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
         {!result && !failure ? (

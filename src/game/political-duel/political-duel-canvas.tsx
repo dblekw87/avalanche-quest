@@ -113,7 +113,7 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
   };
 
   return (
-    <section className="space-y-3">
+    <section className="mobile-game-shell space-y-3">
       <div ref={frameRef} className="game-frame mobile-game-stage relative overflow-hidden rounded-2xl border border-[#74664f] bg-[#080b12] shadow-[0_20px_70px_rgba(0,0,0,.55)]">
         <div ref={containerRef} className="game-canvas-host aspect-[112/52] w-full" />
         <MobileGameControls

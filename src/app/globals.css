@@ -70,6 +70,7 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
 .mobile-touch-controls { display:none; }
 .mobile-control-button,
 .mobile-skill-button {
+  position:relative;
   display:grid;
   min-width:48px;
   height:48px;
@@ -85,11 +86,15 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
   touch-action:none;
   -webkit-tap-highlight-color:transparent;
 }
+.mobile-control-button:active,
+.mobile-skill-button:active { transform:scale(.9); filter:brightness(1.25); }
 .mobile-control-button--jump { border-color:#7dd3fcaa; background:#12455dcc; }
 .mobile-control-button--dash { border-color:#c4b5faaa; background:#3b2b67cc; }
 .mobile-control-button--attack { min-width:58px; border-color:#fca5a5bb; background:#732323dd; }
-.mobile-skill-button { min-width:38px; width:38px; height:38px; border-radius:10px; border-color:#f5cd76aa; background:#4e3519dd; }
-.mobile-skill-button:disabled { opacity:.32; }
+.mobile-skill-button { min-width:46px; width:46px; height:46px; overflow:hidden; border-radius:50%; border:2px solid #f5cd76cc; background:#17120bdd; }
+.mobile-skill-button__icon { position:absolute; inset:3px; border-radius:50%; background-position:center; background-size:cover; opacity:.9; }
+.mobile-skill-button__key { position:absolute; right:-1px; bottom:-1px; display:grid; width:18px; height:18px; place-items:center; border:1px solid #f8ddb0; border-radius:50%; background:#090704; color:#fff4d6; font-size:9px; line-height:1; box-shadow:0 1px 5px #000; }
+.mobile-skill-button:disabled { opacity:.3; filter:grayscale(.85); }
 .mobile-game-stage:fullscreen {
   width:100vw;
   height:100dvh;
@@ -106,8 +111,9 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
 
 @media (max-width:767px) {
   .mobile-scroll { overflow-x:auto; scrollbar-width:none; }
-  .mobile-game-stage { min-height:min(430px,calc(100dvh - 6rem)); }
-  .mobile-game-stage .game-canvas-host { height:100%; min-height:inherit; aspect-ratio:auto; }
+  .mobile-game-shell { width:100vw; margin-left:calc(50% - 50vw); }
+  .mobile-game-stage { height:min(430px,calc(100dvh - 5rem)); min-height:0; border-right:0; border-left:0; }
+  .mobile-game-stage .game-canvas-host { height:100%; min-height:0; aspect-ratio:auto; }
 }
 
 @media (orientation:landscape) {
@@ -118,8 +124,20 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
   .mobile-landscape-prompt { top:3.25rem; width:max-content; max-width:calc(100% - 2rem); text-align:center; }
 }
 
+@media (max-width:430px) {
+  .mobile-skill-button { min-width:40px; width:40px; height:40px; }
+  .mobile-skill-dock { max-width:calc(100vw - 1rem); gap:3px; padding:4px; }
+}
+
 @media (max-height:430px) and (orientation:landscape) {
   .mobile-control-button { min-width:44px; height:44px; border-radius:12px; }
   .mobile-control-button--attack { min-width:54px; }
-  .mobile-skill-button { min-width:34px; width:34px; height:34px; }
+  .mobile-skill-button { min-width:40px; width:40px; height:40px; }
+  .mobile-skill-dock { bottom:max(4rem,calc(env(safe-area-inset-bottom) + 3.5rem)); padding:4px; gap:4px; }
+}
+
+@media (hover:none) and (pointer:coarse) and (orientation:landscape) {
+  .mobile-game-shell { width:100vw; margin-left:calc(50% - 50vw); }
+  .mobile-game-stage:not(:fullscreen) { width:100vw; height:min(520px,calc(100dvh - 3.5rem)); min-height:0; border-right:0; border-left:0; }
+  .mobile-game-stage:not(:fullscreen) .game-canvas-host { width:100%; height:100%; min-height:0; aspect-ratio:auto; }
 }
