@@ -6,8 +6,9 @@ import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
-import { aegisArmor, archerSkills, armorEnhancementAbi, gameTokenAbi, mageSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, warriorSkills } from '@/features/skills/skill-contract';
+import { aegisArmor, archerSkills, armorEnhancementAbi, brawlerSkills, dualbladeSkills, gameTokenAbi, mageSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, warriorSkills } from '@/features/skills/skill-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
+import type { GeneralCharacterId } from '@/game/characters';
 
 type PurchaseState = 'idle' | 'pending' | 'success' | 'error';
 type Purchasable = { id: Hex; slug: string; name: string; price: bigint; key?: string };
@@ -15,7 +16,7 @@ type SkillShopProps = {
   onOwnershipChange: (ownedSkillIds: readonly string[]) => void;
   onArmorOwnershipChange: (owned: boolean) => void;
   refreshKey: string;
-  characterId: 'warrior' | 'mage' | 'spellblade' | 'archer';
+  characterId: GeneralCharacterId;
   onSkillLevelsChange: (levels: Readonly<Record<string, number>>) => void;
   onArmorLevelChange: (level: number) => void;
   onBalanceChange: (balance: bigint) => void;
@@ -53,34 +54,54 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
   const activeSkills = characterId === 'warrior' ? warriorSkills
     : characterId === 'mage' ? mageSkills
       : characterId === 'spellblade' ? spellbladeSkills
-        : archerSkills;
+        : characterId === 'archer' ? archerSkills
+          : characterId === 'dualblade' ? dualbladeSkills
+            : brawlerSkills;
   const classLabel = characterId === 'warrior' ? '용사 전용 스킬'
     : characterId === 'mage' ? '마법사 전용 스킬'
       : characterId === 'spellblade' ? '마검사 전용 스킬'
-        : '궁수 전용 스킬';
+        : characterId === 'archer' ? '궁수 전용 스킬'
+          : characterId === 'dualblade' ? '쌍검사 전용 스킬'
+            : '권격가 전용 스킬';
 
   const skillCardFrame = characterId === 'spellblade'
     ? 'border-[#9d67e8] shadow-[inset_0_0_18px_rgba(126,68,196,.12),0_0_12px_rgba(126,68,196,.18)]'
     : characterId === 'archer'
       ? 'border-[#72c96a] shadow-[inset_0_0_18px_rgba(75,170,86,.12),0_0_12px_rgba(75,170,86,.18)]'
-      : 'border-[#455238]';
+      : characterId === 'dualblade'
+        ? 'border-[#62dff4] shadow-[inset_0_0_16px_rgba(98,223,244,.12),0_0_12px_rgba(98,223,244,.18)]'
+        : characterId === 'brawler'
+          ? 'border-[#f2a640] shadow-[inset_0_0_16px_rgba(242,166,64,.12),0_0_12px_rgba(242,166,64,.18)]'
+          : 'border-[#455238]';
   const skillAreaFrame = characterId === 'warrior'
     ? 'border-[#9b5e35] shadow-[inset_0_0_24px_rgba(155,94,53,.12)]'
     : characterId === 'mage'
       ? 'border-[#527ec7] shadow-[inset_0_0_24px_rgba(82,126,199,.12)]'
       : characterId === 'spellblade'
         ? 'border-[#8f5bd0] shadow-[inset_0_0_26px_rgba(143,91,208,.16)]'
-        : 'border-[#62ad5c] shadow-[inset_0_0_26px_rgba(98,173,92,.16)]';
+        : characterId === 'archer'
+          ? 'border-[#62ad5c] shadow-[inset_0_0_26px_rgba(98,173,92,.16)]'
+          : characterId === 'dualblade'
+            ? 'border-[#3aaec9] shadow-[inset_0_0_28px_rgba(58,174,201,.16)]'
+            : 'border-[#c5792c] shadow-[inset_0_0_28px_rgba(197,121,44,.16)]';
   const skillIconFrame = characterId === 'spellblade'
     ? 'border-[#ad7af0] shadow-[0_0_16px_rgba(157,103,232,.32)]'
     : characterId === 'archer'
       ? 'border-[#82dc77] shadow-[0_0_16px_rgba(114,201,106,.30)]'
-      : 'border-[#665844] shadow-[0_0_14px_rgba(120,170,255,.14)]';
+      : characterId === 'dualblade'
+        ? 'border-[#62dff4] shadow-[0_0_16px_rgba(98,223,244,.30)]'
+        : characterId === 'brawler'
+          ? 'border-[#f2a640] shadow-[0_0_16px_rgba(242,166,64,.30)]'
+          : 'border-[#665844] shadow-[0_0_14px_rgba(120,170,255,.14)]';
   const skillImageFrame = characterId === 'spellblade'
     ? 'rounded border-2 border-[#c08cff] shadow-[inset_0_0_10px_rgba(90,36,145,.65),0_0_10px_rgba(192,140,255,.38)]'
     : characterId === 'archer'
       ? 'rounded border-2 border-[#8ee784] shadow-[inset_0_0_10px_rgba(30,96,43,.65),0_0_10px_rgba(142,231,132,.36)]'
-      : 'rounded border border-[#78694f]';
+      : characterId === 'dualblade'
+        ? 'rounded border-2 border-[#75e7f7] shadow-[inset_0_0_10px_rgba(20,96,120,.65),0_0_10px_rgba(117,231,247,.36)]'
+        : characterId === 'brawler'
+          ? 'rounded border-2 border-[#ffb74d] shadow-[inset_0_0_10px_rgba(110,58,12,.65),0_0_10px_rgba(255,183,77,.36)]'
+          : 'rounded border border-[#78694f]';
   const usesPurpleArmorFrame = characterId === 'spellblade' || characterId === 'archer';
   const armorFrameClass = usesPurpleArmorFrame
     ? PURPLE_ARMOR_FRAME_CLASSES[Math.min(armorLevel, PURPLE_ARMOR_FRAME_CLASSES.length - 1)]
@@ -210,7 +231,9 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
             ? `/assets/skill-effects-new/${entry.slug}-v2.png`
             : characterId === 'archer'
               ? `/assets/skill-effects-new/${entry.slug}.png`
-              : `/assets/skills-v2/${entry.slug}.png`;
+              : characterId === 'dualblade' || characterId === 'brawler'
+                ? `/assets/new-class-skills/${entry.slug}.png`
+                : `/assets/skills-v2/${entry.slug}.png`;
           return <article key={entry.slug} className={`flex flex-col border-2 bg-[#11160f] p-3 transition-shadow ${skillCardFrame} ${owned ? 'ring-1 ring-inset ring-white/20' : ''}`}>
             <div className="mb-3 flex flex-col items-center gap-2 text-center">
               <div className={`flex size-14 shrink-0 items-center justify-center rounded-md border-2 bg-black ${skillIconFrame}`}>

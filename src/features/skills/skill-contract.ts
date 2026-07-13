@@ -46,7 +46,23 @@ export const archerSkills = [
   skill('emerald-rain', 'Skyfall Barrage', 'T', 'Call a spectacular rain of arrows down from the sky.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
-export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills] as const;
+export const dualbladeSkills = [
+  skill('crescent-fang', '초승달 쌍참', 'Q', '두 검의 푸른 검기를 전방으로 발사합니다.', '25', [0, 0]),
+  skill('phantom-cross', '환영 교차난무', 'W', '교차하는 잔상 검격으로 주변 적을 연속 베어냅니다.', '35', [0, 0]),
+  skill('shadow-reversal', '그림자 역습', 'E', '가장 가까운 적의 뒤로 이동해 기습 공격합니다.', '45', [0, 0]),
+  skill('azure-focus', '청명 집중', 'R', '5초 동안 공격과 이동 능력을 강화하는 유일한 버프입니다.', '50', [0, 0]),
+  skill('infinite-blades', '무한검무', 'T', '쌍검 소용돌이와 다중 참격으로 넓은 범위의 적을 베어냅니다.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const brawlerSkills = [
+  skill('iron-jab', '철권 정타', 'Q', '응축한 주먹으로 전방에 강한 타격을 가합니다.', '25', [0, 0]),
+  skill('hundred-fists', '백열연권', 'W', '수많은 주먹 잔상으로 전방의 적을 연속 타격합니다.', '35', [0, 0]),
+  skill('titan-fist', '거신권', 'E', '회전하지 않는 거대한 황금 주먹을 전방으로 발사합니다.', '45', [0, 0]),
+  skill('burning-spirit', '투혼 각성', 'R', '5초 동안 공격과 이동 능력을 강화하는 유일한 버프입니다.', '50', [0, 0]),
+  skill('heaven-breaker', '천붕지권', 'T', '제자리에서 지면을 내려쳐 거대한 원형 충격파를 일으킵니다.', '70', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills] as const;
 
 export const aegisArmor = {
   id: keccak256(toBytes('aegis-armor')),

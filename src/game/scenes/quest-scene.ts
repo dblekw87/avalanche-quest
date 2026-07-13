@@ -1494,7 +1494,6 @@ export class QuestScene extends Phaser.Scene {
     }
     if (skillId === 'heaven-breaker') {
       const impactX = this.player.x + direction * 72;
-      this.player.setVelocityY(-150);
       this.time.delayedCall(170, () => {
         if (this.finished) return;
         this.showInnateSkillEffect(skillId, impactX, this.player.y + 42, 260, 760);
@@ -1560,7 +1559,11 @@ export class QuestScene extends Phaser.Scene {
     if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(displaySize * 0.56, displaySize * 0.46, true);
     projectile.setVelocityX(direction * speed);
     this.playerSkillProjectiles.push({ sprite: projectile, expiresAt: time + PLAYER_SKILL_PROJECTILE_LIFETIME_MS, damage, piercing: skillId === 'crescent-fang', hitEnemyIds: new Set<string>() });
-    this.tweens.add({ targets: projectile, angle: direction * 360, duration: 520, repeat: -1 });
+    if (skillId === 'crescent-fang') {
+      this.tweens.add({ targets: projectile, angle: direction * 360, duration: 520, repeat: -1 });
+    } else {
+      projectile.setAngle(0);
+    }
   }
 
   private showInnateSkillEffect(skillId: string, x: number, y: number, displaySize: number, duration: number, angle = 0): void {
@@ -2400,15 +2403,19 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private alignHeroAnimationBaseline(animation: string): void {
-    if (this.characterId !== 'warrior' && this.characterId !== 'mage') return;
+    if (this.characterId !== 'warrior' && this.characterId !== 'mage' && this.characterId !== 'brawler') return;
     const warriorBaselines: Readonly<Record<string, number>> = {
       idle: 149, walk: 145, run: 133, dash: 133, jump: 138, attack: 142, skill: 130, hit: 122, death: 120,
     };
     const mageBaselines: Readonly<Record<string, number>> = {
       idle: 145, walk: 146, run: 143, dash: 143, jump: 140, attack: 140, skill: 143, hit: 130, death: 125,
     };
-    const targetBaseline = this.characterId === 'warrior' ? 149 : 145;
-    const baseline = (this.characterId === 'warrior' ? warriorBaselines : mageBaselines)[animation] ?? targetBaseline;
+    const brawlerBaselines: Readonly<Record<string, number>> = {
+      idle: 144, walk: 130, run: 110, dash: 105, jump: 105, attack: 118, skill: 129, hit: 135, death: 125,
+    };
+    const targetBaseline = this.characterId === 'warrior' ? 149 : this.characterId === 'mage' ? 145 : 144;
+    const baselines = this.characterId === 'warrior' ? warriorBaselines : this.characterId === 'mage' ? mageBaselines : brawlerBaselines;
+    const baseline = baselines[animation] ?? targetBaseline;
     const downwardFrameOffset = targetBaseline - baseline;
     this.player.setOrigin(0.5, (78 - downwardFrameOffset) / 156);
     const body = this.player.body;

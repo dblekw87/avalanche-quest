@@ -57,6 +57,16 @@ export default buildModule('RewardSystem', (module) => {
     ['verdant-snare', '45'],
     ['feather-step', '50'],
     ['emerald-rain', '70'],
+    ['crescent-fang', '25'],
+    ['phantom-cross', '35'],
+    ['shadow-reversal', '45'],
+    ['azure-focus', '50'],
+    ['infinite-blades', '70'],
+    ['iron-jab', '25'],
+    ['hundred-fists', '35'],
+    ['titan-fist', '45'],
+    ['burning-spirit', '50'],
+    ['heaven-breaker', '70'],
   ] as const;
   newSkills.forEach(([slug, price]) => {
     const transactionId = `set_${slug.replaceAll('-', '_')}_price`;

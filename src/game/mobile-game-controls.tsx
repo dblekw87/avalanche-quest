@@ -29,6 +29,7 @@ export function questMobileSkills(characterId: CharacterId, ownedSkillIds: reado
       label: skill.key,
       name: skill.name,
       iconUrl: innateSkillIcon(skill.id),
+      disabled: !ownedSkillIds.includes(skill.id),
     }));
   }
   const labels = ['Q', 'W', 'E', 'R', 'T'];
