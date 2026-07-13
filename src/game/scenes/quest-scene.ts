@@ -70,6 +70,12 @@ const PIT_DEATH_Y = 610;
 const BOSS_ARENA_START_X = 4_180;
 const BOSS_ARENA_TOP_Y = 390;
 const SKILL_COOLDOWN_BAR_WIDTH = 48;
+const AWAKENING_COOLDOWN_MS = 30_000;
+const AWAKENING_SKILL_IDS = new Set([
+  'starfall', 'meteor', 'constellation-storm', 'emerald-rain', 'infinite-blades', 'heaven-breaker',
+  'cataclysm-wyvern', 'bullet-tempest', 'heaven-sever', 'skybreaker-combo', 'deathbloom',
+  'solar-cataclysm', 'world-anvil', 'ragnarok-cleaver', 'legacy-beyond-failure',
+]);
 const MAX_TOTAL_EQUIPMENT_UPGRADE_LEVEL = 65;
 const UPGRADE_PARTICLE_OFFSET_X = 8;
 const PLATFORM_SURFACE_ORIGIN_Y = [
@@ -246,6 +252,10 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists('quest-warrior-hq-vfx')) this.load.spritesheet('quest-warrior-hq-vfx', '/assets/class-skill-vfx/warrior.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
     if (!this.textures.exists('quest-mage-special-vfx')) this.load.spritesheet('quest-mage-special-vfx', '/assets/class-skill-vfx/mage-special.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
     if (!this.textures.exists('quest-dragon-breath-vfx')) this.load.spritesheet('quest-dragon-breath-vfx', '/assets/class-skill-vfx/dragon-breath.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
+    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'assettycoon'].forEach((character) => {
+      const textureKey = `quest-${character}-ultimate-vfx`;
+      if (!this.textures.exists(textureKey)) this.load.spritesheet(textureKey, `/assets/class-skill-vfx/${character}-ultimate.png?v=20260714f`, { frameWidth: 256, frameHeight: 256 });
+    });
     ['spellblade', 'archer'].forEach((character) => {
       ['idle', 'run', 'jump', 'attack', 'skill', 'dash'].forEach((pose) => {
         if (!this.textures.exists(`quest-${character}-${pose}`)) this.load.image(`quest-${character}-${pose}`, `/assets/class-poses/${character}-${pose}.png`);
@@ -633,6 +643,15 @@ export class QuestScene extends Phaser.Scene {
     });
     if (!this.anims.exists('dragon-hq-cataclysm-breath')) this.anims.create({
       key: 'dragon-hq-cataclysm-breath', frames: this.anims.generateFrameNumbers('quest-dragon-breath-vfx', { start: 0, end: 7 }), frameRate: 5, repeat: 0,
+    });
+    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'assettycoon'].forEach((character) => {
+      const animationKey = `${character}-hq-ultimate`;
+      if (!this.anims.exists(animationKey)) this.anims.create({
+        key: animationKey,
+        frames: this.anims.generateFrameNumbers(`quest-${character}-ultimate-vfx`, { start: 0, end: 7 }),
+        frameRate: 6,
+        repeat: 0,
+      });
     });
   }
 
@@ -1574,7 +1593,7 @@ export class QuestScene extends Phaser.Scene {
     if (skillId === 'healing-circle') { this.castHealingCircle(skillId); return; }
     if (skillId === 'chain-lightning') { this.castVioletJudgment(this.skillDamage(skillId, 3)); return; }
     if (skillId === 'meteor') { this.castMeteor(this.skillDamage(skillId, 5)); return; }
-    if (skillId === 'magic-missile') { this.castGrandMeteor(this.skillDamage(skillId, 3)); return; }
+    if (skillId === 'magic-missile') this.spawnSkillProjectile('slash', this.skillDamage(skillId, 3), 620, 0.68, time, undefined, 'quest-mage-vfx-v2', 'mage-vfx-missile');
     if (skillId === 'ice-storm') { this.castIceStorm(this.skillDamage(skillId, 3)); return; }
 
     if (skillId === 'arcane-cleave') { this.castAbyssRush(skillId, this.skillDamage(skillId, 4)); return; }
@@ -1621,15 +1640,7 @@ export class QuestScene extends Phaser.Scene {
       return;
     }
     if (skillId === 'infinite-blades') {
-      const centerX = this.player.x + direction * 90;
-      [0, 90, 180, 270, 360].forEach((delay, index) => this.time.delayedCall(delay, () => {
-        if (this.finished) return;
-        const offset = (index - 2) * 78;
-        this.showInnateSkillEffect(skillId, centerX + offset, this.player.y - Math.abs(index - 2) * 10, 180 + index * 12, 620, index * 32);
-        this.spawnInnateParticles(centerX + offset, this.player.y, 18, 190);
-      }));
-      this.time.delayedCall(190, () => this.damageEnemiesInArea(centerX, 410, damage, 130));
-      this.cameras.main.shake(420, 0.013);
+      this.castAnimatedUltimate('dualblade', damage);
       return;
     }
     if (skillId === 'iron-jab') {
@@ -1657,15 +1668,7 @@ export class QuestScene extends Phaser.Scene {
       return;
     }
     if (skillId === 'heaven-breaker') {
-      const impactX = this.player.x + direction * 72;
-      this.time.delayedCall(170, () => {
-        if (this.finished) return;
-        this.showInnateSkillEffect(skillId, impactX, this.player.y + 42, 260, 760);
-        this.spawnInnateParticles(impactX, this.player.y + 30, 32, 260);
-        this.damageEnemiesInArea(impactX, 335, damage, 145);
-        this.cameras.main.shake(520, 0.018);
-        this.cameras.main.flash(120, 255, 169, 50, false);
-      });
+      this.castAnimatedUltimate('brawler', damage);
       return;
     }
     if (skillId === 'draconic-thrust') {
@@ -1707,18 +1710,7 @@ export class QuestScene extends Phaser.Scene {
       return;
     }
     if (skillId === 'bullet-tempest') {
-      const centerX = this.player.x + direction * 120;
-      for (let index = 0; index < 12; index += 1) {
-        this.time.delayedCall(index * 55, () => {
-          if (this.finished) return;
-          const angle = -0.48 + (index % 6) * 0.19;
-          this.launchInnateProjectile('bullet-tempest', Math.max(1, Math.ceil(damage / 3)), 760 + (index % 3) * 45, this.time.now, 72, angle);
-          const x = centerX + Phaser.Math.Between(-170, 170);
-          this.showInnateSkillEffect(skillId, x, this.player.y + Phaser.Math.Between(-55, 35), 92, 360, index * 20);
-        });
-      }
-      this.time.delayedCall(330, () => this.damageEnemiesInArea(centerX, 410, damage, 150));
-      this.cameras.main.shake(620, 0.014);
+      this.castAnimatedUltimate('gunslinger', damage);
       return;
     }
 
@@ -1814,7 +1806,7 @@ export class QuestScene extends Phaser.Scene {
       return;
     }
     if (skillId === 'ragnarok-cleaver') {
-      this.castRagnarokCyclone(damage);
+      this.castAnimatedUltimate('axereaver', damage);
       return;
     }
     if (definition.key === 'T') {
@@ -1833,7 +1825,38 @@ export class QuestScene extends Phaser.Scene {
     }
   }
 
+  private castAnimatedUltimate(character: 'spellblade' | 'archer' | 'dualblade' | 'brawler' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver' | 'assettycoon', damage: number): void {
+    const view = this.cameras.main.worldView;
+    const centerX = view.centerX;
+    const colors: Readonly<Record<typeof character, number>> = {
+      spellblade: 0xd62955, archer: 0x8ffff0, dualblade: 0x667cff, brawler: 0xffb23f, gunslinger: 0x63dcff,
+      ssaulabi: 0xef294d, kickfighter: 0x45e6d1, venomancer: 0x80e83f, pyromancer: 0xff8a32, hammerguard: 0x9ac7ff,
+      axereaver: 0xff294f, assettycoon: 0xffdf72,
+    };
+    const sprite = this.add.sprite(512, 260, `quest-${character}-ultimate-vfx`, 0)
+      .setScrollFactor(0)
+      .setDepth(28)
+      .setDisplaySize(720, 620)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    sprite.play(`${character}-hq-ultimate`);
+    sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
+    for (let pulse = 0; pulse < 7; pulse += 1) this.time.delayedCall(210 + pulse * 155, () => {
+      if (this.finished) return;
+      this.damageEnemiesInArea(centerX, view.width * (0.38 + pulse * 0.045), Math.max(1, Math.ceil(damage / 5)), 230);
+      if (pulse === 2 || pulse === 5) this.cameras.main.shake(130, 0.009 + pulse * 0.001);
+    });
+    this.time.delayedCall(1_230, () => {
+      if (this.finished) return;
+      this.damageEnemiesInArea(centerX, view.width * 0.72, damage, 460);
+      this.spawnSkillImpactBurst(centerX, this.player.y + 10, colors[character], 2.25);
+      this.cameras.main.flash(260, (colors[character] >> 16) & 255, (colors[character] >> 8) & 255, colors[character] & 255, false);
+      this.cameras.main.shake(760, 0.028);
+    });
+  }
+
   private castWorldAnvil(damage: number, time: number): void {
+    this.castAnimatedUltimate('hammerguard', damage);
+    return;
     const direction = this.player.flipX ? -1 : 1;
     const level = this.skillUpgradeLevels['world-anvil'] ?? 0;
     const startX = this.player.x;
@@ -1891,6 +1914,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castCrimsonHeavenSever(damage: number, time: number): void {
+    this.castAnimatedUltimate('ssaulabi', damage);
+    return;
     const level = this.skillUpgradeLevels['heaven-sever'] ?? 0;
     const view = this.cameras.main.worldView;
     const centerX = view.centerX;
@@ -1949,6 +1974,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castVenomDeathbloom(damage: number): void {
+    this.castAnimatedUltimate('venomancer', damage);
+    return;
     const level = this.skillUpgradeLevels['deathbloom'] ?? 0;
     const centerX = this.player.x;
     const centerY = this.player.y - 62;
@@ -2029,6 +2056,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castSolarCataclysm(damage: number): void {
+    this.castAnimatedUltimate('pyromancer', damage);
+    return;
     const level = this.skillUpgradeLevels['solar-cataclysm'] ?? 0;
     const centerX = this.player.x;
     const centerY = this.player.y - 205;
@@ -2066,6 +2095,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castSkybreakerQuake(damage: number, time: number): void {
+    this.castAnimatedUltimate('kickfighter', damage);
+    return;
     const level = this.skillUpgradeLevels['skybreaker-combo'] ?? 0;
     const startX = this.player.x;
     const startY = this.player.y;
@@ -2194,6 +2225,10 @@ export class QuestScene extends Phaser.Scene {
     const damage = this.skillDamage(skillId, skill.damage + 7);
     const direction = this.player.flipX ? -1 : 1;
     this.showAssetTycoonCallout(skill.name);
+    if (skill.key === 'T') {
+      this.castAnimatedUltimate('assettycoon', damage);
+      return;
+    }
 
     if ('buff' in skill && skill.buff) {
       const duration = skillId === 'loss-recovery' ? 12_000 : 8_000;
@@ -2233,17 +2268,16 @@ export class QuestScene extends Phaser.Scene {
       }));
       return;
     }
-    const ultimate = skill.key === 'T';
-    const radius = ultimate ? 2_200 : 850;
-    const repeats = ultimate ? 9 : 5;
+    const radius = 850;
+    const repeats = 5;
     for (let index = 0; index < repeats; index += 1) this.time.delayedCall(index * 95, () => {
-      const x = Phaser.Math.Clamp(this.player.x + (index - (repeats - 1) / 2) * (ultimate ? 220 : 150), 80, WORLD_WIDTH - 80);
-      this.showInnateSkillEffect(skillId, x, this.player.y - 40, ultimate ? 330 : 245, 820, index * 39);
-      this.spawnInnateParticles(x, this.player.y, ultimate ? 34 : 22, ultimate ? 340 : 230);
+      const x = Phaser.Math.Clamp(this.player.x + (index - (repeats - 1) / 2) * 150, 80, WORLD_WIDTH - 80);
+      this.showInnateSkillEffect(skillId, x, this.player.y - 40, 245, 820, index * 39);
+      this.spawnInnateParticles(x, this.player.y, 22, 230);
     });
     this.time.delayedCall(360, () => this.damageEnemiesInArea(this.player.x, radius, damage, 360));
     this.cameras.main.flash(260, 255, 216, 90, false);
-    this.cameras.main.shake(ultimate ? 1_100 : 620, ultimate ? 0.03 : 0.018);
+    this.cameras.main.shake(620, 0.018);
   }
 
   private showAssetTycoonCallout(skillName: string): void {
@@ -3095,24 +3129,6 @@ export class QuestScene extends Phaser.Scene {
     return sprite;
   }
 
-  private castGrandMeteor(damage: number): void {
-    const direction = this.player.flipX ? -1 : 1;
-    const view = this.cameras.main.worldView;
-    const impactX = Phaser.Math.Clamp(this.player.x + direction * 270, view.left + 150, view.right - 150);
-    const meteor = this.add.sprite(impactX, this.player.y - 95, 'quest-mage-special-vfx', 0)
-      .setDepth(25).setDisplaySize(440, 440).setFlipX(direction < 0).setBlendMode(Phaser.BlendModes.ADD);
-    meteor.play('mage-hq-grand-meteor');
-    meteor.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => meteor.destroy());
-    this.time.delayedCall(500, () => {
-      if (this.finished) return;
-      this.damageEnemiesInArea(impactX, 245, damage, 290);
-      this.spawnSkillImpactBurst(impactX, this.player.y + 30, 0xff6a25, 1.75);
-      this.spawnInnateParticles(impactX, this.player.y + 10, 42, 285);
-      this.cameras.main.flash(160, 255, 112, 36, false);
-      this.cameras.main.shake(520, 0.023);
-    });
-  }
-
   private castVioletJudgment(damage: number): void {
     const view = this.cameras.main.worldView;
     const centerX = view.centerX;
@@ -3236,48 +3252,34 @@ export class QuestScene extends Phaser.Scene {
 
   private castMeteor(damage: number): void {
     const view = this.cameras.main.worldView;
-    const centerX = view.centerX;
-    const centerY = this.player.y - 75;
-    const elements = [
-      { color: 0xff572e, edge: 0xffd15a, x: -245, y: 15 },
-      { color: 0x36c9ff, edge: 0xc8f6ff, x: -125, y: -125 },
-      { color: 0x64ef9b, edge: 0xe5ffcf, x: 0, y: -175 },
-      { color: 0xb879ff, edge: 0xffffff, x: 125, y: -125 },
-      { color: 0xd99a52, edge: 0xffe1a3, x: 245, y: 15 },
-    ] as const;
-    const orbs = elements.map((element, index) => {
-      const orb = this.add.circle(centerX + element.x, centerY + element.y, 34, element.color, 0.44)
-        .setStrokeStyle(7, element.edge, 0.98).setDepth(18).setScale(0.1).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({ targets: orb, scale: 1.35, angle: index * 90, duration: 360 + index * 90, delay: index * 75, ease: 'Back.Out' });
-      return orb;
+    const impactX = view.centerX;
+    const impactY = this.player.y - 72;
+    const meteor = this.add.sprite(impactX - 220, view.top - 330, 'quest-mage-special-vfx', 0)
+      .setDepth(27).setDisplaySize(470, 470).setBlendMode(Phaser.BlendModes.ADD);
+    meteor.play('mage-hq-grand-meteor');
+    meteor.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => meteor.destroy());
+    this.tweens.add({
+      targets: meteor,
+      x: impactX,
+      y: impactY,
+      displayWidth: 650,
+      displayHeight: 650,
+      duration: 690,
+      ease: 'Expo.In',
     });
-    elements.forEach((element, index) => this.time.delayedCall(390 + index * 170, () => {
+    this.time.delayedCall(650, () => {
       if (this.finished) return;
-      const x = centerX + element.x * 0.55;
-      const y = this.player.y + 22;
-      const wave = this.add.circle(x, y, 38, element.color, 0.24).setStrokeStyle(7, element.edge, 0.98).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({ targets: wave, scale: 4.4, alpha: 0, duration: 650, ease: 'Cubic.Out', onComplete: () => wave.destroy() });
-      this.showInnateSkillEffect('meteor', x, y - 30, 170 + index * 18, 620, index * 41);
-      this.spawnSkillImpactBurst(x, y, element.color, 1.1 + index * 0.08);
-      this.damageEnemiesInArea(x, 220 + index * 24, Math.max(1, Math.ceil(damage / 3)), 260);
-      this.cameras.main.shake(180, 0.01 + index * 0.002);
-    }));
-    this.time.delayedCall(1_280, () => {
-      if (this.finished) return;
-      orbs.forEach((orb) => this.tweens.add({ targets: orb, x: centerX, y: centerY, scale: 0.3, alpha: 0, duration: 280, onComplete: () => orb.destroy() }));
-      const prism = this.add.circle(centerX, centerY, 58, 0xffffff, 0.72).setStrokeStyle(12, 0xffefb2, 1).setDepth(20).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({ targets: prism, scale: 9, alpha: 0, duration: 820, ease: 'Expo.Out', onComplete: () => prism.destroy() });
-      elements.forEach((element, index) => {
-        const ray = this.add.rectangle(centerX, centerY, view.width * 0.72, 18, element.color, 0.72).setDepth(19).setAngle(index * 36 - 72).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: ray, scaleX: 1.45, scaleY: 0.18, alpha: 0, duration: 680, onComplete: () => ray.destroy() });
-      });
-      this.damageEnemiesInArea(centerX, view.width * 0.72, damage, 520);
-      this.cameras.main.flash(300, 235, 225, 255, false);
-      this.cameras.main.shake(850, 0.03);
+      this.damageEnemiesInArea(impactX, view.width * 0.68, damage, 500);
+      this.spawnSkillImpactBurst(impactX, this.player.y + 26, 0xff5b24, 2.35);
+      this.spawnInnateParticles(impactX, this.player.y + 10, 68, 430);
+      this.cameras.main.flash(320, 255, 112, 34, false);
+      this.cameras.main.shake(1_000, 0.036);
     });
   }
 
   private castDarkSwordRain(damage: number): void {
+    this.castAnimatedUltimate('spellblade', damage);
+    return;
     const view = this.cameras.main.worldView;
     const swordCount = 13;
     const veil = this.add.rectangle(view.centerX, view.centerY, view.width, view.height, 0x260812, 0.24).setDepth(17).setBlendMode(Phaser.BlendModes.MULTIPLY);
@@ -3310,6 +3312,8 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castEmeraldTempest(damage: number): void {
+    this.castAnimatedUltimate('archer', damage);
+    return;
     const view = this.cameras.main.worldView;
     const centerX = view.centerX;
     const centerY = this.player.y - 15;
@@ -3560,6 +3564,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private skillCooldownMs(skillId: string): number {
+    if (AWAKENING_SKILL_IDS.has(skillId)) return AWAKENING_COOLDOWN_MS;
     if (isPoliticalCharacter(this.characterId)) {
       const skill = politicalFighters[this.characterId].skills.find((entry) => `${this.characterId}-${entry.key.toLowerCase()}` === skillId);
       if (skill) return skill.cooldownMs;

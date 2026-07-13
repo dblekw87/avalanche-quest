@@ -20,8 +20,21 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://avalanche-quest.vercel.app'),
   title: 'Avalanche Quest — Play. Own. Trade.',
   description: 'A side-scrolling Web3 RPG built for Avalanche Fuji.',
+  openGraph: {
+    title: 'Avalanche Quest — Play. Own. Trade.',
+    description: 'Defeat bosses, earn AQT and equipment, and own your legend on Avalanche Fuji.',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Avalanche Quest expedition heroes' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Avalanche Quest — Play. Own. Trade.',
+    description: 'Defeat bosses, earn AQT and equipment, and own your legend on Avalanche Fuji.',
+    images: ['/og-image.png'],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

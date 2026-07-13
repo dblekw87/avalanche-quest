@@ -23,11 +23,11 @@ export const warriorSkills = [
 ] as const satisfies readonly SkillDefinition[];
 
 export const mageSkills = [
-  skill('magic-missile', 'Grand Meteor', 'Q', 'Drop one enormous blazing meteor for a heavy area impact.', '25', [530, 400]),
+  skill('magic-missile', 'Energy Bolt', 'Q', 'Fire a fast piercing arcane energy projectile.', '25', [530, 400]),
   skill('ice-storm', 'Ice Storm', 'W', 'Raise freezing spikes around nearby enemies.', '35', [530, 459]),
   skill('chain-lightning', 'Violet Judgment', 'E', 'Call purple lightning vertically from the sky across a wide area.', '45', [530, 518]),
   skill('healing-circle', 'Healing Circle', 'R', 'Restore 3 vitality with a healing circle.', '50', [530, 578]),
-  skill('meteor', 'Five-Element Cataclysm', 'T', 'Unite fire, water, wind, lightning, and earth to sweep the battlefield.', '70', [530, 638]),
+  skill('meteor', 'Grand Meteor', 'T', 'Drop one enormous meteor from high above for a devastating battlefield impact.', '70', [530, 638]),
 ] as const satisfies readonly SkillDefinition[];
 
 export const spellbladeSkills = [
