@@ -75,6 +75,7 @@ const AWAKENING_SKILL_IDS = new Set([
   'starfall', 'meteor', 'constellation-storm', 'emerald-rain', 'infinite-blades', 'heaven-breaker',
   'cataclysm-wyvern', 'bullet-tempest', 'heaven-sever', 'skybreaker-combo', 'deathbloom',
   'solar-cataclysm', 'world-anvil', 'ragnarok-cleaver', 'legacy-beyond-failure',
+  'primordial-genesis', 'nightmare-apocalypse',
 ]);
 const MAX_TOTAL_EQUIPMENT_UPGRADE_LEVEL = 65;
 const UPGRADE_PARTICLE_OFFSET_X = 8;
@@ -226,7 +227,7 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists('quest-gunslinger-skill-strip')) {
       this.load.spritesheet('quest-gunslinger-skill-strip', '/assets/classes/gunslinger-skill-strip.png?v=20260714d', { frameWidth: 156, frameHeight: 156 });
     }
-    ['ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'assettycoon'].forEach((character) => {
+    ['ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock', 'assettycoon'].forEach((character) => {
       if (!this.textures.exists(`quest-${character}-sheet`)) this.load.image(`quest-${character}-sheet`, `/assets/classes/${character}-sheet.png?v=20260714c`);
     });
     (['run', 'jump', 'skill', 'hit'] as const).forEach((animation) => {
@@ -252,7 +253,7 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists('quest-warrior-hq-vfx')) this.load.spritesheet('quest-warrior-hq-vfx', '/assets/class-skill-vfx/warrior.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
     if (!this.textures.exists('quest-mage-special-vfx')) this.load.spritesheet('quest-mage-special-vfx', '/assets/class-skill-vfx/mage-special.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
     if (!this.textures.exists('quest-dragon-breath-vfx')) this.load.spritesheet('quest-dragon-breath-vfx', '/assets/class-skill-vfx/dragon-breath.png?v=20260714e', { frameWidth: 256, frameHeight: 256 });
-    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'assettycoon'].forEach((character) => {
+    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock', 'assettycoon'].forEach((character) => {
       const textureKey = `quest-${character}-ultimate-vfx`;
       if (!this.textures.exists(textureKey)) this.load.spritesheet(textureKey, `/assets/class-skill-vfx/${character}-ultimate.png?v=20260714f`, { frameWidth: 256, frameHeight: 256 });
     });
@@ -644,7 +645,7 @@ export class QuestScene extends Phaser.Scene {
     if (!this.anims.exists('dragon-hq-cataclysm-breath')) this.anims.create({
       key: 'dragon-hq-cataclysm-breath', frames: this.anims.generateFrameNumbers('quest-dragon-breath-vfx', { start: 0, end: 7 }), frameRate: 5, repeat: 0,
     });
-    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'assettycoon'].forEach((character) => {
+    ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock', 'assettycoon'].forEach((character) => {
       const animationKey = `${character}-hq-ultimate`;
       if (!this.anims.exists(animationKey)) this.anims.create({
         key: animationKey,
@@ -947,7 +948,7 @@ export class QuestScene extends Phaser.Scene {
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.dashKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     const skillIds = this.classSkillIds;
-    const keyCodes = isSecretCharacter(this.characterId)
+    const keyCodes = isSecretCharacter(this.characterId) || this.characterId === 'elementalist'
       ? [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V, Phaser.Input.Keyboard.KeyCodes.T]
       : isPoliticalCharacter(this.characterId)
       ? [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V]
@@ -1616,6 +1617,11 @@ export class QuestScene extends Phaser.Scene {
     const damage = this.skillDamage(skillId, definition.damage);
     const direction = this.player.flipX ? -1 : 1;
 
+    if (this.characterId === 'elementalist' || this.characterId === 'warlock') {
+      this.castNewMageClassSkill(skillId, definition.key, damage, time);
+      return;
+    }
+
     if (skillId === 'crescent-fang') {
       this.launchInnateProjectile(skillId, damage, 720, time, 128);
       this.spawnInnateParticles(this.player.x + direction * 62, this.player.y, 14, 110);
@@ -1825,15 +1831,16 @@ export class QuestScene extends Phaser.Scene {
     }
   }
 
-  private castAnimatedUltimate(character: 'spellblade' | 'archer' | 'dualblade' | 'brawler' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver' | 'assettycoon', damage: number): void {
+  private castAnimatedUltimate(character: 'spellblade' | 'archer' | 'dualblade' | 'brawler' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver' | 'elementalist' | 'warlock' | 'assettycoon', damage: number): void {
     const view = this.cameras.main.worldView;
     const centerX = view.centerX;
     const colors: Readonly<Record<typeof character, number>> = {
       spellblade: 0xd62955, archer: 0x8ffff0, dualblade: 0x667cff, brawler: 0xffb23f, gunslinger: 0x63dcff,
       ssaulabi: 0xef294d, kickfighter: 0x45e6d1, venomancer: 0x80e83f, pyromancer: 0xff8a32, hammerguard: 0x9ac7ff,
       axereaver: 0xff294f, assettycoon: 0xffdf72,
+      elementalist: 0xffe38a, warlock: 0xa86cff,
     };
-    const sprite = this.add.sprite(512, 260, `quest-${character}-ultimate-vfx`, 0)
+    const sprite = this.add.sprite(this.scale.width / 2, this.scale.height / 2, `quest-${character}-ultimate-vfx`, 0)
       .setScrollFactor(0)
       .setDepth(28)
       .setDisplaySize(720, 620)
@@ -1851,6 +1858,44 @@ export class QuestScene extends Phaser.Scene {
       this.spawnSkillImpactBurst(centerX, this.player.y + 10, colors[character], 2.25);
       this.cameras.main.flash(260, (colors[character] >> 16) & 255, (colors[character] >> 8) & 255, colors[character] & 255, false);
       this.cameras.main.shake(760, 0.028);
+    });
+  }
+
+  private castNewMageClassSkill(skillId: string, key: 'Q' | 'W' | 'E' | 'R' | 'T' | 'Z' | 'X' | 'C' | 'V', damage: number, time: number): void {
+    const elementalist = this.characterId === 'elementalist';
+    const direction = this.player.flipX ? -1 : 1;
+    if (key === 'R') {
+      this.castInnateBuff(skillId, time);
+      return;
+    }
+    if ((elementalist && key === 'V') || (!elementalist && key === 'T')) {
+      this.castAnimatedUltimate(elementalist ? 'elementalist' : 'warlock', damage);
+      return;
+    }
+    if (key === 'Q' || key === 'E') {
+      const count = key === 'E' ? 3 : 1;
+      for (let index = 0; index < count; index += 1) {
+        const angle = count === 1 ? 0 : (index - 1) * 0.16;
+        this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / (count === 1 ? 1 : 2))), 720, time, 120, angle);
+      }
+      this.spawnInnateParticles(this.player.x + direction * 72, this.player.y - 8, 22, 180);
+      return;
+    }
+    const view = this.cameras.main.worldView;
+    const centerX = key === 'W' ? this.player.x + direction * 150 : view.centerX;
+    const pulses = key === 'C' || key === 'T' ? 7 : key === 'Z' || key === 'X' ? 5 : 4;
+    for (let pulse = 0; pulse < pulses; pulse += 1) this.time.delayedCall(pulse * 120, () => {
+      if (this.finished) return;
+      const x = key === 'T' ? view.left + ((pulse + 1) * view.width) / (pulses + 1) : centerX + Phaser.Math.Between(-90, 90);
+      this.showInnateSkillEffect(skillId, x, this.player.y - 20, 150 + pulse * 18, 520, pulse * 37);
+      this.spawnInnateParticles(x, this.player.y, 14, 150);
+      this.damageEnemiesInArea(x, 150 + pulse * 14, Math.max(1, Math.ceil(damage / 3)), 230);
+    });
+    this.time.delayedCall(pulses * 120, () => {
+      if (this.finished) return;
+      this.damageEnemiesInArea(centerX, key === 'C' || key === 'T' ? view.width * 0.62 : 360, damage, 340);
+      this.cameras.main.flash(180, elementalist ? 255 : 145, elementalist ? 220 : 80, 255, false);
+      this.cameras.main.shake(520, 0.018);
     });
   }
 

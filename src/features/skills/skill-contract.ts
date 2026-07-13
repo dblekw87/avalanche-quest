@@ -4,7 +4,7 @@ export type SkillDefinition = {
   id: Hex;
   slug: string;
   name: string;
-  key: 'Q' | 'W' | 'E' | 'R' | 'T';
+  key: 'Q' | 'W' | 'E' | 'R' | 'T' | 'Z' | 'X' | 'C' | 'V';
   description: string;
   price: bigint;
   iconPosition: readonly [x: number, y: number];
@@ -126,7 +126,27 @@ export const axereaverSkills = [
   skill('ragnarok-cleaver', 'Ragnarok Cleaver', 'T', 'Split the battlefield with a colossal execution axe.', '70', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];
 
-export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills, ...dragonknightSkills, ...gunslingerSkills, ...ssaulabiSkills, ...kickfighterSkills, ...venomancerSkills, ...pyromancerSkills, ...hammerguardSkills, ...axereaverSkills] as const;
+export const elementalistSkills = [
+  skill('flame-orbit', 'Flame Orbit', 'Q', 'Launch an orbiting solar flame.', '30', [0, 0]),
+  skill('tidal-prison', 'Tidal Prison', 'W', 'Crush enemies inside a surging water sphere.', '40', [0, 0]),
+  skill('tempest-lance', 'Tempest Lance', 'E', 'Pierce the battlefield with compressed wind.', '50', [0, 0]),
+  skill('gaia-aegis', 'Gaia Aegis', 'R', 'Gain an earthen barrier and elemental power.', '60', [0, 0]),
+  skill('thunder-domain', 'Thunder Domain', 'T', 'Call repeated lightning across a wide area.', '70', [0, 0]),
+  skill('frost-comet', 'Frost Comet', 'Z', 'Drop a freezing comet from above.', '80', [0, 0]),
+  skill('magma-fault', 'Magma Fault', 'X', 'Split the ground with molten stone.', '90', [0, 0]),
+  skill('elemental-convergence', 'Elemental Convergence', 'C', 'Fuse five elements into a multi-hit core.', '110', [0, 0]),
+  skill('primordial-genesis', 'Primordial Genesis', 'V', 'Awaken all five elements and erase the battlefield.', '150', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const warlockSkills = [
+  skill('abyss-bolt', 'Abyss Bolt', 'Q', 'Fire a piercing orb of forbidden magic.', '30', [0, 0]),
+  skill('soul-chains', 'Soul Chains', 'W', 'Bind and repeatedly damage nearby enemies.', '40', [0, 0]),
+  skill('void-eruption', 'Void Eruption', 'E', 'Open dark rifts beneath the enemy.', '50', [0, 0]),
+  skill('dark-covenant', 'Dark Covenant', 'R', 'Gain forbidden power and damage reduction.', '60', [0, 0]),
+  skill('nightmare-apocalypse', 'Nightmare Apocalypse', 'T', 'Summon an abyssal eye and collapse the battlefield into darkness.', '90', [0, 0]),
+] as const satisfies readonly SkillDefinition[];
+
+export const skills = [...warriorSkills, ...mageSkills, ...spellbladeSkills, ...archerSkills, ...dualbladeSkills, ...brawlerSkills, ...dragonknightSkills, ...gunslingerSkills, ...ssaulabiSkills, ...kickfighterSkills, ...venomancerSkills, ...pyromancerSkills, ...hammerguardSkills, ...axereaverSkills, ...elementalistSkills, ...warlockSkills] as const;
 
 export const aegisArmor = {
   id: keccak256(toBytes('aegis-armor')),

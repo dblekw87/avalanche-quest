@@ -37,6 +37,7 @@ export class PoliticalDuelScene extends Phaser.Scene {
   private bossHealthBar!: Phaser.GameObjects.Rectangle;
   private statusText!: Phaser.GameObjects.Text;
   private ended = false;
+  private startedAt = 0;
   private dashReadyAt = 0;
   private dashUntil = 0;
   private dashDirection = 1;
@@ -85,6 +86,7 @@ export class PoliticalDuelScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.startedAt = this.time.now;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.audioDirector.stop());
     this.physics.world.setBounds(0, 0, WIDTH, FLOOR_Y);
     this.createArena();
@@ -647,6 +649,7 @@ export class PoliticalDuelScene extends Phaser.Scene {
     if (this.ended) return;
     this.ended = true;
     this.audioDirector.stop();
+    this.events.emit('duel-completed', { playerWon, durationMs: Math.max(0, Math.round(this.time.now - this.startedAt)) });
     const defeated = playerWon ? this.boss : this.player;
     const victor = playerWon ? this.player : this.boss;
     defeated.sprite.play(`${defeated.faction}-knockdown`, true);

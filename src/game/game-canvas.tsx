@@ -229,7 +229,7 @@ function gameCharacterLabel(characterId: CharacterId) {
   const labels: Record<CharacterId, string> = {
     warrior: 'Warrior', mage: 'Mage', spellblade: 'Spellblade', archer: 'Archer', dualblade: 'Dualblade', brawler: 'Brawler',
     dragonknight: 'Dragon Knight', gunslinger: 'Gunslinger', ssaulabi: 'Ssaulabi', kickfighter: 'Kickfighter', venomancer: 'Venomancer',
-    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', conservative: 'Conservative Faction',
+    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', elementalist: 'Elementalist', warlock: 'Warlock', conservative: 'Conservative Faction',
     progressive: 'Progressive Faction', assettycoon: 'Asset Tycoon',
   };
   return labels[characterId];

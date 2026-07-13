@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { Address, Hex } from 'viem';
 
 import { MobileGameControls, duelMobileSkills, type MobileGameAction } from '@/game/mobile-game-controls';
 
@@ -19,10 +20,12 @@ type LockableScreenOrientation = ScreenOrientation & {
 
 type PoliticalDuelCanvasProps = {
   faction: PoliticalFaction;
+  player: Address | null;
+  onAssetTycoonReward: (reward: { claim: { claimId: Hex; attemptId: Hex; player: Address; nonce: string; deadline: string }; signature: Hex }) => void;
   onExit: () => void;
 };
 
-export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProps) {
+export function PoliticalDuelCanvas({ faction, player, onAssetTycoonReward, onExit }: PoliticalDuelCanvasProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<import('phaser').Game | null>(null);
@@ -59,6 +62,9 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
     let game: import('phaser').Game | undefined;
 
     async function boot() {
+      const attemptResponse = player ? await fetch('/api/duel-attempts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ player, faction }) }) : null;
+      const attemptPayload: unknown = attemptResponse?.ok ? await attemptResponse.json() : null;
+      const duelAttemptId = attemptPayload && typeof attemptPayload === 'object' && 'attemptId' in attemptPayload && typeof attemptPayload.attemptId === 'string' ? attemptPayload.attemptId : null;
       const Phaser = await import('phaser');
       const { PoliticalDuelScene } = await import('./political-duel-scene');
       if (disposed || !containerRef.current) return;
@@ -81,12 +87,19 @@ export function PoliticalDuelCanvas({ faction, onExit }: PoliticalDuelCanvasProp
           sceneRef.current = scene as unknown as DuelSceneControls;
           sceneRef.current.setAudioEnabled(window.localStorage.getItem('aqt-game-audio-v2') === 'on');
         }
+        scene?.events.on('duel-completed', (result: { playerWon: boolean; durationMs: number }) => {
+          if (!result.playerWon || !player || !duelAttemptId) return;
+          void fetch('/api/duel-rewards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ player, attemptId: duelAttemptId, durationMs: result.durationMs }) })
+            .then(async (response) => response.ok ? response.json() as Promise<{ claim: { claimId: Hex; attemptId: Hex; player: Address; nonce: string; deadline: string }; signature: Hex }> : Promise.reject(new Error('Duel reward failed')))
+            .then(onAssetTycoonReward)
+            .catch(() => undefined);
+        });
       });
     }
 
     void boot();
     return () => { disposed = true; gameRef.current = null; sceneRef.current = null; game?.destroy(true); };
-  }, [faction]);
+  }, [faction, onAssetTycoonReward, player]);
 
   useEffect(() => {
     const refreshScale = () => window.requestAnimationFrame(() => gameRef.current?.scale.refresh());

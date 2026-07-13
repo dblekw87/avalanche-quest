@@ -2,7 +2,7 @@ import type { InnateCharacterId } from '@/game/characters';
 
 export type InnateSkillDefinition = {
   id: string;
-  key: 'Q' | 'W' | 'E' | 'R' | 'T';
+  key: 'Q' | 'W' | 'E' | 'R' | 'T' | 'Z' | 'X' | 'C' | 'V';
   name: string;
   description: string;
   cooldownMs: number;
@@ -123,6 +123,30 @@ export const innateClasses: Record<InnateCharacterId, InnateClassDefinition> = {
       { id: 'blood-cyclone', key: 'E', name: 'Blood Cyclone', description: 'Shred nearby enemies in a double-axe vortex.', cooldownMs: 4_600, damage: 7 },
       { id: 'berserker-oath', key: 'R', name: 'Berserker Oath', description: 'The only buff skill: increase attack, speed and resilience for 5 seconds.', cooldownMs: 11_000, damage: 0, buff: true },
       { id: 'ragnarok-cleaver', key: 'T', name: 'Ragnarok Cleaver', description: 'Split the battlefield with a colossal execution axe.', cooldownMs: 9_000, damage: 10 },
+    ],
+  },
+  elementalist: {
+    id: 'elementalist', name: 'Elementalist', role: 'A special female mage who weaves fire, water, wind, earth and lightning', accent: '#f0c96a',
+    skills: [
+      { id: 'flame-orbit', key: 'Q', name: 'Flame Orbit', description: 'Launch an orbiting solar flame.', cooldownMs: 1_400, damage: 5 },
+      { id: 'tidal-prison', key: 'W', name: 'Tidal Prison', description: 'Crush enemies inside a surging water sphere.', cooldownMs: 3_400, damage: 6 },
+      { id: 'tempest-lance', key: 'E', name: 'Tempest Lance', description: 'Pierce the battlefield with compressed wind.', cooldownMs: 4_500, damage: 7 },
+      { id: 'gaia-aegis', key: 'R', name: 'Gaia Aegis', description: 'Gain an earthen barrier and elemental power.', cooldownMs: 11_000, damage: 0, buff: true },
+      { id: 'thunder-domain', key: 'T', name: 'Thunder Domain', description: 'Call repeated lightning across a wide area.', cooldownMs: 7_000, damage: 8 },
+      { id: 'frost-comet', key: 'Z', name: 'Frost Comet', description: 'Drop a freezing comet from above.', cooldownMs: 6_500, damage: 8 },
+      { id: 'magma-fault', key: 'X', name: 'Magma Fault', description: 'Split the ground with molten stone.', cooldownMs: 8_000, damage: 9 },
+      { id: 'elemental-convergence', key: 'C', name: 'Elemental Convergence', description: 'Fuse five elements into a multi-hit core.', cooldownMs: 12_000, damage: 11 },
+      { id: 'primordial-genesis', key: 'V', name: 'Primordial Genesis', description: 'Awaken all five elements and erase the battlefield.', cooldownMs: 30_000, damage: 18 },
+    ],
+  },
+  warlock: {
+    id: 'warlock', name: 'Warlock', role: 'A male forbidden mage who commands curses, shadows and the abyss', accent: '#a86cff',
+    skills: [
+      { id: 'abyss-bolt', key: 'Q', name: 'Abyss Bolt', description: 'Fire a piercing orb of forbidden magic.', cooldownMs: 1_350, damage: 5 },
+      { id: 'soul-chains', key: 'W', name: 'Soul Chains', description: 'Bind and repeatedly damage nearby enemies.', cooldownMs: 3_600, damage: 6 },
+      { id: 'void-eruption', key: 'E', name: 'Void Eruption', description: 'Open dark rifts beneath the enemy.', cooldownMs: 4_800, damage: 7 },
+      { id: 'dark-covenant', key: 'R', name: 'Dark Covenant', description: 'Gain forbidden power and damage reduction.', cooldownMs: 11_000, damage: 0, buff: true },
+      { id: 'nightmare-apocalypse', key: 'T', name: 'Nightmare Apocalypse', description: 'Summon an abyssal eye and collapse the battlefield into darkness.', cooldownMs: 30_000, damage: 14 },
     ],
   },
 };

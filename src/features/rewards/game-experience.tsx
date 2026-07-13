@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
@@ -279,7 +280,8 @@ export function GameExperience() {
             </h1>
             <p className="mt-2 text-xs font-medium text-[#aca496]">Play as your selected faction while the opposing faction appears as a hard boss using every skill and 12 combat patterns.</p>
           </div>
-          <PoliticalDuelCanvas key={duelFaction} faction={duelFaction} onExit={() => setDuelFaction(null)} />
+          <PoliticalDuelCanvas key={duelFaction} faction={duelFaction} player={address ?? null} onAssetTycoonReward={setAssetTycoonDrop} onExit={() => setDuelFaction(null)} />
+          {assetTycoonDrop ? <div className="relative mt-4 overflow-hidden rounded-2xl border-2 border-[#f2c94c] bg-[#17130a] p-5 pr-[34%]"><Image src="/assets/class-portraits/assettycoon.png" alt="Asset Tycoon" width={360} height={420} className="pointer-events-none absolute -bottom-20 right-0 h-[170%] w-[38%] object-contain object-bottom" /><div className="relative z-10"><p className="text-[10px] font-black tracking-[.22em] text-[#ffe071]">SPECIAL DUEL VICTORY · GUARANTEED CLASS</p><h2 className="mt-2 text-xl font-black text-white">Asset Tycoon NFT License</h2><p className="mt-2 text-xs font-semibold text-[#d8c9a0]">The server verified your victory. Mint the guaranteed class license to your connected wallet.</p><button type="button" disabled={assetTycoonMintState === 'pending' || assetTycoonMintState === 'success'} onClick={() => void mintAssetTycoon()} className="relative z-20 mt-4 rounded-lg border border-[#ffe482] bg-[#94721a] px-7 py-3 text-xs font-black text-white disabled:opacity-50">{assetTycoonMintState === 'pending' ? 'MINTING…' : assetTycoonMintState === 'success' ? 'CLASS ACTIVATED' : 'MINT GUARANTEED CLASS NFT'}</button></div></div> : null}
         </div>
       </main>
     );
@@ -369,7 +371,8 @@ export function GameExperience() {
                   type="button"
                   disabled={attemptId !== null}
                   onClick={() => setStageId(id)}
-                  className={`min-w-0 border px-3 py-3 text-center sm:px-4 sm:text-left ${stageId === id ? 'border-[#d0aa68] bg-[#33271b] text-[#f0dfbd]' : 'border-[#514838] text-[#9f9583]'}`}
+                  style={{ backgroundImage: `url(/assets/maps-hd/stage-${String(stages[id].number).padStart(2, '0')}.webp)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  className={`relative min-w-0 overflow-hidden border px-3 py-3 text-center text-white [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:px-4 sm:text-left ${stageId === id ? 'border-[#f0c76e] ring-2 ring-[#f0c76e]/50' : 'border-[#b9aa91]'}`}
                 >
                   <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
                   <strong className="mt-1 block text-sm">{stages[id].name}</strong>
@@ -383,18 +386,19 @@ export function GameExperience() {
             </div>
             <div className="mt-3 grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {(characterGroup === 'general'
-                ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe']] as const)
-                : ([['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'], ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills']] as const)
+                ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe'], ['warlock', 'Warlock', 'Male forbidden mage using curses and abyssal magic']] as const)
+                : ([['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'], ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills'], ['elementalist', 'Elementalist', 'Female special mage · 9 purchasable elemental skills']] as const)
               ).map(([id, name, role]) => {
-                const special = id === 'conservative' || id === 'progressive';
-                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`flex h-full min-h-[92px] min-w-0 flex-col justify-center rounded-xl border px-3 py-3 text-center transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:text-left ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center justify-center text-[10px] leading-4 text-[#6f685e] sm:justify-start">{role}</span></button>;
+                const special = id === 'conservative' || id === 'progressive' || id === 'elementalist';
+                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id}.png`} alt="" width={180} height={210} className="pointer-events-none absolute -bottom-8 -right-5 h-[125%] w-[52%] object-contain object-bottom" /></button>;
               })}
             </div>
             {characterGroup === 'general' ? (
-              <div className={`mt-3 rounded-xl border p-4 ${ownsAssetTycoon ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
-                <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
+              <div className={`relative mt-3 min-h-44 overflow-hidden rounded-xl border p-4 pr-[38%] ${ownsAssetTycoon ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
+                <Image src="/assets/class-portraits/assettycoon.png" alt="Asset Tycoon" width={360} height={420} className="pointer-events-none absolute -bottom-14 right-0 h-[145%] w-[42%] object-contain object-bottom" />
+                <div className="relative z-10 flex min-h-36 flex-col items-start justify-center gap-3 text-left">
                   <div><span className="text-[10px] font-extrabold tracking-[.2em] text-[#f2c94c]">ULTRA-RARE NFT CLASS · 1% ON VERIFIED STAGES 27–30</span><strong className="mt-1 block text-lg font-black text-[#fff0ad]">Asset Tycoon</strong><p className="mt-1 text-xs font-semibold text-[#b9aa83]">Male apex class · nine max-level skills · Attack/Vitality/Defense +20. Ownership and play access transfer with the ERC-721 NFT.</p></div>
-                  <button type="button" disabled={!ownsAssetTycoon || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="w-full rounded-lg border border-[#f2c94c] bg-[#6e5311] px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : 'NFT REQUIRED'}</button>
+                  <button type="button" disabled={!ownsAssetTycoon || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : 'NFT REQUIRED'}</button>
                 </div>
               </div>
             ) : null}
@@ -478,7 +482,7 @@ function formatCharacterName(characterId: CharacterId) {
   const labels: Record<CharacterId, string> = {
     warrior: 'Warrior', mage: 'Mage', spellblade: 'Spellblade', archer: 'Archer', dualblade: 'Dualblade', brawler: 'Brawler',
     dragonknight: 'Dragon Knight', gunslinger: 'Gunslinger', ssaulabi: 'Ssaulabi', kickfighter: 'Kickfighter', venomancer: 'Venomancer',
-    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', conservative: 'Conservative Faction',
+    pyromancer: 'Pyromancer', hammerguard: 'Hammerguard', axereaver: 'Axe Reaver', elementalist: 'Elementalist', warlock: 'Warlock', conservative: 'Conservative Faction',
     progressive: 'Progressive Faction', assettycoon: 'Asset Tycoon',
   };
   return labels[characterId];

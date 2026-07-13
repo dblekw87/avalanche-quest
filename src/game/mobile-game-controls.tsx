@@ -10,7 +10,7 @@ import { politicalFighters, type PoliticalFaction } from '@/game/political-duel/
 export type MobileGameAction = 'left' | 'right' | 'jump' | 'dash' | 'attack';
 export type MobileSkillButton = { id: string; label: string; name: string; iconUrl: string; disabled?: boolean };
 
-const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver'>, readonly string[]>> = {
+const GENERAL_SKILLS: Readonly<Record<Exclude<GeneralCharacterId, 'dualblade' | 'brawler' | 'dragonknight' | 'gunslinger' | 'ssaulabi' | 'kickfighter' | 'venomancer' | 'pyromancer' | 'hammerguard' | 'axereaver' | 'elementalist' | 'warlock'>, readonly string[]>> = {
   warrior: ['arcane-bolt', 'frost-nova', 'flame-wave', 'healing-light', 'starfall'],
   mage: ['magic-missile', 'ice-storm', 'chain-lightning', 'healing-circle', 'meteor'],
   spellblade: ['arcane-cleave', 'twin-phantom', 'rune-step', 'astral-counter', 'constellation-storm'],

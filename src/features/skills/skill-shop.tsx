@@ -6,7 +6,7 @@ import { formatEther, getAddress, isAddress, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
-import { aegisArmor, archerSkills, armorEnhancementAbi, axereaverSkills, brawlerSkills, dragonknightSkills, dualbladeSkills, gameTokenAbi, gunslingerSkills, hammerguardSkills, kickfighterSkills, mageSkills, pyromancerSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, ssaulabiSkills, venomancerSkills, warriorSkills, type SkillDefinition } from '@/features/skills/skill-contract';
+import { aegisArmor, archerSkills, armorEnhancementAbi, axereaverSkills, brawlerSkills, dragonknightSkills, dualbladeSkills, elementalistSkills, gameTokenAbi, gunslingerSkills, hammerguardSkills, kickfighterSkills, mageSkills, pyromancerSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, ssaulabiSkills, venomancerSkills, warlockSkills, warriorSkills, type SkillDefinition } from '@/features/skills/skill-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 import type { GeneralCharacterId } from '@/game/characters';
 
@@ -29,14 +29,16 @@ const CLASS_SKILLS: Readonly<Record<GeneralCharacterId, readonly SkillDefinition
   dualblade: dualbladeSkills, brawler: brawlerSkills, dragonknight: dragonknightSkills, gunslinger: gunslingerSkills,
   ssaulabi: ssaulabiSkills, kickfighter: kickfighterSkills, venomancer: venomancerSkills,
   pyromancer: pyromancerSkills, hammerguard: hammerguardSkills, axereaver: axereaverSkills,
+  elementalist: elementalistSkills, warlock: warlockSkills,
 };
 const CLASS_LABELS: Readonly<Record<GeneralCharacterId, string>> = {
   warrior: 'Warrior Skills', mage: 'Mage Skills', spellblade: 'Spellblade Skills', archer: 'Archer Skills',
   dualblade: 'Dualblade Skills', brawler: 'Brawler Skills', dragonknight: 'Dragon Knight Skills', gunslinger: 'Gunslinger Skills',
   ssaulabi: 'Ssaulabi Skills', kickfighter: 'Kickfighter Skills', venomancer: 'Venomancer Skills',
   pyromancer: 'Pyromancer Skills', hammerguard: 'Hammerguard Skills', axereaver: 'Axe Reaver Skills',
+  elementalist: 'Elementalist Skills', warlock: 'Warlock Skills',
 };
-const GENERATED_CLASS_IDS: readonly GeneralCharacterId[] = ['dualblade', 'brawler', 'dragonknight', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver'];
+const GENERATED_CLASS_IDS: readonly GeneralCharacterId[] = ['dualblade', 'brawler', 'dragonknight', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock'];
 const PURPLE_ARMOR_FRAME_CLASSES = [
   'border-[#6f617d] shadow-[0_0_12px_rgba(126,92,166,.18)]',
   'border-[#8062a4] shadow-[0_0_16px_rgba(139,92,246,.25)]',

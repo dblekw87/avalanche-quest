@@ -85,6 +85,9 @@ export default buildModule('RewardSystem', (module) => {
     ['ember-lance', '25'], ['flame-pillar', '35'], ['phoenix-spiral', '45'], ['burning-soul', '50'], ['solar-cataclysm', '70'],
     ['iron-crash', '25'], ['seismic-march', '35'], ['gravity-bell', '45'], ['adamant-guard', '50'], ['world-anvil', '70'],
     ['rending-arc', '25'], ['predator-rush', '35'], ['blood-cyclone', '45'], ['berserker-oath', '50'], ['ragnarok-cleaver', '70'],
+    ['flame-orbit', '30'], ['tidal-prison', '40'], ['tempest-lance', '50'], ['gaia-aegis', '60'], ['thunder-domain', '70'],
+    ['frost-comet', '80'], ['magma-fault', '90'], ['elemental-convergence', '110'], ['primordial-genesis', '150'],
+    ['abyss-bolt', '30'], ['soul-chains', '40'], ['void-eruption', '50'], ['dark-covenant', '60'], ['nightmare-apocalypse', '90'],
   ] as const;
   newSkills.forEach(([slug, price]) => {
     const transactionId = `set_${slug.replaceAll('-', '_')}_price`;
