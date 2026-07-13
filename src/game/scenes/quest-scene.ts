@@ -133,7 +133,10 @@ export class QuestScene extends Phaser.Scene {
   private readonly skillCooldownBars = new Map<string, { fill: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text }>();
   private skillLockedUntil = 0;
   private defenseUntil = 0;
+  private activeDefenseReduction = 1;
   private classPowerUntil = 0;
+  private classPowerMultiplier = 1.3;
+  private classMovementSpeed = 270;
   private classBuffAura?: Phaser.GameObjects.Ellipse;
   private dashUntil = 0;
   private lastDashAt = -DASH_COOLDOWN_MS;
@@ -878,7 +881,7 @@ export class QuestScene extends Phaser.Scene {
       }
       return;
     }
-    const movementSpeed = time < this.classPowerUntil ? 270 : 225;
+    const movementSpeed = time < this.classPowerUntil ? this.classMovementSpeed : 225;
     if (this.cursors.left.isDown || this.mobileLeft) this.player.setVelocityX(-movementSpeed).setFlipX(true);
     else if (this.cursors.right.isDown || this.mobileRight) this.player.setVelocityX(movementSpeed).setFlipX(false);
     else this.player.setVelocityX(0);
@@ -1399,6 +1402,7 @@ export class QuestScene extends Phaser.Scene {
       }
     }
 
+    if (!isPoliticalCharacter(this.characterId)) this.spawnEnhancedSkillEffect(skillId);
     if (isPoliticalCharacter(this.characterId)) {
       this.castPoliticalStageSkill(skillId, time);
       return;
@@ -1407,15 +1411,13 @@ export class QuestScene extends Phaser.Scene {
       this.castInnateClassSkill(skillId, time);
       return;
     }
-    this.spawnEnhancedSkillEffect(skillId);
-
-    if (skillId === 'healing-light') { this.castDefense(time); return; }
+    if (skillId === 'healing-light') { this.castDefense(skillId, time); return; }
     if (skillId === 'starfall') { this.castWarriorRoar(this.skillDamage(skillId, 5), time); return; }
     if (skillId === 'arcane-bolt') this.spawnSkillProjectile('slash', this.skillDamage(skillId, 3), 500, 0.72, time, undefined, 'quest-warrior-vfx-v2', 'warrior-vfx-power-slash', true);
     if (skillId === 'frost-nova') { this.castClassAreaSkill('quest-warrior-vfx-v2', 'warrior-vfx-spin-slash', this.skillDamage(skillId, 4), 180, 0.82); return; }
     if (skillId === 'flame-wave') { this.castClassAreaSkill('quest-warrior-vfx-v2', 'warrior-vfx-earth-slam', this.skillDamage(skillId, 4), 230, 0.88); return; }
 
-    if (skillId === 'healing-circle') { this.castHealingCircle(); return; }
+    if (skillId === 'healing-circle') { this.castHealingCircle(skillId); return; }
     if (skillId === 'chain-lightning') { this.castStarfall(this.skillDamage(skillId, 3)); return; }
     if (skillId === 'meteor') { this.castMeteor(this.skillDamage(skillId, 5)); return; }
     if (skillId === 'magic-missile') this.spawnSkillProjectile('slash', this.skillDamage(skillId, 3), 620, 0.68, time, undefined, 'quest-mage-vfx-v2', 'mage-vfx-missile');
@@ -1605,7 +1607,11 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castInnateBuff(skillId: string, time: number): void {
-    const duration = 5_000;
+    const level = this.skillUpgradeLevels[skillId] ?? 0;
+    const duration = 5_000 + level * 500;
+    this.classPowerMultiplier = 1.3 + level * 0.05;
+    this.classMovementSpeed = 270 + level * 7;
+    this.activeDefenseReduction = 1 + Math.floor(level / 3);
     this.classPowerUntil = time + duration;
     this.defenseUntil = Math.max(this.defenseUntil, time + duration);
     this.classBuffAura?.destroy();
@@ -1998,7 +2004,10 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castClassBuff(skillId: string, time: number): void {
-    this.defenseUntil = time + 4_000;
+    const level = this.skillUpgradeLevels[skillId] ?? 0;
+    const duration = 4_000 + level * 500;
+    this.activeDefenseReduction = 1 + Math.floor(level / 3);
+    this.defenseUntil = time + duration;
     const animatedClassVfx = this.characterId === 'archer' || this.characterId === 'spellblade';
     const aura = animatedClassVfx
       ? this.add.sprite(this.player.x, this.player.y - 8, `quest-${this.characterId}-vfx-${skillId}`).play(`${this.characterId}-vfx-${skillId}`)
@@ -2015,7 +2024,7 @@ export class QuestScene extends Phaser.Scene {
     this.tweens.add({
       targets: aura,
       alpha: 0.18,
-      duration: 4_000,
+      duration,
       ease: 'Sine.InOut',
       onUpdate: () => aura.setPosition(this.player.x, this.player.y),
       onComplete: () => aura.destroy(),
@@ -2060,11 +2069,10 @@ export class QuestScene extends Phaser.Scene {
 
   private skillDamage(skillId: string, baseDamage: number): number {
     const damage = baseDamage + (this.skillUpgradeLevels[skillId] ?? 0) * 2;
-    return this.time.now < this.classPowerUntil ? Math.ceil(damage * 1.3) : damage;
+    return this.time.now < this.classPowerUntil ? Math.ceil(damage * this.classPowerMultiplier) : damage;
   }
 
   private spawnEnhancedSkillEffect(skillId: string): void {
-    if (this.characterId === 'spellblade' || this.characterId === 'archer' || isInnateCharacter(this.characterId)) return;
     const level = this.skillUpgradeLevels[skillId] ?? 0;
     if (level <= 0) return;
     const direction = this.player.flipX ? -1 : 1;
@@ -2073,11 +2081,13 @@ export class QuestScene extends Phaser.Scene {
     const centeredSkills = ['healing-light', 'starfall', 'healing-circle'];
     const startX = this.player.x + (centeredSkills.includes(skillId) ? 0 : direction * 64);
     const startY = this.player.y + (skillId === 'meteor' ? -150 : 0);
-    const effect = this.add.image(startX, startY, `quest-enhanced-${skillId}`)
+    const textureKey = isInnateCharacter(this.characterId) ? `quest-skill-icon-${skillId}` : `quest-enhanced-${skillId}`;
+    const tier = Math.min(4, Math.ceil(level / 2));
+    const effect = this.add.image(startX, startY, textureKey)
       .setDepth(14)
       .setFlipX(direction < 0)
-      .setScale(0.42 + level * 0.1)
-      .setAlpha(0.7 + level * 0.055)
+      .setScale(0.38 + level * 0.085)
+      .setAlpha(Math.min(1, 0.68 + level * 0.045))
       .setBlendMode(Phaser.BlendModes.ADD);
     const travel = projectileSkills.includes(skillId) ? 420 : forwardSkills.includes(skillId) ? 180 : 0;
     this.tweens.add({
@@ -2090,6 +2100,24 @@ export class QuestScene extends Phaser.Scene {
       ease: projectileSkills.includes(skillId) ? 'Linear' : 'Sine.Out',
       onComplete: () => effect.destroy(),
     });
+    this.spawnInnateParticles(this.player.x, this.player.y, 8 + level * 3, 72 + level * 18);
+    for (let ringIndex = 0; ringIndex < tier; ringIndex += 1) {
+      this.time.delayedCall(ringIndex * 85, () => {
+        if (this.finished) return;
+        const ring = this.add.circle(this.player.x, this.player.y + 10, 34 + ringIndex * 9, this.skillAccentColor, 0.08)
+          .setStrokeStyle(2 + level * 0.25, ringIndex % 2 === 0 ? this.skillAccentColor : 0xffffff, 0.88)
+          .setDepth(13)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: ring,
+          scale: 1.7 + level * 0.08,
+          alpha: 0,
+          duration: 420 + level * 45,
+          ease: 'Cubic.Out',
+          onComplete: () => ring.destroy(),
+        });
+      });
+    }
   }
 
   private spawnSkillProjectile(effect: 'slash' | 'fireball' | 'wind', damage: number, speed: number, scale: number, time: number, tint?: number, customTexture?: string, customAnimation?: string, invertVisual = false): void {
@@ -2105,12 +2133,23 @@ export class QuestScene extends Phaser.Scene {
     this.playerSkillProjectiles.push({ sprite: projectile, expiresAt: time + PLAYER_SKILL_PROJECTILE_LIFETIME_MS, damage });
   }
 
-  private castDefense(time: number): void {
-    this.defenseUntil = time + 4_000;
+  private castDefense(skillId: string, time: number): void {
+    const level = this.skillUpgradeLevels[skillId] ?? 0;
+    const duration = 4_000 + level * 500;
+    this.activeDefenseReduction = 1 + Math.floor(level / 2);
+    this.defenseUntil = time + duration;
     const shield = this.add.sprite(this.player.x, this.player.y, 'quest-warrior-vfx-v2', 'warrior-vfx-shield-0').setDepth(12).setScale(0.78).setBlendMode(Phaser.BlendModes.ADD);
     shield.play('warrior-vfx-shield');
     this.spawnSkillImpactBurst(this.player.x, this.player.y + 14, 0xffc857, 0.82);
-    this.tweens.add({ targets: shield, alpha: 0, scale: 0.95, duration: 750, onComplete: () => shield.destroy() });
+    this.tweens.add({
+      targets: shield,
+      alpha: 0.24,
+      scale: 0.95 + level * 0.025,
+      duration,
+      ease: 'Sine.InOut',
+      onUpdate: () => shield.setPosition(this.player.x, this.player.y),
+      onComplete: () => shield.destroy(),
+    });
   }
 
   private castStarfall(damage: number): void {
@@ -2207,9 +2246,10 @@ export class QuestScene extends Phaser.Scene {
     });
   }
 
-  private castHealingCircle(): void {
-    this.playerHealth = Math.min(PLAYER_MAX_HEALTH, this.playerHealth + 4);
-    this.healthBar.width = 126 * (this.playerHealth / PLAYER_MAX_HEALTH);
+  private castHealingCircle(skillId: string): void {
+    const level = this.skillUpgradeLevels[skillId] ?? 0;
+    this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 4 + level);
+    this.healthBar.width = 126 * (this.playerHealth / this.playerMaxHealth);
     const circle = this.add.circle(this.player.x, this.player.y + 38, 54, 0x62ff8a, 0.3).setDepth(6);
     this.tweens.add({ targets: circle, scale: 1.8, alpha: 0, duration: 700, onComplete: () => circle.destroy() });
     const healEffect = this.add.sprite(this.player.x, this.player.y + 28, 'quest-mage-vfx-v2', 'mage-vfx-healing-circle-0').setDepth(12).setScale(0.82).setBlendMode(Phaser.BlendModes.ADD);
@@ -2359,7 +2399,7 @@ export class QuestScene extends Phaser.Scene {
   private damagePlayer(time: number, damage: number, sourceX: number): void {
     if (time < this.invulnerableUntil || this.finished) return;
     this.invulnerableUntil = time + DAMAGE_INVULNERABILITY_MS;
-    const totalReduction = (this.armorEquipped ? 1 : 0) + (time < this.defenseUntil ? 1 : 0) + Math.floor(this.upgradeLevels.defense / 2) + Math.floor(this.armorLevel / 2);
+    const totalReduction = (this.armorEquipped ? 1 : 0) + (time < this.defenseUntil ? this.activeDefenseReduction : 0) + Math.floor(this.upgradeLevels.defense / 2) + Math.floor(this.armorLevel / 2);
     const mitigatedDamage = Math.max(1, damage - totalReduction);
     this.playerHealth = Math.max(0, this.playerHealth - mitigatedDamage);
     this.healthBar.width = 126 * (this.playerHealth / this.playerMaxHealth);
