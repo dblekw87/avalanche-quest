@@ -4,7 +4,7 @@ Avalanche Fuji Testnet에서 동작하는 사이드 스크롤 Web3 액션 RPG입
 
 > 네트워크: Avalanche Fuji C-Chain (`43113`)<br>
 > 프로젝트 상태: 포트폴리오 / 테스트넷 MVP<br>
-> 배포 주소: Vercel 배포 진행 중
+> 배포 주소: [https://avalanche-quest.vercel.app](https://avalanche-quest.vercel.app)
 
 ## 프로젝트 화면
 
