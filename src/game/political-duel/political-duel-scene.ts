@@ -644,7 +644,9 @@ export class PoliticalDuelScene extends Phaser.Scene {
   }
 
   private finish(playerWon: boolean): void {
+    if (this.ended) return;
     this.ended = true;
+    this.audioDirector.stop();
     const defeated = playerWon ? this.boss : this.player;
     const victor = playerWon ? this.player : this.boss;
     defeated.sprite.play(`${defeated.faction}-knockdown`, true);
