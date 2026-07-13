@@ -16,11 +16,9 @@ Avalanche Fuji Testnet에서 동작하는 사이드 스크롤 Web3 액션 RPG입
 
 ![Avalanche Quest 스테이지와 스킬 선택 화면](docs/screenshots/game-desktop.png)
 
-### 모바일 반응형 화면
+### 실제 인게임 전투
 
-<p align="center">
-  <img src="docs/screenshots/home-mobile.png" alt="Avalanche Quest 모바일 메인 화면" width="390" />
-</p>
+![Avalanche Quest Phaser 인게임 전투 화면](docs/screenshots/gameplay.png)
 
 ## 주요 기능
 
