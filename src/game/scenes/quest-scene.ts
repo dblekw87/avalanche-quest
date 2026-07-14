@@ -1847,10 +1847,15 @@ export class QuestScene extends Phaser.Scene {
       axereaver: 0xff294f, assettycoon: 0xffdf72,
       elementalist: 0xffe38a, warlock: 0xa86cff,
     };
+    const screenPulse = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, colors[character], 0.16)
+      .setScrollFactor(0)
+      .setDepth(27)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: screenPulse, alpha: 0.34, duration: 280, yoyo: true, repeat: 2, onComplete: () => screenPulse.destroy() });
     const sprite = this.add.sprite(this.scale.width / 2, this.scale.height / 2, `quest-${character}-ultimate-vfx`, 0)
       .setScrollFactor(0)
       .setDepth(28)
-      .setDisplaySize(this.scale.width * 1.04, this.scale.height * 1.04)
+      .setDisplaySize(this.scale.width * 1.42, this.scale.height * 1.18)
       .setBlendMode(Phaser.BlendModes.ADD);
     sprite.play(`${character}-hq-ultimate`);
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
