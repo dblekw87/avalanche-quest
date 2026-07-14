@@ -370,13 +370,9 @@ export class QuestScene extends Phaser.Scene {
       }
     }
     this.add.rectangle(WORLD_WIDTH / 2, 260, WORLD_WIDTH, 520, this.stage.backgroundColor, 0.16).setDepth(-9);
-    this.add.rectangle(40, 28, 690, 64, 0x050806, 0.92).setOrigin(0).setStrokeStyle(1, 0xffd98a, 0.55).setScrollFactor(0).setDepth(19);
+    this.add.rectangle(40, 28, 520, 38, 0x050806, 0.92).setOrigin(0).setStrokeStyle(1, 0xffd98a, 0.55).setScrollFactor(0).setDepth(19);
     this.add.text(52, 38, `${this.stage.worldLabel} // STAGE ${String(this.stage.number).padStart(2, '0')}`, {
       color: '#ffe5a8', fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', letterSpacing: 2, stroke: '#000000', strokeThickness: 3,
-    }).setScrollFactor(0).setDepth(20);
-    const skillKeyGuide = isPoliticalCharacter(this.characterId) ? 'Q/W/E/R/Z/X/C/V' : 'Q/W/E/R/T';
-    this.add.text(52, 66, `ARROWS: MOVE/DOUBLE JUMP  -  SHIFT: DASH  -  SPACE: ATTACK${this.ownedSkillIds.length > 0 ? `  -  ${skillKeyGuide}: SKILLS` : ''}`, {
-      color: '#ffffff', fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
     }).setScrollFactor(0).setDepth(20);
   }
 
@@ -914,12 +910,23 @@ export class QuestScene extends Phaser.Scene {
     const classSkillIds = this.classSkillIds;
     const political = isPoliticalCharacter(this.characterId);
     const secret = isSecretCharacter(this.characterId);
-    const expanded = political || secret;
-    const keyLabels = secret ? ['Q', 'W', 'E', 'R', 'Z', 'X', 'C', 'V', 'T'] : political ? ['Q', 'W', 'E', 'R', 'Z', 'X', 'C', 'V'] : ['Q', 'W', 'E', 'R', 'T'];
+    const elementalist = this.characterId === 'elementalist';
+    const expanded = political || secret || elementalist;
+    const keyLabels = secret
+      ? ['Q', 'W', 'E', 'R', 'Z', 'X', 'C', 'V', 'T']
+      : elementalist
+        ? ['Q', 'W', 'E', 'R', 'T', 'Z', 'X', 'C', 'V']
+        : political
+          ? ['Q', 'W', 'E', 'R', 'Z', 'X', 'C', 'V']
+          : ['Q', 'W', 'E', 'R', 'T'];
+    const cardWidth = expanded ? 56 : 62;
+    const cardGap = expanded ? 62 : 68;
+    const hudWidth = cardWidth + Math.max(0, classSkillIds.length - 1) * cardGap;
+    const hudStartX = (this.scale.width - hudWidth) / 2;
     classSkillIds.forEach((skillId, index) => {
-      const x = (secret ? 202 : political ? 248 : 400) + index * (expanded ? 62 : 68);
+      const x = hudStartX + index * cardGap;
       const owned = this.ownedSkillIds.includes(skillId);
-      this.add.rectangle(x + 29, 482, expanded ? 56 : 62, 68, 0x07100b, 0.9).setStrokeStyle(1, owned ? this.stage.accentColor : 0x4d514d, owned ? 0.72 : 0.42).setScrollFactor(0).setDepth(19);
+      this.add.rectangle(x + cardWidth / 2, 482, cardWidth, 68, 0x07100b, 0.9).setStrokeStyle(1, owned ? this.stage.accentColor : 0x4d514d, owned ? 0.72 : 0.42).setScrollFactor(0).setDepth(19);
       this.add.image(x + 29, 473, political ? 'political-reference' : `quest-skill-icon-${skillId}`, political ? `political-stage-${skillId}` : undefined).setDisplaySize(political ? 40 : 44, 44).setAlpha(owned ? 1 : 0.28).setScrollFactor(0).setDepth(20);
       this.add.text(x + 5, 451, keyLabels[index] ?? '', { color: owned ? '#fff0bd' : '#777b76', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', backgroundColor: '#0b110d' }).setPadding(3, 1).setScrollFactor(0).setDepth(22);
       const fill = this.add.rectangle(x + 5, 508, SKILL_COOLDOWN_BAR_WIDTH, 5, this.stage.accentColor, 0.9).setOrigin(0, 0.5).setScrollFactor(0).setDepth(21);
@@ -1843,7 +1850,7 @@ export class QuestScene extends Phaser.Scene {
     const sprite = this.add.sprite(this.scale.width / 2, this.scale.height / 2, `quest-${character}-ultimate-vfx`, 0)
       .setScrollFactor(0)
       .setDepth(28)
-      .setDisplaySize(720, 620)
+      .setDisplaySize(this.scale.width * 1.04, this.scale.height * 1.04)
       .setBlendMode(Phaser.BlendModes.ADD);
     sprite.play(`${character}-hq-ultimate`);
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
@@ -1864,39 +1871,199 @@ export class QuestScene extends Phaser.Scene {
   private castNewMageClassSkill(skillId: string, key: 'Q' | 'W' | 'E' | 'R' | 'T' | 'Z' | 'X' | 'C' | 'V', damage: number, time: number): void {
     const elementalist = this.characterId === 'elementalist';
     const direction = this.player.flipX ? -1 : 1;
+    if (elementalist) {
+      this.castElementalistSkill(skillId, key, damage, time, direction);
+      return;
+    }
     if (key === 'R') {
       this.castInnateBuff(skillId, time);
       return;
     }
-    if ((elementalist && key === 'V') || (!elementalist && key === 'T')) {
-      this.castAnimatedUltimate(elementalist ? 'elementalist' : 'warlock', damage);
+    if (key === 'T') {
+      this.castAnimatedUltimate('warlock', damage);
       return;
     }
-    if (key === 'Q' || key === 'E') {
-      const count = key === 'E' ? 3 : 1;
+    if (key === 'Q') {
+      this.castWarlockAbyssBolt(skillId, damage, time, direction);
+      return;
+    }
+    if (key === 'E') {
+      const count = 3;
       for (let index = 0; index < count; index += 1) {
-        const angle = count === 1 ? 0 : (index - 1) * 0.16;
-        this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / (count === 1 ? 1 : 2))), 720, time, 120, angle);
+        const angle = (index - 1) * 0.16;
+        this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 2)), 720, time, 120, angle);
       }
       this.spawnInnateParticles(this.player.x + direction * 72, this.player.y - 8, 22, 180);
       return;
     }
     const view = this.cameras.main.worldView;
     const centerX = key === 'W' ? this.player.x + direction * 150 : view.centerX;
-    const pulses = key === 'C' || key === 'T' ? 7 : key === 'Z' || key === 'X' ? 5 : 4;
+    const pulses = key === 'C' ? 7 : key === 'Z' || key === 'X' ? 5 : 4;
     for (let pulse = 0; pulse < pulses; pulse += 1) this.time.delayedCall(pulse * 120, () => {
       if (this.finished) return;
-      const x = key === 'T' ? view.left + ((pulse + 1) * view.width) / (pulses + 1) : centerX + Phaser.Math.Between(-90, 90);
+      const x = centerX + Phaser.Math.Between(-90, 90);
       this.showInnateSkillEffect(skillId, x, this.player.y - 20, 150 + pulse * 18, 520, pulse * 37);
       this.spawnInnateParticles(x, this.player.y, 14, 150);
       this.damageEnemiesInArea(x, 150 + pulse * 14, Math.max(1, Math.ceil(damage / 3)), 230);
     });
     this.time.delayedCall(pulses * 120, () => {
       if (this.finished) return;
-      this.damageEnemiesInArea(centerX, key === 'C' || key === 'T' ? view.width * 0.62 : 360, damage, 340);
-      this.cameras.main.flash(180, elementalist ? 255 : 145, elementalist ? 220 : 80, 255, false);
+      this.damageEnemiesInArea(centerX, key === 'C' ? view.width * 0.62 : 360, damage, 340);
+      this.cameras.main.flash(180, 145, 80, 255, false);
       this.cameras.main.shake(520, 0.018);
     });
+  }
+
+  private castElementalistSkill(skillId: string, key: 'Q' | 'W' | 'E' | 'R' | 'T' | 'Z' | 'X' | 'C' | 'V', damage: number, time: number, direction: number): void {
+    const view = this.cameras.main.worldView;
+    if (key === 'V') {
+      this.castAnimatedUltimate('elementalist', damage);
+      return;
+    }
+    if (key === 'R') {
+      this.castInnateBuff(skillId, time);
+      [0x65d46e, 0xd7a54b, 0x70d9ff].forEach((color, index) => {
+        const shield = this.add.ellipse(this.player.x, this.player.y, 105 + index * 28, 132 + index * 24, color, 0.08)
+          .setStrokeStyle(4, color, 0.85).setDepth(15);
+        this.tweens.add({ targets: shield, alpha: 0, scaleX: 1.45, scaleY: 1.3, duration: 760 + index * 120, onComplete: () => shield.destroy() });
+      });
+      return;
+    }
+    if (key === 'Q') {
+      this.castElementalistFlameProjectile(skillId, damage, time, direction);
+      return;
+    }
+    if (key === 'E') {
+      [-26, 0, 26].forEach((offsetY, index) => this.time.delayedCall(index * 90, () => {
+        const startX = this.player.x + direction * 55;
+        const lance = this.add.polygon(startX, this.player.y + offsetY, [0, 0, 62, 10, 0, 20, 14, 10], 0xc9fbff, 0.95)
+          .setStrokeStyle(3, 0x56dfff, 1).setDepth(16).setScale(direction, 1);
+        this.tweens.add({ targets: lance, x: startX + direction * 650, alpha: 0.12, duration: 520, ease: 'Quad.easeIn', onUpdate: () => {
+          this.spawnInnateParticles(lance.x, lance.y, 2, 42);
+          this.damageEnemiesInArea(lance.x, 64, Math.max(1, Math.ceil(damage / 2)), 70);
+        }, onComplete: () => lance.destroy() });
+      }));
+      return;
+    }
+    if (key === 'T') {
+      const veil = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x46206f, 0.2)
+        .setScrollFactor(0).setDepth(13);
+      this.tweens.add({ targets: veil, alpha: 0, duration: 1_650, onComplete: () => veil.destroy() });
+      for (let pulse = 0; pulse < 14; pulse += 1) this.time.delayedCall(pulse * 105, () => {
+        if (this.finished) return;
+        const x = view.left + ((pulse + 0.5) / 14) * view.width;
+        const bolt = this.add.polygon(x, view.top - 20, [-18, 0, 22, 0, -8, view.height * 0.46, 28, view.height * 0.46, -24, view.height], 0xdca8ff, 0.88)
+          .setStrokeStyle(5, 0xffffff, 0.92).setOrigin(0.5, 0).setDepth(17);
+        this.tweens.add({ targets: bolt, alpha: 0, duration: 330, ease: 'Cubic.Out', onComplete: () => bolt.destroy() });
+        this.spawnElementalBurst(x, view.top + view.height * 0.76, 0x9d5cff, 150);
+        this.damageEnemiesInArea(x, view.width * 0.12, Math.max(1, Math.ceil(damage / 3)), view.height);
+      });
+      this.time.delayedCall(1_480, () => this.damageEnemiesInArea(view.centerX, view.width, damage, view.height));
+      return;
+    }
+    const centerX = key === 'W' ? this.player.x + direction * 165 : view.centerX;
+    if (key === 'W') {
+      for (let ring = 0; ring < 4; ring += 1) {
+        const wave = this.add.ellipse(centerX, this.player.y + 12, 90 + ring * 34, 42 + ring * 15, 0x43b7e8, 0.1)
+          .setStrokeStyle(5, ring % 2 === 0 ? 0xbff8ff : 0x318dd7, 0.92).setDepth(15);
+        this.tweens.add({ targets: wave, scaleX: 1.8, scaleY: 2.5, alpha: 0, duration: 650 + ring * 90, onComplete: () => wave.destroy() });
+      }
+      this.damageEnemiesInArea(centerX, 245, damage, 300);
+      return;
+    }
+    if (key === 'Z') {
+      const comet = this.add.circle(centerX + direction * 170, view.top - 80, 54, 0xc8f8ff, 0.95).setStrokeStyle(12, 0x64bfff, 0.9).setDepth(17);
+      this.tweens.add({ targets: comet, x: centerX, y: this.player.y, scale: 1.65, duration: 720, ease: 'Cubic.In', onUpdate: () => this.spawnInnateParticles(comet.x, comet.y, 3, 62), onComplete: () => {
+        this.spawnElementalBurst(centerX, this.player.y, 0x83dfff, 310);
+        this.damageEnemiesInArea(centerX, 330, damage, 310);
+        comet.destroy();
+      } });
+      return;
+    }
+    if (key === 'X') {
+      for (let fissure = 0; fissure < 8; fissure += 1) this.time.delayedCall(fissure * 70, () => {
+        const x = this.player.x + direction * (65 + fissure * 72);
+        const crack = this.add.polygon(x, this.player.y + 48, [-42, 18, -18, -12, 0, 12, 24, -24, 46, 18], 0xff5a24, 0.82)
+          .setStrokeStyle(4, 0xffd15c, 0.95).setDepth(15);
+        this.tweens.add({ targets: crack, scaleY: 1.8, alpha: 0, duration: 520, onComplete: () => crack.destroy() });
+        this.damageEnemiesInArea(x, 105, Math.max(1, Math.ceil(damage / 3)), 230);
+      });
+      return;
+    }
+    if (key === 'C') {
+      const colors = [0xff6633, 0x54d8ff, 0x8fea77, 0xffdf68, 0xb27aff];
+      colors.forEach((color, index) => {
+        const angle = (Math.PI * 2 * index) / colors.length;
+        const orb = this.add.circle(centerX + Math.cos(angle) * 220, this.player.y + Math.sin(angle) * 110, 26, color, 0.92).setDepth(16);
+        this.tweens.add({ targets: orb, x: centerX, y: this.player.y, scale: 0.35, duration: 620 + index * 70, ease: 'Sine.easeIn', onComplete: () => orb.destroy() });
+      });
+      this.time.delayedCall(850, () => {
+        this.spawnElementalBurst(centerX, this.player.y, 0xffffff, 410);
+        this.damageEnemiesInArea(centerX, 430, damage, 370);
+      });
+    }
+  }
+
+  private castElementalistFlameProjectile(skillId: string, damage: number, time: number, direction: number): void {
+    const startX = this.player.x + direction * 58;
+    const startY = this.player.y - 10;
+    const projectile = this.add.image(startX, startY, `quest-skill-icon-${skillId}`)
+      .setDisplaySize(74, 74)
+      .setDepth(16)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: projectile, scaleX: 1.35, scaleY: 1.18, duration: 520, ease: 'Sine.easeIn' });
+    this.tweens.add({
+      targets: projectile,
+      x: startX + direction * 520,
+      duration: 620,
+      ease: 'Quad.easeIn',
+      onUpdate: () => {
+        if (!projectile.active) return;
+        this.spawnInnateParticles(projectile.x, projectile.y + Phaser.Math.Between(-14, 14), 3, 72);
+        this.damageEnemiesInArea(projectile.x, 72, Math.max(1, Math.ceil(damage / 3)), 100);
+      },
+      onComplete: () => {
+        this.spawnElementalBurst(projectile.x, projectile.y, 0xff6a2e, 220);
+        this.damageEnemiesInArea(projectile.x, 190, damage, 240);
+        projectile.destroy();
+      },
+    });
+    this.spawnInnateParticles(startX, startY, 22, 170);
+    this.lastSkillAt.set(skillId, time);
+  }
+
+  private spawnElementalBurst(x: number, y: number, color: number, radius: number): void {
+    const core = this.add.circle(x, y, Math.max(18, radius * 0.12), color, 0.92).setStrokeStyle(6, 0xffffff, 0.78).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
+    const ring = this.add.ellipse(x, y, radius * 0.38, radius * 0.2, color, 0.08).setStrokeStyle(7, color, 0.95).setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: core, scale: 3.4, alpha: 0, duration: 520, ease: 'Cubic.Out', onComplete: () => core.destroy() });
+    this.tweens.add({ targets: ring, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 620, ease: 'Cubic.Out', onComplete: () => ring.destroy() });
+    this.spawnInnateParticles(x, y, 28, radius * 0.62);
+  }
+
+  private castWarlockAbyssBolt(skillId: string, damage: number, time: number, direction: number): void {
+    const startX = this.player.x + direction * 56;
+    const startY = this.player.y - 12;
+    const bolt = this.add.circle(startX, startY, 25, 0x25103e, 0.98)
+      .setStrokeStyle(6, 0xb765ff, 0.95).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.circle(startX, startY, 9, 0xf1c9ff, 0.95).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: [bolt, core], scaleX: 1.32, scaleY: 0.82, duration: 170, yoyo: true, repeat: 3 });
+    this.tweens.add({
+      targets: [bolt, core], x: startX + direction * 610, duration: 680, ease: 'Sine.easeIn',
+      onUpdate: () => {
+        core.setPosition(bolt.x, bolt.y);
+        const trail = this.add.circle(bolt.x - direction * Phaser.Math.Between(10, 38), bolt.y + Phaser.Math.Between(-18, 18), Phaser.Math.Between(4, 11), 0x7836b8, 0.56)
+          .setDepth(14).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: trail, alpha: 0, scale: 0.15, y: trail.y + Phaser.Math.Between(-32, 32), duration: 360, onComplete: () => trail.destroy() });
+        this.damageEnemiesInArea(bolt.x, 72, Math.max(1, Math.ceil(damage / 3)), 90);
+      },
+      onComplete: () => {
+        this.spawnElementalBurst(bolt.x, bolt.y, 0x8e45d6, 235);
+        this.damageEnemiesInArea(bolt.x, 205, damage, 260);
+        bolt.destroy();
+        core.destroy();
+      },
+    });
+    this.lastSkillAt.set(skillId, time);
   }
 
   private castWorldAnvil(damage: number, time: number): void {

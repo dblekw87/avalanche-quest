@@ -215,7 +215,6 @@ export class PoliticalDuelScene extends Phaser.Scene {
       this.add.image(x, HEIGHT - 54, 'political-reference', `${this.player.faction}-${skill.key}`).setDisplaySize(62, 62).setOrigin(0).setDepth(20);
       this.add.text(x + 4, HEIGHT - 50, skill.key, { fontFamily: 'monospace', fontSize: '15px', color: '#ffffff', backgroundColor: '#111827' }).setDepth(21);
     });
-    this.add.text(WIDTH - 18, HEIGHT - 23, '← → MOVE · ↑ JUMP · SHIFT DASH · SPACE ATTACK · Q W E R Z X C V SKILLS', { fontFamily: 'monospace', fontSize: '11px', color: '#e6d7ba' }).setOrigin(1).setDepth(21);
   }
 
   private createInput(): void {
