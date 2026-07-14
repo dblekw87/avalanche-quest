@@ -13,7 +13,7 @@ import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-cont
 
 // Local gameplay/VFX test switch only. Contract ownership, minting and marketplace
 // authorization continue to use the on-chain license checks below.
-const ASSET_TYCOON_LOCAL_TEST_UNLOCK = false;
+const ASSET_TYCOON_LOCAL_TEST_UNLOCK = process.env.NODE_ENV === 'development';
 import { gameItemAbi } from '@/features/items/item-contract';
 import { SkillShop } from '@/features/skills/skill-shop';
 import { UpgradeShop } from '@/features/upgrades/upgrade-shop';
@@ -102,7 +102,7 @@ export function GameExperience() {
     if (!address || !publicClient || !licenseValue || !isAddress(licenseValue)) {
       const timer = window.setTimeout(() => {
         setOwnsAssetTycoon(false);
-        if (characterId === 'assettycoon') setCharacterId('warrior');
+        if (!ASSET_TYCOON_LOCAL_TEST_UNLOCK && characterId === 'assettycoon') setCharacterId('warrior');
       }, 0);
       return () => window.clearTimeout(timer);
     }
@@ -391,18 +391,23 @@ export function GameExperience() {
             <div className="mt-3 grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {(characterGroup === 'general'
                 ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe'], ['warlock', 'Warlock', 'Male forbidden mage using curses and abyssal magic']] as const)
-                : ([['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'], ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills'], ['elementalist', 'Elementalist', 'Female special mage · 9 purchasable elemental skills']] as const)
+                : ([
+                    ['conservative', 'Conservative Faction', 'Male SD swordsman · 8 exclusive skills'],
+                    ['progressive', 'Progressive Faction', 'Female SD mage · 8 exclusive skills'],
+                    ['elementalist', 'Elementalist', 'Female special mage · 9 purchasable elemental skills'],
+                    ...(ASSET_TYCOON_LOCAL_TEST_UNLOCK ? [['assettycoon', 'Asset Tycoon', 'Local test · nine max-level skills'] as const] : []),
+                  ] as const)
               ).map(([id, name, role]) => {
-                const special = id === 'conservative' || id === 'progressive' || id === 'elementalist';
+                const special = id === 'conservative' || id === 'progressive' || id === 'elementalist' || id === 'assettycoon';
                 return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id}.png`} alt="" width={180} height={210} className="pointer-events-none absolute -bottom-8 -right-5 h-[125%] w-[52%] object-contain object-bottom" /></button>;
               })}
             </div>
-            {characterGroup === 'general' ? (
+            {characterGroup === 'general' && !ASSET_TYCOON_LOCAL_TEST_UNLOCK ? (
               <div className={`relative mt-3 min-h-44 overflow-hidden rounded-xl border p-4 pr-[38%] ${ownsAssetTycoon || ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
                 <Image src="/assets/class-portraits/assettycoon.png" alt="Asset Tycoon" width={360} height={420} className="pointer-events-none absolute -bottom-14 right-0 h-[145%] w-[42%] object-contain object-bottom" />
                 <div className="relative z-10 flex min-h-36 flex-col items-start justify-center gap-3 text-left">
                   <div><span className="text-[10px] font-extrabold tracking-[.2em] text-[#f2c94c]">ULTRA-RARE NFT CLASS · 1% ON VERIFIED STAGES 27–30</span><strong className="mt-1 block text-lg font-black text-[#fff0ad]">Asset Tycoon</strong><p className="mt-1 text-xs font-semibold text-[#b9aa83]">Male apex class · nine max-level skills · Attack/Vitality/Defense +20. Ownership and play access transfer with the ERC-721 NFT.</p></div>
-                  <button type="button" disabled={(!ownsAssetTycoon && !ASSET_TYCOON_LOCAL_TEST_UNLOCK) || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon || ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'SELECT ASSET TYCOON · TEST' : 'NFT REQUIRED'}</button>
+                  <button type="button" disabled={(!ownsAssetTycoon && !ASSET_TYCOON_LOCAL_TEST_UNLOCK) || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'SELECT · LOCAL TEST' : 'NFT REQUIRED'}</button>
                 </div>
               </div>
             ) : null}
@@ -418,7 +423,7 @@ export function GameExperience() {
         <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4">
-        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · NFT LICENSE ACTIVE</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20 while this wallet owns the NFT.</p></section> : isGeneralCharacter(characterId) ? <SkillShop
+        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}
