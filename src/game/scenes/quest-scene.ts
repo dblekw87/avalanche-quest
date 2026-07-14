@@ -3469,17 +3469,17 @@ export class QuestScene extends Phaser.Scene {
     const meteor = this.add.sprite(impactX - 220, view.top - 330, 'quest-mage-special-vfx', 0)
       .setDepth(27).setDisplaySize(470, 470).setBlendMode(Phaser.BlendModes.ADD);
     meteor.play('mage-hq-grand-meteor');
-    meteor.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => meteor.destroy());
     this.tweens.add({
       targets: meteor,
       x: impactX,
       y: impactY,
       displayWidth: 650,
       displayHeight: 650,
-      duration: 690,
-      ease: 'Expo.In',
+      duration: 1_350,
+      ease: 'Cubic.In',
+      onComplete: () => meteor.destroy(),
     });
-    this.time.delayedCall(650, () => {
+    this.time.delayedCall(1_300, () => {
       if (this.finished) return;
       this.damageEnemiesInArea(impactX, view.width * 0.68, damage, 500);
       this.spawnSkillImpactBurst(impactX, this.player.y + 26, 0xff5b24, 2.35);
