@@ -3466,9 +3466,17 @@ export class QuestScene extends Phaser.Scene {
     const view = this.cameras.main.worldView;
     const impactX = view.centerX;
     const impactY = this.player.y - 72;
-    const meteor = this.add.sprite(impactX - 220, view.top - 330, 'quest-mage-special-vfx', 0)
-      .setDepth(27).setDisplaySize(470, 470).setBlendMode(Phaser.BlendModes.ADD);
+    const startX = impactX - 190;
+    const startY = view.top - 70;
+    const aura = this.add.circle(startX, startY, 82, 0xff4b16, 0.46)
+      .setStrokeStyle(18, 0xffc35a, 0.7).setDepth(26).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.circle(startX, startY, 38, 0xfff0b0, 0.96)
+      .setStrokeStyle(10, 0xff6a20, 0.95).setDepth(27).setBlendMode(Phaser.BlendModes.ADD);
+    const meteor = this.add.sprite(startX, startY, 'quest-mage-special-vfx', 0)
+      .setDepth(28).setDisplaySize(520, 520);
     meteor.play('mage-hq-grand-meteor');
+    this.tweens.add({ targets: aura, x: impactX, y: impactY, scale: 1.7, alpha: 0.72, duration: 1_350, ease: 'Cubic.In', onComplete: () => aura.destroy() });
+    this.tweens.add({ targets: core, x: impactX, y: impactY, scale: 1.45, duration: 1_350, ease: 'Cubic.In', onComplete: () => core.destroy() });
     this.tweens.add({
       targets: meteor,
       x: impactX,
@@ -3478,6 +3486,12 @@ export class QuestScene extends Phaser.Scene {
       duration: 1_350,
       ease: 'Cubic.In',
       onComplete: () => meteor.destroy(),
+    });
+    for (let trail = 0; trail < 8; trail += 1) this.time.delayedCall(180 + trail * 125, () => {
+      if (!meteor.active) return;
+      const ember = this.add.circle(meteor.x - Phaser.Math.Between(18, 66), meteor.y - Phaser.Math.Between(20, 74), Phaser.Math.Between(10, 24), trail % 2 === 0 ? 0xffd36b : 0xff4b1f, 0.72)
+        .setDepth(26).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: ember, alpha: 0, scale: 0.15, x: ember.x - 55, y: ember.y - 70, duration: 520, onComplete: () => ember.destroy() });
     });
     this.time.delayedCall(1_300, () => {
       if (this.finished) return;
