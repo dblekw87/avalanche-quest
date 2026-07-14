@@ -33,6 +33,24 @@ const slides = [
     color: '#42a5ff',
     sprite: '/assets/political-duel/political-progressive-sheet.png',
   },
+  {
+    id: 'hidden-classes',
+    eyebrow: 'HIDDEN CLASS ROSTER',
+    title: 'Hidden Classes',
+    subtitle: 'Discover specialized heroes beyond the starting roster',
+    body: 'Unlock distinctive combat styles such as Ssaulabi sword arts, aerial kick fighting, poison control, pyromancy, colossal weapons, elemental magic, and forbidden curses.',
+    color: '#ef5568',
+    portrait: '/assets/class-portraits/ssaulabi.png',
+  },
+  {
+    id: 'rare-class',
+    eyebrow: 'ULTRA-RARE NFT CLASS',
+    title: 'Asset Tycoon',
+    subtitle: 'A transferable apex class earned from verified expeditions',
+    body: 'Clear eligible late-game stages for a chance to receive the rare class license. Minting the ERC-721 activates nine max-level skills, and ownership moves with the NFT.',
+    color: '#b18416',
+    portrait: '/assets/class-portraits/assettycoon.png',
+  },
 ] as const;
 
 export function HomeSpecialCarousel() {
@@ -44,9 +62,9 @@ export function HomeSpecialCarousel() {
       <div className="mb-8 flex flex-wrap items-end justify-center gap-4 text-center sm:mb-10 sm:justify-between sm:text-left">
         <div className="w-full sm:w-auto">
           <p className="text-xs font-bold tracking-[.24em] text-[#9a6728]">NEW SPECIAL CONTENT</p>
-          <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">Meet two factions and a new showdown.</h2>
+          <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">Meet special, hidden, and rare classes.</h2>
         </div>
-        <p className="max-w-md text-sm font-medium leading-6 text-[#71685d]">Explore the Conservative and Progressive special classes and their hard 1 VS 1 arena.</p>
+        <p className="max-w-md text-sm font-medium leading-6 text-[#71685d]">Explore faction heroes, their hard 1 VS 1 arena, hidden combat classes, and the ultra-rare NFT class.</p>
       </div>
 
       <div className="relative md:flex md:items-center md:gap-5">
@@ -61,6 +79,10 @@ export function HomeSpecialCarousel() {
                 <div className="grid min-h-72 place-items-center overflow-hidden rounded-2xl bg-[#171b22]">
                   {'sprite' in slide ? (
                     <div className="aspect-square w-full max-w-72 bg-no-repeat" style={{ backgroundImage: `url(${slide.sprite})`, backgroundPosition: '0 0', backgroundSize: '800% 100%' }} role="img" aria-label={`${slide.title} SD character`} />
+                  ) : 'portrait' in slide ? (
+                    <div className="relative h-72 w-full bg-[radial-gradient(circle_at_50%_42%,#4a3b32_0%,#171b22_68%)]">
+                      <Image src={slide.portrait} alt={`${slide.title} character portrait`} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain object-bottom" />
+                    </div>
                   ) : (
                     <div className="relative h-72 w-full">
                       <Image src={slide.image} alt="Faction duel special map" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover [image-rendering:pixelated]" />

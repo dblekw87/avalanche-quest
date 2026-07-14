@@ -10,6 +10,10 @@ import { avalancheFuji } from 'wagmi/chains';
 import { rewardDistributorAbi } from '@/features/rewards/reward-contract';
 import { assetTycoonSkills } from '@/game/asset-tycoon';
 import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-contract';
+
+// Local gameplay/VFX test switch only. Contract ownership, minting and marketplace
+// authorization continue to use the on-chain license checks below.
+const ASSET_TYCOON_LOCAL_TEST_UNLOCK = false;
 import { gameItemAbi } from '@/features/items/item-contract';
 import { SkillShop } from '@/features/skills/skill-shop';
 import { UpgradeShop } from '@/features/upgrades/upgrade-shop';
@@ -394,11 +398,11 @@ export function GameExperience() {
               })}
             </div>
             {characterGroup === 'general' ? (
-              <div className={`relative mt-3 min-h-44 overflow-hidden rounded-xl border p-4 pr-[38%] ${ownsAssetTycoon ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
+              <div className={`relative mt-3 min-h-44 overflow-hidden rounded-xl border p-4 pr-[38%] ${ownsAssetTycoon || ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'border-[#f2c94c] bg-gradient-to-r from-[#35270b] to-[#151109]' : 'border-[#665a3c] bg-[#16130e]'}`}>
                 <Image src="/assets/class-portraits/assettycoon.png" alt="Asset Tycoon" width={360} height={420} className="pointer-events-none absolute -bottom-14 right-0 h-[145%] w-[42%] object-contain object-bottom" />
                 <div className="relative z-10 flex min-h-36 flex-col items-start justify-center gap-3 text-left">
                   <div><span className="text-[10px] font-extrabold tracking-[.2em] text-[#f2c94c]">ULTRA-RARE NFT CLASS · 1% ON VERIFIED STAGES 27–30</span><strong className="mt-1 block text-lg font-black text-[#fff0ad]">Asset Tycoon</strong><p className="mt-1 text-xs font-semibold text-[#b9aa83]">Male apex class · nine max-level skills · Attack/Vitality/Defense +20. Ownership and play access transfer with the ERC-721 NFT.</p></div>
-                  <button type="button" disabled={!ownsAssetTycoon || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : 'NFT REQUIRED'}</button>
+                  <button type="button" disabled={(!ownsAssetTycoon && !ASSET_TYCOON_LOCAL_TEST_UNLOCK) || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon || ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'SELECT ASSET TYCOON · TEST' : 'NFT REQUIRED'}</button>
                 </div>
               </div>
             ) : null}

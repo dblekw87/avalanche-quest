@@ -228,7 +228,7 @@ export class QuestScene extends Phaser.Scene {
       this.load.spritesheet('quest-gunslinger-skill-strip', '/assets/classes/gunslinger-skill-strip.png?v=20260714d', { frameWidth: 156, frameHeight: 156 });
     }
     ['ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock', 'assettycoon'].forEach((character) => {
-      if (!this.textures.exists(`quest-${character}-sheet`)) this.load.image(`quest-${character}-sheet`, `/assets/classes/${character}-sheet.png?v=20260714c`);
+      if (!this.textures.exists(`quest-${character}-sheet`)) this.load.image(`quest-${character}-sheet`, `/assets/classes/${character}-sheet.png?v=20260714f`);
     });
     (['run', 'jump', 'skill', 'hit'] as const).forEach((animation) => {
       const textureKey = `quest-kickfighter-${animation}-strip`;
@@ -256,6 +256,29 @@ export class QuestScene extends Phaser.Scene {
     ['spellblade', 'archer', 'dualblade', 'brawler', 'gunslinger', 'ssaulabi', 'kickfighter', 'venomancer', 'pyromancer', 'hammerguard', 'axereaver', 'elementalist', 'warlock', 'assettycoon'].forEach((character) => {
       const textureKey = `quest-${character}-ultimate-vfx`;
       if (!this.textures.exists(textureKey)) this.load.spritesheet(textureKey, `/assets/class-skill-vfx/${character}-ultimate.png?v=20260714f`, { frameWidth: 256, frameHeight: 256 });
+    });
+    if (!this.textures.exists('quest-elementalist-flame-orbit-vfx')) this.load.spritesheet(
+      'quest-elementalist-flame-orbit-vfx',
+      '/assets/class-skill-vfx/elementalist-flame-orbit.png?v=20260714a',
+      { frameWidth: 256, frameHeight: 256 },
+    );
+    if (!this.textures.exists('quest-ssaulabi-battou-vfx')) this.load.spritesheet(
+      'quest-ssaulabi-battou-vfx',
+      '/assets/class-skill-vfx/ssaulabi-battou-awakening.png?v=20260714a',
+      { frameWidth: 256, frameHeight: 256 },
+    );
+    const elementalistVfxFiles: Readonly<Record<string, string>> = {
+      'tidal-prison': 'elementalist-tidal-prison.png',
+      'tempest-lance': 'elementalist-tempest-lance.png',
+      'gaia-aegis': 'elementalist-gaia-aegis.png',
+      'thunder-domain': 'elementalist-thunder-domain.png',
+      'frost-comet': 'elementalist-frost-comet.png',
+      'magma-fault': 'elementalist-magma-fault.png',
+      'elemental-convergence': 'elementalist-convergence.png',
+    };
+    Object.entries(elementalistVfxFiles).forEach(([skillId, file]) => {
+      const textureKey = `quest-elementalist-${skillId}-vfx`;
+      if (!this.textures.exists(textureKey)) this.load.spritesheet(textureKey, `/assets/class-skill-vfx/${file}?v=20260714a`, { frameWidth: 256, frameHeight: 256 });
     });
     ['spellblade', 'archer'].forEach((character) => {
       ['idle', 'run', 'jump', 'attack', 'skill', 'dash'].forEach((pose) => {
@@ -512,6 +535,7 @@ export class QuestScene extends Phaser.Scene {
     const initialFrame = political ? 0 : animated ? `${this.characterId}-idle-0` : undefined;
     this.player = this.physics.add.sprite(120, 300, textureKey, initialFrame);
     if (political) this.player.setScale(0.38);
+    else if (this.characterId === 'ssaulabi') this.player.setScale(0.78);
     else if (animated) this.player.setScale(0.64);
     else this.player.setDisplaySize(92, 100);
     this.player.setCollideWorldBounds(true).setMaxVelocity(560, 560).setDepth(8);
@@ -520,7 +544,7 @@ export class QuestScene extends Phaser.Scene {
       if (political) body.setSize(82, 140).setOffset(87, 90);
       else if (animated) {
         const expansionFootOffsets: Partial<Record<CharacterId, number>> = {
-          ssaulabi: 23,
+          ssaulabi: 20,
           kickfighter: 16,
           venomancer: 28,
           pyromancer: 13,
@@ -528,7 +552,8 @@ export class QuestScene extends Phaser.Scene {
           axereaver: 28,
           assettycoon: 19,
         };
-        body.setSize(70, 127).setOffset(43, expansionFootOffsets[this.characterId] ?? 23);
+        if (this.characterId === 'ssaulabi') body.setSize(58, 104).setOffset(35, expansionFootOffsets.ssaulabi ?? 20);
+        else body.setSize(70, 127).setOffset(43, expansionFootOffsets[this.characterId] ?? 23);
       }
       else body.setSize(this.player.width * 0.34, this.player.height * 0.7).setOffset(this.player.width * 0.33, this.player.height * 0.15);
     }
@@ -647,6 +672,27 @@ export class QuestScene extends Phaser.Scene {
         key: animationKey,
         frames: this.anims.generateFrameNumbers(`quest-${character}-ultimate-vfx`, { start: 0, end: 7 }),
         frameRate: 6,
+        repeat: 0,
+      });
+    });
+    if (!this.anims.exists('elementalist-flame-orbit-hq')) this.anims.create({
+      key: 'elementalist-flame-orbit-hq',
+      frames: this.anims.generateFrameNumbers('quest-elementalist-flame-orbit-vfx', { start: 0, end: 15 }),
+      frameRate: 18,
+      repeat: 0,
+    });
+    if (!this.anims.exists('ssaulabi-battou-awakening-hq')) this.anims.create({
+      key: 'ssaulabi-battou-awakening-hq',
+      frames: this.anims.generateFrameNumbers('quest-ssaulabi-battou-vfx', { start: 0, end: 15 }),
+      frameRate: 16,
+      repeat: 0,
+    });
+    ['tidal-prison', 'tempest-lance', 'gaia-aegis', 'thunder-domain', 'frost-comet', 'magma-fault', 'elemental-convergence'].forEach((skillId) => {
+      const animationKey = `elementalist-${skillId}-hq`;
+      if (!this.anims.exists(animationKey)) this.anims.create({
+        key: animationKey,
+        frames: this.anims.generateFrameNumbers(`quest-elementalist-${skillId}-vfx`, { start: 0, end: 15 }),
+        frameRate: skillId === 'thunder-domain' ? 13 : 16,
         repeat: 0,
       });
     });
@@ -905,8 +951,8 @@ export class QuestScene extends Phaser.Scene {
     this.add.rectangle(998, 38, 200, 10, 0x27302b).setScrollFactor(0).setDepth(20);
     this.healthBar = this.add.rectangle(898, 38, 200, 10, 0xdfff62).setOrigin(0, 0.5).setScrollFactor(0).setDepth(21);
     this.objectiveText = this.add.text(1102, 51, '', { color: '#f1ffb8', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', align: 'right', backgroundColor: '#07100bcc' }).setOrigin(1, 0).setPadding(4, 2).setScrollFactor(0).setDepth(21);
-    this.add.rectangle(1032, 88, 150, 26, 0x07100b, 0.88).setStrokeStyle(1, 0xd0a55f, 0.65).setScrollFactor(0).setDepth(19);
-    this.add.text(1098, 80, `AQT ${Number(this.aqtBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, { color: '#ffe09a', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
+    this.add.rectangle(1032, 112, 150, 26, 0x07100b, 0.88).setStrokeStyle(1, 0xd0a55f, 0.65).setScrollFactor(0).setDepth(19);
+    this.add.text(1098, 104, `AQT ${Number(this.aqtBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, { color: '#ffe09a', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
     const classSkillIds = this.classSkillIds;
     const political = isPoliticalCharacter(this.characterId);
     const secret = isSecretCharacter(this.characterId);
@@ -955,8 +1001,10 @@ export class QuestScene extends Phaser.Scene {
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.dashKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     const skillIds = this.classSkillIds;
-    const keyCodes = isSecretCharacter(this.characterId) || this.characterId === 'elementalist'
+    const keyCodes = isSecretCharacter(this.characterId)
       ? [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V, Phaser.Input.Keyboard.KeyCodes.T]
+      : this.characterId === 'elementalist'
+      ? [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.T, Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V]
       : isPoliticalCharacter(this.characterId)
       ? [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.Z, Phaser.Input.Keyboard.KeyCodes.X, Phaser.Input.Keyboard.KeyCodes.C, Phaser.Input.Keyboard.KeyCodes.V]
       : [Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R, Phaser.Input.Keyboard.KeyCodes.T];
@@ -1925,98 +1973,82 @@ export class QuestScene extends Phaser.Scene {
       this.castAnimatedUltimate('elementalist', damage);
       return;
     }
-    if (key === 'R') {
-      this.castInnateBuff(skillId, time);
-      [0x65d46e, 0xd7a54b, 0x70d9ff].forEach((color, index) => {
-        const shield = this.add.ellipse(this.player.x, this.player.y, 105 + index * 28, 132 + index * 24, color, 0.08)
-          .setStrokeStyle(4, color, 0.85).setDepth(15);
-        this.tweens.add({ targets: shield, alpha: 0, scaleX: 1.45, scaleY: 1.3, duration: 760 + index * 120, onComplete: () => shield.destroy() });
-      });
-      return;
-    }
     if (key === 'Q') {
       this.castElementalistFlameProjectile(skillId, damage, time, direction);
       return;
     }
     if (key === 'E') {
-      [-26, 0, 26].forEach((offsetY, index) => this.time.delayedCall(index * 90, () => {
-        const startX = this.player.x + direction * 55;
-        const lance = this.add.polygon(startX, this.player.y + offsetY, [0, 0, 62, 10, 0, 20, 14, 10], 0xc9fbff, 0.95)
-          .setStrokeStyle(3, 0x56dfff, 1).setDepth(16).setScale(direction, 1);
-        this.tweens.add({ targets: lance, x: startX + direction * 650, alpha: 0.12, duration: 520, ease: 'Quad.easeIn', onUpdate: () => {
-          this.spawnInnateParticles(lance.x, lance.y, 2, 42);
-          this.damageEnemiesInArea(lance.x, 64, Math.max(1, Math.ceil(damage / 2)), 70);
-        }, onComplete: () => lance.destroy() });
-      }));
+      const lance = this.playElementalistVfx(skillId, this.player.x + direction * 70, this.player.y - 5, 210, 210, direction < 0);
+      this.tweens.add({ targets: lance, x: lance.x + direction * 650, duration: 850, ease: 'Quad.easeIn', onUpdate: () => {
+        this.damageEnemiesInArea(lance.x, 86, Math.max(1, Math.ceil(damage / 3)), 90);
+      }, onComplete: () => this.damageEnemiesInArea(lance.x, 190, damage, 230) });
       return;
     }
     if (key === 'T') {
-      const veil = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x46206f, 0.2)
-        .setScrollFactor(0).setDepth(13);
-      this.tweens.add({ targets: veil, alpha: 0, duration: 1_650, onComplete: () => veil.destroy() });
-      for (let pulse = 0; pulse < 14; pulse += 1) this.time.delayedCall(pulse * 105, () => {
+      this.playElementalistVfx(skillId, this.scale.width / 2, this.scale.height / 2, this.scale.width * 1.12, this.scale.height * 1.08, false, true);
+      for (let pulse = 0; pulse < 6; pulse += 1) this.time.delayedCall(280 + pulse * 155, () => {
         if (this.finished) return;
-        const x = view.left + ((pulse + 0.5) / 14) * view.width;
-        const bolt = this.add.polygon(x, view.top - 20, [-18, 0, 22, 0, -8, view.height * 0.46, 28, view.height * 0.46, -24, view.height], 0xdca8ff, 0.88)
-          .setStrokeStyle(5, 0xffffff, 0.92).setOrigin(0.5, 0).setDepth(17);
-        this.tweens.add({ targets: bolt, alpha: 0, duration: 330, ease: 'Cubic.Out', onComplete: () => bolt.destroy() });
-        this.spawnElementalBurst(x, view.top + view.height * 0.76, 0x9d5cff, 150);
-        this.damageEnemiesInArea(x, view.width * 0.12, Math.max(1, Math.ceil(damage / 3)), view.height);
+        this.damageEnemiesInArea(view.centerX, view.width, Math.max(1, Math.ceil(damage / 4)), view.height);
+        this.cameras.main.shake(110, 0.008 + pulse * 0.001);
       });
-      this.time.delayedCall(1_480, () => this.damageEnemiesInArea(view.centerX, view.width, damage, view.height));
       return;
     }
     const centerX = key === 'W' ? this.player.x + direction * 165 : view.centerX;
     if (key === 'W') {
-      for (let ring = 0; ring < 4; ring += 1) {
-        const wave = this.add.ellipse(centerX, this.player.y + 12, 90 + ring * 34, 42 + ring * 15, 0x43b7e8, 0.1)
-          .setStrokeStyle(5, ring % 2 === 0 ? 0xbff8ff : 0x318dd7, 0.92).setDepth(15);
-        this.tweens.add({ targets: wave, scaleX: 1.8, scaleY: 2.5, alpha: 0, duration: 650 + ring * 90, onComplete: () => wave.destroy() });
-      }
-      this.damageEnemiesInArea(centerX, 245, damage, 300);
+      this.playElementalistVfx(skillId, centerX, this.player.y - 30, 380, 380);
+      this.time.delayedCall(620, () => this.damageEnemiesInArea(centerX, 270, damage, 340));
+      return;
+    }
+    if (key === 'R') {
+      const level = this.skillUpgradeLevels[skillId] ?? 0;
+      const duration = 5_000 + level * 500;
+      this.classPowerMultiplier = 1.3 + level * 0.05;
+      this.classMovementSpeed = 270 + level * 7;
+      this.activeDefenseReduction = 1 + Math.floor(level / 3);
+      this.classPowerUntil = time + duration;
+      this.defenseUntil = Math.max(this.defenseUntil, time + duration);
+      this.playElementalistVfx(skillId, this.player.x, this.player.y - 25, 350, 350);
       return;
     }
     if (key === 'Z') {
-      const comet = this.add.circle(centerX + direction * 170, view.top - 80, 54, 0xc8f8ff, 0.95).setStrokeStyle(12, 0x64bfff, 0.9).setDepth(17);
-      this.tweens.add({ targets: comet, x: centerX, y: this.player.y, scale: 1.65, duration: 720, ease: 'Cubic.In', onUpdate: () => this.spawnInnateParticles(comet.x, comet.y, 3, 62), onComplete: () => {
-        this.spawnElementalBurst(centerX, this.player.y, 0x83dfff, 310);
-        this.damageEnemiesInArea(centerX, 330, damage, 310);
-        comet.destroy();
-      } });
+      this.playElementalistVfx(skillId, centerX, this.player.y - 105, 470, 470);
+      this.time.delayedCall(700, () => this.damageEnemiesInArea(centerX, 350, damage, 380));
       return;
     }
     if (key === 'X') {
-      for (let fissure = 0; fissure < 8; fissure += 1) this.time.delayedCall(fissure * 70, () => {
-        const x = this.player.x + direction * (65 + fissure * 72);
-        const crack = this.add.polygon(x, this.player.y + 48, [-42, 18, -18, -12, 0, 12, 24, -24, 46, 18], 0xff5a24, 0.82)
-          .setStrokeStyle(4, 0xffd15c, 0.95).setDepth(15);
-        this.tweens.add({ targets: crack, scaleY: 1.8, alpha: 0, duration: 520, onComplete: () => crack.destroy() });
-        this.damageEnemiesInArea(x, 105, Math.max(1, Math.ceil(damage / 3)), 230);
-      });
+      const faultX = this.player.x + direction * 250;
+      this.playElementalistVfx(skillId, faultX, this.player.y + 5, 560, 430, direction < 0);
+      this.time.delayedCall(560, () => this.damageEnemiesInArea(faultX, 410, damage, 320));
       return;
     }
     if (key === 'C') {
-      const colors = [0xff6633, 0x54d8ff, 0x8fea77, 0xffdf68, 0xb27aff];
-      colors.forEach((color, index) => {
-        const angle = (Math.PI * 2 * index) / colors.length;
-        const orb = this.add.circle(centerX + Math.cos(angle) * 220, this.player.y + Math.sin(angle) * 110, 26, color, 0.92).setDepth(16);
-        this.tweens.add({ targets: orb, x: centerX, y: this.player.y, scale: 0.35, duration: 620 + index * 70, ease: 'Sine.easeIn', onComplete: () => orb.destroy() });
-      });
-      this.time.delayedCall(850, () => {
-        this.spawnElementalBurst(centerX, this.player.y, 0xffffff, 410);
-        this.damageEnemiesInArea(centerX, 430, damage, 370);
-      });
+      this.playElementalistVfx(skillId, centerX, this.player.y - 55, 520, 520);
+      this.time.delayedCall(760, () => this.damageEnemiesInArea(centerX, 460, damage, 420));
     }
+  }
+
+  private playElementalistVfx(skillId: string, x: number, y: number, width: number, height: number, flipX = false, screenSpace = false): Phaser.GameObjects.Sprite {
+    const effect = this.add.sprite(x, y, `quest-elementalist-${skillId}-vfx`, 0)
+      .setDepth(28)
+      .setDisplaySize(width, height)
+      .setFlipX(flipX)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    if (screenSpace) effect.setScrollFactor(0);
+    effect.play(`elementalist-${skillId}-hq`);
+    effect.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => effect.destroy());
+    return effect;
   }
 
   private castElementalistFlameProjectile(skillId: string, damage: number, time: number, direction: number): void {
     const startX = this.player.x + direction * 58;
     const startY = this.player.y - 10;
-    const projectile = this.add.image(startX, startY, `quest-skill-icon-${skillId}`)
-      .setDisplaySize(74, 74)
+    const projectile = this.add.sprite(startX, startY, 'quest-elementalist-flame-orbit-vfx', 0)
+      .setDisplaySize(174, 174)
       .setDepth(16)
+      .setFlipX(direction < 0)
       .setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: projectile, scaleX: 1.35, scaleY: 1.18, duration: 520, ease: 'Sine.easeIn' });
+    projectile.play('elementalist-flame-orbit-hq');
+    projectile.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => projectile.destroy());
     this.tweens.add({
       targets: projectile,
       x: startX + direction * 520,
@@ -2024,16 +2056,12 @@ export class QuestScene extends Phaser.Scene {
       ease: 'Quad.easeIn',
       onUpdate: () => {
         if (!projectile.active) return;
-        this.spawnInnateParticles(projectile.x, projectile.y + Phaser.Math.Between(-14, 14), 3, 72);
         this.damageEnemiesInArea(projectile.x, 72, Math.max(1, Math.ceil(damage / 3)), 100);
       },
       onComplete: () => {
-        this.spawnElementalBurst(projectile.x, projectile.y, 0xff6a2e, 220);
         this.damageEnemiesInArea(projectile.x, 190, damage, 240);
-        projectile.destroy();
       },
     });
-    this.spawnInnateParticles(startX, startY, 22, 170);
     this.lastSkillAt.set(skillId, time);
   }
 
@@ -2131,62 +2159,25 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castCrimsonHeavenSever(damage: number, time: number): void {
-    this.castAnimatedUltimate('ssaulabi', damage);
-    return;
-    const level = this.skillUpgradeLevels['heaven-sever'] ?? 0;
     const view = this.cameras.main.worldView;
-    const centerX = view.centerX;
-    const centerY = view.centerY;
-    const direction = this.player.flipX ? -1 : 1;
     this.player.setVelocity(0, 0);
     this.defenseUntil = Math.max(this.defenseUntil, time + 1_050);
-    const veil = this.add.rectangle(512, 260, 1_024, 520, 0x17070b, 0.7).setScrollFactor(0).setDepth(14);
-    this.tweens.add({ targets: veil, fillAlpha: 0.9, duration: 250, yoyo: true, hold: 420, onComplete: () => veil.destroy() });
-
-    for (let slash = 0; slash < 6; slash += 1) {
-      this.time.delayedCall(180 + slash * 75, () => {
-        if (this.finished) return;
-        const offsetY = (slash - 2.5) * 58;
-        const angle = direction * (slash % 2 === 0 ? -8 - slash * 2 : 11 + slash * 2);
-        const blade = this.add.rectangle(centerX, centerY + offsetY, view.width * 1.25, 8 + level * 0.7, slash % 2 === 0 ? 0xffefe2 : 0xd71938, 0.96)
-          .setDepth(17)
-          .setAngle(angle)
-          .setBlendMode(Phaser.BlendModes.ADD)
-          .setScale(0.05, 1);
-        this.tweens.add({ targets: blade, scaleX: 1, scaleY: 2.2, alpha: 0, duration: 430, ease: 'Expo.Out', onComplete: () => blade.destroy() });
-        this.showInnateSkillEffect('heaven-sever', centerX + Phaser.Math.Between(-360, 360), centerY + offsetY, 210 + slash * 18, 520, angle);
-      });
-    }
-
-    const leafCount = 54 + level * 5;
-    for (let leaf = 0; leaf < leafCount; leaf += 1) {
-      this.time.delayedCall(120 + leaf * 12, () => {
-        if (this.finished) return;
-        const startX = view.left - 40 + Phaser.Math.Between(0, Math.round(view.width * 0.45));
-        const startY = view.top + Phaser.Math.Between(20, Math.round(view.height - 40));
-        const petal = this.add.ellipse(startX, startY, Phaser.Math.Between(7, 15), Phaser.Math.Between(3, 7), leaf % 4 === 0 ? 0xff8a48 : leaf % 3 === 0 ? 0x8f1025 : 0xd9273f, 0.9)
-          .setDepth(18)
-          .setAngle(Phaser.Math.Between(-80, 80))
-          .setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({
-          targets: petal,
-          x: startX + view.width * Phaser.Math.FloatBetween(0.75, 1.25),
-          y: startY + Phaser.Math.Between(-100, 150),
-          angle: petal.angle + Phaser.Math.Between(240, 720),
-          alpha: 0,
-          duration: Phaser.Math.Between(900, 1_500),
-          ease: 'Sine.InOut',
-          onComplete: () => petal.destroy(),
-        });
-      });
-    }
-
-    this.time.delayedCall(640, () => {
+    const battou = this.add.sprite(this.scale.width / 2, this.scale.height / 2, 'quest-ssaulabi-battou-vfx', 0)
+      .setScrollFactor(0)
+      .setDepth(29)
+      .setDisplaySize(this.scale.width * 1.42, this.scale.height * 1.18)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    battou.play('ssaulabi-battou-awakening-hq');
+    battou.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => battou.destroy());
+    for (let pulse = 0; pulse < 5; pulse += 1) this.time.delayedCall(240 + pulse * 135, () => {
       if (this.finished) return;
-      this.enemies.filter((enemy) => enemy.health > 0 && this.isEnemyOnScreen(enemy)).forEach((enemy) => this.damageEnemy(enemy, damage));
-      this.spawnSkillImpactBurst(this.player.x, this.player.y, 0xef294d, 1.65 + level * 0.06);
-      this.cameras.main.flash(210, 255, 232, 220, false);
-      this.cameras.main.shake(760, 0.023 + level * 0.001);
+      this.damageEnemiesInArea(view.centerX, view.width, Math.max(1, Math.ceil(damage / 4)), view.height);
+      if (pulse === 2 || pulse === 4) this.cameras.main.shake(130, 0.012 + pulse * 0.002);
+    });
+    this.time.delayedCall(860, () => {
+      if (this.finished) return;
+      this.damageEnemiesInArea(view.centerX, view.width, damage, view.height);
+      this.cameras.main.flash(240, 255, 220, 230, false);
     });
   }
 
@@ -3818,7 +3809,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private alignHeroAnimationBaseline(animation: string): void {
-    if (this.characterId !== 'warrior' && this.characterId !== 'mage' && this.characterId !== 'brawler') return;
+    if (this.characterId !== 'warrior' && this.characterId !== 'mage' && this.characterId !== 'brawler' && this.characterId !== 'ssaulabi' && this.characterId !== 'assettycoon') return;
     const warriorBaselines: Readonly<Record<string, number>> = {
       idle: 149, walk: 145, run: 133, dash: 133, jump: 138, attack: 142, skill: 130, hit: 122, death: 120,
     };
@@ -3828,13 +3819,29 @@ export class QuestScene extends Phaser.Scene {
     const brawlerBaselines: Readonly<Record<string, number>> = {
       idle: 144, walk: 130, run: 110, dash: 144, jump: 144, attack: 118, skill: 129, hit: 135, death: 125,
     };
+    const ssaulabiBaselines: Readonly<Record<string, number>> = {
+      idle: 122, walk: 121, run: 113, dash: 114, jump: 114, attack: 122, skill: 122, hit: 121, death: 121,
+    };
     const targetBaseline = this.characterId === 'warrior' ? 149 : this.characterId === 'mage' ? 145 : 144;
-    const baselines = this.characterId === 'warrior' ? warriorBaselines : this.characterId === 'mage' ? mageBaselines : brawlerBaselines;
-    const baseline = baselines[animation] ?? targetBaseline;
-    const downwardFrameOffset = targetBaseline - baseline;
-    this.player.setOrigin(0.5, (78 - downwardFrameOffset) / 156);
+    const assetTycoonBaselines: Readonly<Record<string, number>> = {
+      idle: 144, walk: 144, run: 144, dash: 144, jump: 144, attack: 144, skill: 144, hit: 144, death: 144,
+    };
+    const baselines = this.characterId === 'warrior'
+      ? warriorBaselines
+      : this.characterId === 'mage'
+        ? mageBaselines
+        : this.characterId === 'ssaulabi'
+          ? ssaulabiBaselines
+        : this.characterId === 'assettycoon'
+          ? assetTycoonBaselines
+          : brawlerBaselines;
+    const effectiveTargetBaseline = this.characterId === 'ssaulabi' ? 122 : targetBaseline;
+    const baseline = baselines[animation] ?? effectiveTargetBaseline;
+    const downwardFrameOffset = effectiveTargetBaseline - baseline;
+    const frameSize = this.characterId === 'ssaulabi' ? 128 : 156;
+    this.player.setOrigin(0.5, (frameSize / 2 - downwardFrameOffset) / frameSize);
     const body = this.player.body;
-    if (body instanceof Phaser.Physics.Arcade.Body) body.setOffset(43, 23 - downwardFrameOffset);
+    if (body instanceof Phaser.Physics.Arcade.Body) body.setOffset(this.characterId === 'ssaulabi' ? 35 : 43, (this.characterId === 'ssaulabi' ? 20 : 23) - downwardFrameOffset);
   }
 
   private playPlayerAnimation(animation: string): void {
@@ -3875,7 +3882,8 @@ export class QuestScene extends Phaser.Scene {
       return;
     }
     if (this.characterId === 'warrior' || this.characterId === 'mage' || isInnateCharacter(this.characterId) || isSecretCharacter(this.characterId)) {
-      if (Math.abs(this.player.scaleX) !== 0.64 || this.player.scaleY !== 0.64) this.player.setScale(0.64);
+      const scale = this.characterId === 'ssaulabi' ? 0.78 : 0.64;
+      if (Math.abs(this.player.scaleX) !== scale || this.player.scaleY !== scale) this.player.setScale(scale);
       return;
     }
     if (Math.round(this.player.displayWidth) !== 92 || Math.round(this.player.displayHeight) !== 100) this.player.setDisplaySize(92, 100);
@@ -4000,10 +4008,15 @@ export class QuestScene extends Phaser.Scene {
     }
     const animations = ['idle', 'walk', 'run', 'jump', 'attack', 'skill', 'hit', 'death'] as const;
     animations.forEach((animation, row) => {
+      const assetTycoonSafeRows: Readonly<Record<(typeof animations)[number], number>> = {
+        idle: 0, walk: 1, run: 1, jump: 1, attack: 0, skill: 0, hit: 0, death: 7,
+      };
+      const sourceRow = this.characterId === 'assettycoon' ? assetTycoonSafeRows[animation] : row;
+      const frameSize = this.characterId === 'ssaulabi' ? 128 : 156;
       for (let column = 0; column < 8; column += 1) {
         const frameName = `${this.characterId}-${animation}-${column}`;
         const frameOffset = isInnateCharacter(this.characterId) || isSecretCharacter(this.characterId) ? 0 : 3;
-        if (!texture.has(frameName)) texture.add(frameName, 0, frameOffset + column * 156, frameOffset + row * 156, 156, 156);
+        if (!texture.has(frameName)) texture.add(frameName, 0, frameOffset + column * frameSize, frameOffset + sourceRow * frameSize, frameSize, frameSize);
       }
       const key = `${this.characterId}-${animation}`;
       if (!this.anims.exists(key)) {
