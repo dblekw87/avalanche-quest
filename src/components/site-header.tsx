@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const links = [
+  ['/guide', 'Play Guide'],
   ['/game', 'Adventure'],
   ['/inventory', 'Inventory'],
   ['/marketplace', 'Marketplace'],

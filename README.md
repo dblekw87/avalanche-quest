@@ -211,9 +211,9 @@ avalanche-quest/
 | RewardDistributor | [`0x21F7...2f8b`](https://testnet.snowtrace.io/address/0x21F797e0c02F2bbec8a640Cf291298fe89ec2f8b) | 서명 검증 후 AQT 보상 |
 | GameItem | [`0x5E30...D0be`](https://testnet.snowtrace.io/address/0x5E3076C3881c4c4b3543291B7536802455f6D0be) | ERC-721 장비 |
 | ItemMarketplace | [`0x4cC7...8822`](https://testnet.snowtrace.io/address/0x4cC76E2CEb0212eb6797d8378461AA10A3568822) | 장비 NFT AQT 거래 |
-| SkillShop | [`0x22DC...a229`](https://testnet.snowtrace.io/address/0x22DC2FA0365683A4d6492004Ff316afC612ea229) | 스킬 구매 |
-| SkillEnhancement | [`0xC5D1...e242`](https://testnet.snowtrace.io/address/0xC5D1f7860cbD9bAAF59c243723092D618F59e242) | 스킬 강화 |
-| ArmorEnhancement | [`0x2D21...BB84`](https://testnet.snowtrace.io/address/0x2D2155e9Beca5fB3Afbb09d33a305f5fa8F4BB84) | Aegis Armor 강화 |
+| SkillShop V2 | [`0x641E...dc1f`](https://testnet.snowtrace.io/address/0x641E63684252CfA099F61512c8989482dC0Fdc1f) | 기본 Q 지급·기존 구매 승계·스킬 구매 |
+| SkillEnhancement V2 | [`0x2664...2120`](https://testnet.snowtrace.io/address/0x2664aE0a8Fb2dF162C82f790b140ce180D9d2120) | 기존 레벨 승계·스킬 최대 7강 |
+| ArmorEnhancement V2 | [`0xe465...ae8A`](https://testnet.snowtrace.io/address/0xe4653FF904fe334256B53313Ebb9D95ACB4cae8A) | 기존 레벨을 승계하는 Aegis Armor 강화 |
 | CharacterUpgrade V3 | [`0x3A76...ACa6`](https://testnet.snowtrace.io/address/0x3A76d7936e8947d34dd3BAf1cB0877927245ACa6) | 공격·생명·방어 최대 20강 |
 | AssetTycoonLicense | [`0x0384...51BF`](https://testnet.snowtrace.io/address/0x0384Fb612636836B42Cf1568DafFB8410A6E51BF) | 희귀 클래스 ERC-721 소유권 |
 | AssetTycoonMarketplace | [`0xE7bc...FbBa0`](https://testnet.snowtrace.io/address/0xE7bc87eC32B2DA4AD017C8F6EF2db4a13B2FbBa0) | 희귀 클래스 AQT 에스크로 거래 |

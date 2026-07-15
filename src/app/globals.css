@@ -41,6 +41,7 @@ header * { border-color:#e5ded3!important; }
 header [class*="text-[#"] { color:#51493f!important; }
 main { background:#fff!important; color:#201c17; }
 main :not(.game-frame, .game-frame *)[class*="bg-[#"] { background-color:#fff!important; }
+main kbd[title][class] { background:#201c17!important; color:#fff!important; border-color:#4b433b!important; }
 main :not(.game-frame, .game-frame *)[class*="text-[#"] { color:#51493f!important; }
 main :not(.game-frame, .game-frame *)[class*="border-[#"] { border-color:#ddd4c7!important; }
 main :not(.game-frame, .game-frame *) button[class*="bg-[#"] { background:#f1e3ca!important; color:#3d2c16!important; }

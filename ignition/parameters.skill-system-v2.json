@@ -1,0 +1,9 @@
+{
+  "SkillSystemV2": {
+    "admin": "0x3028645d4D6A71DB84Caccbfc4a6c83E74aF5899",
+    "gameToken": "0xD182A7E85E201412D9f69D98Be3127eC126F05f9",
+    "legacySkillShop": "0x22DC2FA0365683A4d6492004Ff316afC612ea229",
+    "legacySkillEnhancement": "0xC5D1f7860cbD9bAAF59c243723092D618F59e242",
+    "legacyArmorEnhancement": "0x2D2155e9Beca5fB3Afbb09d33a305f5fa8F4BB84"
+  }
+}

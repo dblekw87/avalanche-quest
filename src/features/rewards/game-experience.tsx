@@ -369,19 +369,41 @@ export function GameExperience() {
           <div>
             <span className="text-[10px] tracking-[.2em] text-[#a88350]">CHOOSE EXPEDITION</span>
             <div className="mt-3 grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
-              {(Object.keys(stages) as StageId[]).map((id) => (
+              {stageIds.filter((id) => !stages[id].special).map((id) => (
                 <button
                   key={id}
                   type="button"
                   disabled={attemptId !== null}
                   onClick={() => setStageId(id)}
-                  style={{ backgroundImage: `url(/assets/maps-hd/stage-${String(stages[id].number).padStart(2, '0')}.webp)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                  className={`relative min-w-0 overflow-hidden border px-3 py-3 text-center text-white [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:px-4 sm:text-left ${stageId === id ? 'border-[#f0c76e] ring-2 ring-[#f0c76e]/50' : 'border-[#b9aa91]'}`}
+                  style={{ backgroundImage: `url(/assets/maps-hd/stage-${String(stages[id].assetNumber).padStart(2, '0')}.webp)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  className={`relative min-w-0 overflow-hidden border px-3 py-3 text-center text-white transition sm:px-4 sm:text-left [text-shadow:0_2px_4px_rgba(0,0,0,.95)] ${stageId === id ? 'z-10 scale-[1.025] border-[#fff3ad] ring-4 ring-[#ffd45f] shadow-[0_0_26px_rgba(255,212,95,.95),inset_0_0_0_2px_rgba(255,255,255,.9)]' : 'border-[#b9aa91] hover:border-[#ead392]'}`}
                 >
                   <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
                   <strong className="mt-1 block text-sm">{stages[id].name}</strong>
                 </button>
               ))}
+            </div>
+            <div className="mt-5 rounded-xl border border-[#9b2947] bg-gradient-to-r from-[#260813] via-[#130b16] to-[#1b0926] p-3 sm:p-4">
+              <div className="flex items-end justify-between gap-3">
+                <span><span className="block text-[10px] font-black tracking-[.24em] text-white [text-shadow:0_2px_5px_rgba(0,0,0,.95)]">SPECIAL STAGES · 31–40</span><strong className="mt-1 block text-base font-black text-white">Named Raid · Extreme Annihilation</strong></span>
+                <span className="rounded-full border border-white/70 px-3 py-1 text-[9px] font-black tracking-[.16em] text-white">4 PHASE FINAL BOSS</span>
+              </div>
+              <p className="mt-2 text-[10px] font-semibold leading-4 text-white/90">Extended route · two named mid-boss arenas · sealed progression gates · phase-changing final encounter.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                {stageIds.filter((id) => stages[id].special).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={attemptId !== null}
+                    onClick={() => setStageId(id)}
+                    style={{ backgroundImage: `linear-gradient(rgba(25,0,8,.28),rgba(25,0,8,.66)),url(/assets/maps-special/stage-${stages[id].number}-v2.png)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                    className={`relative min-w-0 overflow-hidden border px-3 py-4 text-center text-white [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:text-left ${stageId === id ? 'border-[#ff668f] ring-2 ring-[#ff3f72]/60' : 'border-[#713044]'}`}
+                  >
+                    <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
+                    <strong className="mt-1 block text-sm">{stages[id].name}</strong>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="mx-auto mt-4 flex w-full max-w-md justify-center gap-2 rounded-xl border border-[#514838] bg-[#12100d] p-1 sm:mx-0 sm:w-fit sm:max-w-none">
               {([['general', 'General Classes'], ['special', 'Special Classes']] as const).map(([group, label]) => (
@@ -399,7 +421,7 @@ export function GameExperience() {
                   ] as const)
               ).map(([id, name, role]) => {
                 const special = id === 'conservative' || id === 'progressive' || id === 'elementalist' || id === 'assettycoon';
-                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id}.png`} alt="" width={180} height={210} className={`pointer-events-none absolute -right-5 h-[125%] w-[52%] object-contain object-bottom ${id === 'elementalist' ? '-bottom-4' : '-bottom-8'}`} /></button>;
+                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id === 'gunslinger' ? 'gunslinger-v2' : id}.png`} alt="" width={180} height={210} className={`pointer-events-none absolute -right-5 h-[125%] w-[52%] object-contain object-bottom ${id === 'elementalist' ? '-bottom-4' : '-bottom-8'}`} /></button>;
               })}
             </div>
             {characterGroup === 'general' && !ASSET_TYCOON_LOCAL_TEST_UNLOCK ? (
@@ -423,7 +445,7 @@ export function GameExperience() {
         <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4">
-        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
+        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5 text-white [&_*]:!text-white"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}

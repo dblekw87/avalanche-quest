@@ -271,6 +271,9 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
             </div>
             <strong className="mt-2 text-[#e6d7ba]">{entry.name}</strong>
             <p className="mt-1 flex-1 text-xs leading-5 text-[#9f9583]">{entry.description}</p>
+            <p className="mt-2 text-[10px] font-bold text-[#d8c27b]">
+              +{skillLevels[entry.slug] ?? 0} · DMG +{(skillLevels[entry.slug] ?? 0) * 2} · COOLDOWN -{(skillLevels[entry.slug] ?? 0) * 3}%
+            </p>
             <button type="button" onClick={() => void purchase(entry)} disabled={owned || state === 'pending'} className="mt-3 border border-[#a7c465] bg-[#52682f] px-3 py-2 text-xs font-bold text-[#f1f7de] disabled:opacity-50">
               {owned ? 'OWNED' : activeSkill === entry.slug ? 'PURCHASING…' : 'BUY'}
             </button>

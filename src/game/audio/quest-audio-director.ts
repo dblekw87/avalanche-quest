@@ -192,7 +192,7 @@ export class QuestAudioDirector {
   private scheduleAhead(): void {
     const context = this.context;
     if (!context || context.state !== 'running') return;
-    const profile = STAGE_MUSIC_PROFILES[this.stageNumber - 1] ?? STAGE_MUSIC_PROFILES[0]!;
+    const profile = STAGE_MUSIC_PROFILES[(this.stageNumber - 1) % STAGE_MUSIC_PROFILES.length] ?? STAGE_MUSIC_PROFILES[0]!;
     const stepDuration = 30 / (profile.bpm * (this.bossIntensity ? 1.12 : 1));
     while (this.nextStepAt < context.currentTime + 0.45) {
       this.scheduleMusicStep(profile, this.step, this.nextStepAt, stepDuration);
