@@ -257,13 +257,13 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
                 : `/assets/skills-v2/${entry.slug}.png`;
           return <article key={entry.slug} className={`flex flex-col border-2 bg-[#11160f] p-3 transition-shadow ${skillCardFrame} ${owned ? 'ring-1 ring-inset ring-white/20' : ''}`}>
             <div className="mb-3 flex flex-col items-center gap-2 text-center">
-              <div className={`flex size-14 shrink-0 items-center justify-center rounded-md border-2 bg-black ${skillIconFrame}`}>
+              <div className={`relative size-14 shrink-0 rounded-md border-2 bg-black ${skillIconFrame}`}>
                 <Image
                   src={iconSource}
                   alt={`${entry.name} skill icon`}
                   width={48}
                   height={48}
-                  className={`size-12 object-contain ${skillImageFrame} ${characterId === 'archer' ? 'brightness-125 saturate-150 hue-rotate-[8deg]' : ''}`}
+                  className={`absolute inset-0 m-auto size-12 object-contain ${skillImageFrame} ${characterId === 'archer' ? 'brightness-125 saturate-150 hue-rotate-[8deg]' : ''}`}
                   unoptimized
                 />
               </div>

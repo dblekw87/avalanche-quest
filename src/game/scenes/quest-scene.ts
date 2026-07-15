@@ -161,11 +161,8 @@ export class QuestScene extends Phaser.Scene {
   private lastAttackAt = -ATTACK_COOLDOWN_MS;
   private invulnerableUntil = 0;
   private attackVisual?: Phaser.GameObjects.Container;
-  private armorOverlay!: Phaser.GameObjects.Graphics;
-  private armorGlow!: Phaser.GameObjects.Ellipse;
-  private weaponGlow!: Phaser.GameObjects.Ellipse;
   private upgradeParticle?: Phaser.GameObjects.Sprite;
-  private armorEnhancementShimmer?: Phaser.GameObjects.Sprite;
+  private lastArmorSparkleAt = 0;
   private playerPoseLockedUntil = 0;
   private bossProjectiles: BossProjectile[] = [];
   private playerSkillProjectiles: PlayerSkillProjectile[] = [];
@@ -237,7 +234,9 @@ export class QuestScene extends Phaser.Scene {
     if (!this.textures.exists(upgradeVfxKey)) {
       this.load.spritesheet(upgradeVfxKey, `/assets/upgrade-vfx/${this.characterId}.png?v=20260714d`, { frameWidth: 256, frameHeight: 256 });
     }
-    if (!this.textures.exists('quest-armor-enhancement-shimmer')) this.load.spritesheet('quest-armor-enhancement-shimmer', '/assets/equipment-enhancement-vfx/armor-shimmer.png?v=20260715a', { frameWidth: 256, frameHeight: 256 });
+    if (!this.textures.exists('quest-armor-glint-v2')) {
+      this.load.spritesheet('quest-armor-glint-v2', '/assets/equipment-enhancement-vfx/armor-glint-v2.png?v=20260715a', { frameWidth: 313, frameHeight: 313 });
+    }
     if (!this.textures.exists('quest-warrior-sheet')) this.load.image('quest-warrior-sheet', '/assets/sprites/hero-v2.png');
     if (!this.textures.exists('quest-spellblade-sheet')) this.load.image('quest-spellblade-sheet', '/assets/home/spellblade.png');
     if (!this.textures.exists('quest-archer-sheet')) this.load.image('quest-archer-sheet', '/assets/home/archer.png');
@@ -732,48 +731,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private createEquipmentVisuals(): void {
-    // Equipment upgrades are represented only by transient twinkles. Persistent
-    // circles, triangles and drawn armor shapes obscured the character sprite.
-    const armorEnhancementLevel = this.defenseLevel + this.armorLevel + (this.armorEquipped ? 1 : 0);
-    if (armorEnhancementLevel > 0) {
-      const accent = this.skillAccentColor;
-      this.armorEnhancementShimmer = this.add.sprite(this.player.x, this.player.y, 'quest-armor-enhancement-shimmer', 0)
-        .setDepth(9)
-        .setDisplaySize(104 + Math.min(armorEnhancementLevel, 10) * 1.5, 112 + Math.min(armorEnhancementLevel, 10) * 1.8)
-        .setAlpha(Math.min(0.34 + armorEnhancementLevel * 0.025, 0.62))
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setTint(0xffffff, accent, accent, 0xffffff)
-        .play('equipment-armor-shimmer');
-    }
-    return;
-    const defenseLevel = this.defenseLevel + (this.armorEquipped ? 1 : 0) + this.armorLevel;
-    if (defenseLevel > 0) {
-      const color = this.characterId === 'warrior' ? 0xe0b35a : 0x8f7cff;
-      this.armorGlow = this.add.ellipse(this.player.x, this.player.y + 5, 86, 112, color, Math.min(0.1 + defenseLevel * 0.035, 0.28)).setStrokeStyle(2 + defenseLevel * 0.35, color, 0.7).setDepth(7);
-      this.armorOverlay = this.add.graphics().setDepth(9);
-      if (this.characterId === 'warrior') {
-        this.armorOverlay.fillStyle(0xd8c08a, 0.72).fillCircle(-24, -18, 9).fillCircle(24, -18, 9);
-        this.armorOverlay.fillStyle(defenseLevel >= 4 ? 0xd3a441 : 0x8293a3, 0.55).fillRoundedRect(-18, -13, 36, 39, 7);
-        this.armorOverlay.lineStyle(2, 0xffe5a3, 0.75).strokeRoundedRect(-18, -13, 36, 39, 7);
-        if (defenseLevel >= 2) this.armorOverlay.fillStyle(0xb08a49, 0.9).fillTriangle(-28, -27, -13, -41, -7, -20).fillTriangle(28, -27, 13, -41, 7, -20);
-        if (defenseLevel >= 3) this.armorOverlay.lineStyle(4, 0xf2c66d, 0.85).strokeCircle(0, 3, 24);
-        if (defenseLevel >= 4) this.armorOverlay.fillStyle(0x8e2d22, 0.78).fillTriangle(-21, 17, -38, 51, -6, 31).fillTriangle(21, 17, 38, 51, 6, 31);
-        if (defenseLevel >= 5) this.armorOverlay.lineStyle(3, 0xffffff, 0.95).strokeTriangle(0, -31, -17, 19, 17, 19);
-      } else {
-        this.armorOverlay.lineStyle(3, 0xb8a7ff, 0.78).strokeCircle(0, 2, 34);
-        this.armorOverlay.lineStyle(1, 0x76d7ff, 0.7).strokeTriangle(0, -37, -31, 22, 31, 22);
-        this.armorOverlay.fillStyle(0x8f7cff, 0.35).fillCircle(-23, -18, 8).fillCircle(23, -18, 8);
-        if (defenseLevel >= 2) this.armorOverlay.lineStyle(3, 0x76d7ff, 0.9).strokeCircle(0, -8, 25);
-        if (defenseLevel >= 3) this.armorOverlay.fillStyle(0x50358f, 0.52).fillTriangle(-31, 12, 0, 53, 31, 12);
-        if (defenseLevel >= 4) this.armorOverlay.lineStyle(3, 0xd8c7ff, 0.9).strokeTriangle(0, -48, -39, 28, 39, 28);
-        if (defenseLevel >= 5) this.armorOverlay.fillStyle(0xffffff, 0.92).fillCircle(0, -13, 6);
-      }
-    }
-    if (this.attackLevel + this.armorLevel > 0) {
-      const color = this.characterId === 'warrior' ? 0xffb52e : 0x8c6cff;
-      const weaponLevel = this.attackLevel + this.armorLevel;
-      this.weaponGlow = this.add.ellipse(this.player.x, this.player.y, 42 + weaponLevel * 5, 20 + weaponLevel * 2, color, Math.min(0.18 + weaponLevel * 0.05, 0.52)).setDepth(10);
-    }
+    this.lastArmorSparkleAt = this.time.now + Phaser.Math.Between(120, 280);
   }
 
   private updateEquipmentVisuals(): void {
@@ -784,13 +742,7 @@ export class QuestScene extends Phaser.Scene {
         this.classBuffAura = undefined;
       }
     }
-    const equipmentCenter = this.player.getCenter();
-    if (this.armorEnhancementShimmer?.active) {
-      this.armorEnhancementShimmer
-        .setPosition(equipmentCenter.x, equipmentCenter.y + 6)
-        .setFlipX(this.player.flipX)
-        .setVisible(this.player.visible);
-    }
+    this.updateArmorSurfaceSparkles();
     const totalUpgradeLevel = this.attackLevel + this.vitalityLevel + this.defenseLevel + this.armorLevel;
     if (!this.equipmentParticlesEnabled || totalUpgradeLevel <= 0) {
       this.upgradeParticle?.destroy();
@@ -806,6 +758,59 @@ export class QuestScene extends Phaser.Scene {
     if (!this.upgradeParticle.anims.isPlaying) this.upgradeParticle.play(`upgrade-vfx-${this.characterId}`);
   }
 
+  private updateArmorSurfaceSparkles(): void {
+    const armorEnhancementLevel = this.defenseLevel + this.armorLevel + (this.armorEquipped ? 1 : 0);
+    if (armorEnhancementLevel <= 0 || !this.player.visible || this.time.now < this.lastArmorSparkleAt) return;
+    const intensity = Phaser.Math.Clamp(armorEnhancementLevel / 11, 0.18, 1);
+    const delay = Phaser.Math.Linear(620, 210, intensity);
+    this.lastArmorSparkleAt = this.time.now + Phaser.Math.Between(Math.round(delay * 0.78), Math.round(delay * 1.22));
+
+    const armorPoints = [
+      { x: -20, y: -24, scale: 0.7 },
+      { x: 18, y: -19, scale: 0.82 },
+      { x: -11, y: -2, scale: 0.62 },
+      { x: 13, y: 8, scale: 0.72 },
+      { x: -18, y: 24, scale: 0.52 },
+    ] as const;
+    const point = armorPoints[Phaser.Math.Between(0, armorPoints.length - 1)]!;
+    this.spawnArmorSpecularGlint(
+      point.x,
+      point.y,
+      point.scale + intensity * 0.28,
+    );
+  }
+
+  private spawnArmorSpecularGlint(offsetX: number, offsetY: number, strength: number): void {
+    const center = this.player.getCenter();
+    const facing = this.player.flipX ? -1 : 1;
+    const startX = center.x + offsetX * facing;
+    const startY = center.y + offsetY;
+    const displaySize = 34 + strength * 10;
+    const glint = this.add.sprite(startX, startY, 'quest-armor-glint-v2', 0)
+      .setDepth(this.player.depth + 2)
+      .setDisplaySize(displaySize, displaySize)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .play('equipment-armor-glint-v2');
+    const travel = { x: 0, y: 0 };
+    this.tweens.add({
+      targets: travel,
+      x: 7,
+      y: -3,
+      duration: 570,
+      ease: 'Cubic.Out',
+      onUpdate: () => {
+        const currentCenter = this.player.getCenter();
+        const currentFacing = this.player.flipX ? -1 : 1;
+        glint
+          .setPosition(
+            currentCenter.x + (offsetX + travel.x) * currentFacing,
+            currentCenter.y + offsetY + travel.y,
+          );
+      },
+      onComplete: () => glint.destroy(),
+    });
+  }
+
   setEquipmentParticlesEnabled(enabled: boolean): void {
     this.equipmentParticlesEnabled = enabled;
     if (!enabled) {
@@ -817,13 +822,13 @@ export class QuestScene extends Phaser.Scene {
   private registerUpgradeVfxAnimation(): void {
     const textureKey = `quest-upgrade-vfx-${this.characterId}`;
     const animationKey = `upgrade-vfx-${this.characterId}`;
-    if (this.anims.exists(animationKey)) return;
-    if (!this.anims.exists('equipment-armor-shimmer')) this.anims.create({
-      key: 'equipment-armor-shimmer',
-      frames: this.anims.generateFrameNumbers('quest-armor-enhancement-shimmer', { start: 0, end: 15 }),
-      frameRate: 18,
-      repeat: -1,
+    if (!this.anims.exists('equipment-armor-glint-v2')) this.anims.create({
+      key: 'equipment-armor-glint-v2',
+      frames: this.anims.generateFrameNumbers('quest-armor-glint-v2', { start: 0, end: 15 }),
+      frameRate: 28,
+      repeat: 0,
     });
+    if (this.anims.exists(animationKey)) return;
     this.anims.create({
       key: animationKey,
       frames: this.anims.generateFrameNumbers(textureKey, { start: 0, end: 15 }),
@@ -4457,6 +4462,77 @@ export class QuestScene extends Phaser.Scene {
         if (!jumpTexture.has(frameName)) jumpTexture.add(frameName, 0, column * 156, 0, 156, 156);
       }
     }
+    const isolatedAxeReaverTextureKeys = new Map<string, string>();
+    if (this.characterId === 'axereaver') {
+      const source = texture.getSourceImage() as CanvasImageSource;
+      const frameSize = 156;
+      const gutter = 2;
+      const isolatedFrameSize = frameSize + gutter * 2;
+      const sourceYOffset = {
+        idle: 17,
+        walk: 10,
+        run: 6,
+        jump: 7,
+        attack: 13,
+        skill: 10,
+        hit: 0,
+        death: 0,
+      } as const;
+      const remainingTopOverflow = {
+        idle: 0,
+        walk: 7,
+        run: 4,
+        jump: 0,
+        attack: 0,
+        skill: 3,
+        hit: 10,
+        death: 0,
+      } as const;
+      const axeReaverRows = [
+        ['idle', 0],
+        ['walk', 1],
+        ['run', 2],
+        ['jump', 3],
+        ['attack', 4],
+        ['skill', 5],
+        ['hit', 6],
+        ['death', 7],
+      ] as const;
+      axeReaverRows.forEach(([animation, row]) => {
+        const isolatedTextureKey = `quest-axereaver-${animation}-isolated`;
+        if (!this.textures.exists(isolatedTextureKey)) {
+          const isolatedTexture = this.textures.createCanvas(isolatedTextureKey, isolatedFrameSize * 8, isolatedFrameSize);
+          if (!isolatedTexture) throw new Error(`Failed to isolate Axe Reaver ${animation} frames.`);
+          const context = isolatedTexture.getContext();
+          for (let column = 0; column < 8; column += 1) {
+            context.drawImage(
+              source,
+              column * frameSize,
+              row * frameSize + sourceYOffset[animation],
+              frameSize,
+              frameSize,
+              column * isolatedFrameSize + gutter,
+              gutter,
+              frameSize,
+              frameSize,
+            );
+            const overflowHeight = remainingTopOverflow[animation];
+            if (overflowHeight > 0) {
+              context.clearRect(column * isolatedFrameSize + gutter, gutter, frameSize, overflowHeight);
+            }
+          }
+          isolatedTexture.refresh();
+        }
+        isolatedAxeReaverTextureKeys.set(animation, isolatedTextureKey);
+        const isolatedTexture = this.textures.get(isolatedTextureKey);
+        for (let column = 0; column < 8; column += 1) {
+          const frameName = `axereaver-${animation}-isolated-${column}`;
+          if (!isolatedTexture.has(frameName)) {
+            isolatedTexture.add(frameName, 0, column * isolatedFrameSize, 0, isolatedFrameSize, isolatedFrameSize);
+          }
+        }
+      });
+    }
     const animations = ['idle', 'walk', 'run', 'jump', 'attack', 'skill', 'hit', 'death'] as const;
     animations.forEach((animation, row) => {
       const assetTycoonSafeRows: Readonly<Record<(typeof animations)[number], number>> = {
@@ -4482,6 +4558,7 @@ export class QuestScene extends Phaser.Scene {
         const usesKickfighterStrip = this.characterId === 'kickfighter'
           && (animation === 'run' || animation === 'jump' || animation === 'skill' || animation === 'hit');
         const usesGunslingerSkillStrip = this.characterId === 'gunslinger' && animation === 'skill';
+        const isolatedAxeReaverTextureKey = isolatedAxeReaverTextureKeys.get(animation);
         this.anims.create({
           key,
           frames: animation === 'idle'
@@ -4492,6 +4569,8 @@ export class QuestScene extends Phaser.Scene {
               ? Array.from({ length: 8 }, (_, index) => ({ key: `quest-kickfighter-${animation}-strip`, frame: index }))
             : usesGunslingerSkillStrip
               ? Array.from({ length: 8 }, (_, index) => ({ key: 'quest-gunslinger-skill-strip', frame: index }))
+            : isolatedAxeReaverTextureKey
+              ? Array.from({ length: 8 }, (_, index) => ({ key: isolatedAxeReaverTextureKey, frame: `axereaver-${animation}-isolated-${index}` }))
             : Array.from({ length: 8 }, (_, index) => ({ key: textureKey, frame: `${this.characterId}-${animation}-${index}` })),
           frameRate: animation === 'run' ? 13 : animation === 'attack' ? 14 : 9,
           repeat: animation === 'idle' || animation === 'walk' || animation === 'run' ? -1 : 0,
