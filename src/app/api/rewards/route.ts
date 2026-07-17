@@ -20,6 +20,7 @@ import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-cont
 import { gameItemAbi } from '@/features/items/item-contract';
 import type { StageResult } from '@/game/bridge/events';
 import { isStageId, stageIds, stages, type StageId } from '@/game/config/stages';
+import { parseAttemptAuthorization, verifyAttemptAuthorization } from '@/server/attempts/authorization';
 import { attemptStore } from '@/server/attempts/store';
 import { verifyStageResult } from '@/server/rewards/verify-stage-result';
 
@@ -34,12 +35,30 @@ export async function POST(request: Request) {
   if (!body || typeof body !== 'object') return error('Invalid request', 400);
   const player = 'player' in body ? body.player : null;
   const result = 'result' in body ? body.result : null;
+  const authorizationValue = 'attemptAuthorization' in body ? body.attemptAuthorization : null;
   if (typeof player !== 'string' || !isAddress(player) || !isStageResult(result)) {
     return error('Invalid reward request', 400);
   }
 
   const normalizedPlayer = getAddress(player);
-  const attempt = attemptStore.get(result.attemptId as Hex);
+  const storedAttempt = attemptStore.get(result.attemptId as Hex);
+  const signingSecret = process.env.REWARD_SIGNER_PRIVATE_KEY;
+  const authorization = parseAttemptAuthorization(authorizationValue);
+  const authorizedAttempt = signingSecret
+    && authorization
+    && verifyAttemptAuthorization(authorization, signingSecret)
+    && authorization.attemptId === result.attemptId
+    && authorization.player === normalizedPlayer
+    && authorization.stageId === result.stageId
+      ? {
+          id: authorization.attemptId,
+          player: authorization.player,
+          stageId: authorization.stageId,
+          expiresAt: authorization.expiresAt,
+          status: 'started' as const,
+        }
+      : null;
+  const attempt = storedAttempt ?? authorizedAttempt;
   if (!attempt || attempt.player !== normalizedPlayer || attempt.stageId !== result.stageId) {
     return error('Attempt does not match this wallet and stage', 403);
   }

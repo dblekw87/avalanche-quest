@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { formatEther, getAddress, isAddress, type Hex } from 'viem';
+import { formatEther, getAddress, isAddress, isHex, type Hex } from 'viem';
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
@@ -52,6 +52,19 @@ type AuthorizedLoot = {
   metadataURI: string; signature: Hex; name: string; rarityName: string; typeName: string;
 };
 
+type AttemptAuthorization = {
+  attemptId: Hex;
+  player: Hex;
+  stageId: StageId;
+  expiresAt: number;
+  signature: Hex;
+};
+
+type CreatedAttempt = {
+  attemptId: string;
+  authorization: AttemptAuthorization;
+};
+
 export function GameExperience() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -61,6 +74,7 @@ export function GameExperience() {
   const [characterId, setCharacterId] = useState<CharacterId>('warrior');
   const [characterGroup, setCharacterGroup] = useState<CharacterGroup>('general');
   const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [attemptAuthorization, setAttemptAuthorization] = useState<AttemptAuthorization | null>(null);
   const [result, setResult] = useState<StageResult | null>(null);
   const [failure, setFailure] = useState<StageFailure | null>(null);
   const [starting, setStarting] = useState(false);
@@ -116,6 +130,7 @@ export function GameExperience() {
 
   const resetRun = useCallback(() => {
     setAttemptId(null);
+    setAttemptAuthorization(null);
     setResult(null);
     setFailure(null);
     setTransactionState('idle');
@@ -125,7 +140,7 @@ export function GameExperience() {
     setMessage(null);
   }, []);
 
-  const requestAttempt = async (targetStageId: StageId): Promise<string> => {
+  const requestAttempt = async (targetStageId: StageId): Promise<CreatedAttempt> => {
     if (!address) throw new Error('Connect a wallet before starting a reward-eligible stage.');
     if (chainId !== avalancheFuji.id) throw new Error('Switch your wallet to Avalanche Fuji before starting.');
     const response = await fetch('/api/attempts', {
@@ -134,10 +149,18 @@ export function GameExperience() {
       body: JSON.stringify({ player: address, stageId: targetStageId }),
     });
     const data: unknown = await response.json();
-    if (!response.ok || !data || typeof data !== 'object' || !('attemptId' in data) || typeof data.attemptId !== 'string') {
+    if (
+      !response.ok
+      || !data
+      || typeof data !== 'object'
+      || !('attemptId' in data)
+      || typeof data.attemptId !== 'string'
+      || !('attemptAuthorization' in data)
+      || !isAttemptAuthorization(data.attemptAuthorization)
+    ) {
       throw new Error(readError(data, 'Could not create a stage attempt.'));
     }
-    return data.attemptId;
+    return { attemptId: data.attemptId, authorization: data.attemptAuthorization };
   };
 
   const continueToNextStage = async (preserveAuthorizedLoot = false) => {
@@ -149,7 +172,7 @@ export function GameExperience() {
     try {
       // Keep the completed canvas visible while the next server attempt is
       // prepared, then swap both values in the same React update cycle.
-      const nextAttemptId = await requestAttempt(nextStageId);
+      const nextAttempt = await requestAttempt(nextStageId);
       setResult(null);
       setFailure(null);
       setTransactionState('idle');
@@ -160,7 +183,8 @@ export function GameExperience() {
         setLootHash(null);
       }
       setStageId(nextStageId);
-      setAttemptId(nextAttemptId);
+      setAttemptId(nextAttempt.attemptId);
+      setAttemptAuthorization(nextAttempt.authorization);
       setShowAdvancePrompt(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not continue to the next stage.');
@@ -182,7 +206,9 @@ export function GameExperience() {
     setStarting(true);
     setMessage(null);
     try {
-      setAttemptId(await requestAttempt(targetStageId));
+      const nextAttempt = await requestAttempt(targetStageId);
+      setAttemptId(nextAttempt.attemptId);
+      setAttemptAuthorization(nextAttempt.authorization);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not start the stage.');
     } finally {
@@ -236,7 +262,7 @@ export function GameExperience() {
       const response = await fetch('/api/rewards', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ player: address, result }),
+        body: JSON.stringify({ player: address, result, attemptAuthorization }),
       });
       const data: unknown = await response.json();
       if (!response.ok || !isAuthorizedReward(data)) {
@@ -523,6 +549,21 @@ function readError(value: unknown, fallback: string) {
   return value && typeof value === 'object' && 'error' in value && typeof value.error === 'string'
     ? value.error
     : fallback;
+}
+
+function isAttemptAuthorization(value: unknown): value is AttemptAuthorization {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<AttemptAuthorization>;
+  return typeof candidate.attemptId === 'string'
+    && isHex(candidate.attemptId, { strict: true })
+    && typeof candidate.player === 'string'
+    && isAddress(candidate.player)
+    && typeof candidate.stageId === 'string'
+    && stageIds.includes(candidate.stageId as StageId)
+    && typeof candidate.expiresAt === 'number'
+    && Number.isSafeInteger(candidate.expiresAt)
+    && typeof candidate.signature === 'string'
+    && isHex(candidate.signature, { strict: true });
 }
 
 function isAuthorizedReward(value: unknown): value is AuthorizedReward {
