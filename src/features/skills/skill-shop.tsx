@@ -24,70 +24,24 @@ type SkillShopProps = {
 
 const SKILL_ENHANCEMENT_BASE_PRICE_AQT = 20;
 const SKILL_ENHANCEMENT_MAX_LEVEL = 7;
-const SKILL_ICON_OFFSETS: Readonly<Record<string, readonly [x: number, y: number]>> = {
-  'arcane-bolt': [-3.1, -4],
-  'healing-light': [3, 2.7],
-  starfall: [0.6, 3],
-  'ice-storm': [1.3, -10.6],
-  'chain-lightning': [1.5, -2.4],
-  'healing-circle': [0.2, -6.3],
-  meteor: [5.6, -3.6],
-  'arcane-cleave': [-2.6, -0.5],
-  'twin-phantom': [4.8, -8.2],
-  'rune-step': [0.9, -11.3],
-  'gale-arrow': [2.2, -4.1],
-  'split-shot': [-1.6, -5.4],
-  'feather-step': [3.9, -2.9],
-  'emerald-rain': [2.9, -3.6],
-  'crescent-fang': [8, 0.7],
-  'shadow-reversal': [6.1, -3.9],
-  'infinite-blades': [0.2, -2],
-  'iron-jab': [-7.6, -3.9],
-  'hundred-fists': [-2, 1.3],
-  'titan-fist': [-2.7, 0.1],
-  'burning-spirit': [-1.3, 3.9],
-  'heaven-breaker': [0, -2.4],
-  'draconic-thrust': [-2.9, -4.3],
-  wingbreaker: [-4.6, -4.9],
-  'inferno-breath': [-8.1, -8.6],
-  'cataclysm-wyvern': [-0.2, -4.1],
-  quickdraw: [-5.8, 6],
-  'scatter-burst': [-7.3, 3.6],
-  'ricochet-round': [-6.8, -0.8],
-  'bullet-tempest': [1.3, -2.3],
-  'moonlit-draw': [-4.5, -10.7],
-  'tiger-step': [4.9, -4.2],
-  'crimson-formation': [6.5, -0.9],
-  'unbroken-resolve': [-4.3, -0.5],
-  'heaven-sever': [-0.9, 2.7],
-  'gale-kick': [7.3, -6],
-  'cyclone-heel': [4.5, -3],
-  'flow-state': [-2.9, -3.1],
-  'skybreaker-combo': [2.9, -5.3],
-  'venom-needle': [-9.6, 4.2],
-  'plague-pool': [1.1, -6.7],
-  'serpent-miasma': [8.7, 2.6],
-  'antidote-pact': [-1.7, 4.5],
-  'ember-lance': [-2.2, -6.3],
-  'flame-pillar': [0.3, -3.9],
-  'phoenix-spiral': [3.1, -1.6],
-  'burning-soul': [-1.3, 3.9],
-  'solar-cataclysm': [0, 2.6],
-  'iron-crash': [-1.8, -7.2],
-  'gravity-bell': [2.6, -2.1],
-  'rending-arc': [13.6, -2.1],
-  'berserker-oath': [-0.3, 8.4],
-  'ragnarok-cleaver': [1.3, -2],
-  'flame-orbit': [-2.2, -6.3],
-  'tidal-prison': [1.1, -6.7],
-  'tempest-lance': [7.3, -6],
-  'thunder-domain': [2.6, -2.1],
-  'magma-fault': [0.3, -3.9],
-  'elemental-convergence': [0, 2.6],
-  'primordial-genesis': [3.4, 5.3],
-  'abyss-bolt': [-9.6, 4.2],
-  'soul-chains': [6.5, -0.9],
-  'nightmare-apocalypse': [0.2, -2],
+const SKILL_ICON_TRANSFORMS: Readonly<Record<string, string>> = {
+  'phoenix-spiral': 'translateX(3.1%)',
+  'iron-crash': 'translateY(4%)',
+  'seismic-march': 'translateY(-4%)',
+  'gravity-bell': 'translateX(3%)',
+  'adamant-guard': 'translate(-3%, 3%)',
+  'rending-arc': 'translateX(-5%)',
+  'predator-rush': 'translateY(-4%)',
+  'blood-cyclone': 'translate(3%, -3%)',
+  'berserker-oath': 'translateY(-4%)',
+  'abyss-bolt': 'translateY(-3%)',
+  'soul-chains': 'translateX(3%)',
+  'void-eruption': 'translateY(3%)',
+  'dark-covenant': 'translate(-4%, -4%)',
+  'tempest-lance': 'translate(-5%, 3%)',
+  'gaia-aegis': 'translate(-3%, 3%)',
+  'thunder-domain': 'translateX(3%)',
+  'primordial-genesis': 'translateX(3%)',
 };
 const CLASS_SKILLS: Readonly<Record<GeneralCharacterId, readonly SkillDefinition[]>> = {
   warrior: warriorSkills, mage: mageSkills, spellblade: spellbladeSkills, archer: archerSkills,
@@ -313,8 +267,10 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
       <div className={`mt-3 grid gap-2 border-2 bg-[#0d120c]/70 p-2 lg:grid-cols-5 ${skillAreaFrame}`}>
         {activeSkills.map((entry) => {
           const owned = ownedIds.includes(entry.slug);
-          const [iconOffsetX, iconOffsetY] = SKILL_ICON_OFFSETS[entry.slug] ?? [0, 0];
-          const iconSource = characterId === 'spellblade'
+          const iconTransform = SKILL_ICON_TRANSFORMS[entry.slug];
+          const iconSource = entry.slug === 'frost-comet'
+            ? '/assets/new-class-skills/frost-comet-v2.png'
+            : characterId === 'spellblade'
             ? `/assets/skill-effects-new/${entry.slug}-v2.png`
             : characterId === 'archer'
               ? `/assets/skill-effects-new/${entry.slug}.png`
@@ -331,7 +287,7 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
                     width={48}
                     height={48}
                     className={`size-full object-contain ${characterId === 'archer' ? 'brightness-125 saturate-150 hue-rotate-[8deg]' : ''}`}
-                    style={{ transform: `translate(${iconOffsetX}%, ${iconOffsetY}%) scale(.9)` }}
+                    style={iconTransform ? { transform: iconTransform } : undefined}
                     unoptimized
                   />
                 </div>
