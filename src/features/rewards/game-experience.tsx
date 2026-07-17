@@ -65,6 +65,10 @@ type CreatedAttempt = {
   authorization: AttemptAuthorization;
 };
 
+type PendingSelection =
+  | { kind: 'class'; characterId: CharacterId; characterGroup: CharacterGroup }
+  | { kind: 'stage'; stageId: StageId };
+
 export function GameExperience() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -96,6 +100,7 @@ export function GameExperience() {
   const [assetTycoonDrop, setAssetTycoonDrop] = useState<AuthorizedAssetTycoon | null>(null);
   const [assetTycoonMintState, setAssetTycoonMintState] = useState<TransactionState>('idle');
   const [assetTycoonHash, setAssetTycoonHash] = useState<Hex | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const handleUpgradeLevelsChange = useCallback((nextLevels: UpgradeLevels) => {
     setUpgradeLevels((current) => current.attack === nextLevels.attack && current.vitality === nextLevels.vitality && current.defense === nextLevels.defense ? current : nextLevels);
   }, []);
@@ -106,6 +111,11 @@ export function GameExperience() {
     setSkillUpgradeLevels((current) => JSON.stringify(current) === JSON.stringify(nextLevels) ? current : nextLevels);
   }, []);
   const stage = stages[stageId];
+  const selectionHasUnclaimedRewards = result !== null && (
+    transactionState !== 'success'
+    || (loot !== null && lootTransactionState !== 'success')
+    || (assetTycoonDrop !== null && assetTycoonMintState !== 'success')
+  );
   const activeOwnedSkillIds = isPoliticalCharacter(characterId)
     ? politicalFighters[characterId].skills.map((skill) => `${characterId}-${skill.key.toLowerCase()}`)
     : isSecretCharacter(characterId) ? assetTycoonSkills.map((skill) => skill.id)
@@ -133,12 +143,56 @@ export function GameExperience() {
     setAttemptAuthorization(null);
     setResult(null);
     setFailure(null);
+    setShowAdvancePrompt(false);
     setTransactionState('idle');
     setTransactionHash(null);
     setLoot(null); setLootTransactionState('idle'); setLootHash(null);
     setAssetTycoonDrop(null); setAssetTycoonMintState('idle'); setAssetTycoonHash(null);
     setMessage(null);
+    setPendingSelection(null);
   }, []);
+
+  const applySelection = useCallback((selection: PendingSelection) => {
+    if (selection.kind === 'class') {
+      setCharacterGroup(selection.characterGroup);
+      setCharacterId(selection.characterId);
+      return;
+    }
+    setStageId(selection.stageId);
+  }, []);
+
+  const requestSelection = useCallback((selection: PendingSelection) => {
+    if (starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending') return;
+    if (attemptId !== null) {
+      setPendingSelection(selection);
+      return;
+    }
+    applySelection(selection);
+  }, [
+    applySelection,
+    assetTycoonMintState,
+    attemptId,
+    lootTransactionState,
+    starting,
+    transactionState,
+  ]);
+
+  const confirmSelection = useCallback(() => {
+    if (!pendingSelection) return;
+    const selection = pendingSelection;
+    resetRun();
+    applySelection(selection);
+  }, [applySelection, pendingSelection, resetRun]);
+
+  const selectCharacter = useCallback((nextCharacterId: CharacterId, nextGroup: CharacterGroup = characterGroup) => {
+    if (nextCharacterId === characterId && nextGroup === characterGroup) return;
+    requestSelection({ kind: 'class', characterId: nextCharacterId, characterGroup: nextGroup });
+  }, [characterGroup, characterId, requestSelection]);
+
+  const selectStage = useCallback((nextStageId: StageId) => {
+    if (nextStageId === stageId) return;
+    requestSelection({ kind: 'stage', stageId: nextStageId });
+  }, [requestSelection, stageId]);
 
   const requestAttempt = async (targetStageId: StageId): Promise<CreatedAttempt> => {
     if (!address) throw new Error('Connect a wallet before starting a reward-eligible stage.');
@@ -399,10 +453,10 @@ export function GameExperience() {
                 <button
                   key={id}
                   type="button"
-                  disabled={attemptId !== null}
-                  onClick={() => setStageId(id)}
+                  disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'}
+                  onClick={() => selectStage(id)}
                   style={{ backgroundImage: `url(/assets/maps-hd/stage-${String(stages[id].assetNumber).padStart(2, '0')}.webp)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                  className={`relative min-w-0 overflow-hidden border px-3 py-3 text-center text-white transition sm:px-4 sm:text-left [text-shadow:0_2px_4px_rgba(0,0,0,.95)] ${stageId === id ? 'z-10 scale-[1.025] border-[#fff3ad] ring-4 ring-[#ffd45f] shadow-[0_0_26px_rgba(255,212,95,.95),inset_0_0_0_2px_rgba(255,255,255,.9)]' : 'border-[#b9aa91] hover:border-[#ead392]'}`}
+                  className={`relative min-w-0 overflow-hidden border px-3 py-3 text-center text-white transition disabled:cursor-wait disabled:opacity-60 sm:px-4 sm:text-left [text-shadow:0_2px_4px_rgba(0,0,0,.95)] ${stageId === id ? 'z-10 scale-[1.025] border-[#fff3ad] ring-4 ring-[#ffd45f] shadow-[0_0_26px_rgba(255,212,95,.95),inset_0_0_0_2px_rgba(255,255,255,.9)]' : 'border-[#b9aa91] hover:border-[#ead392]'}`}
                 >
                   <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
                   <strong className="mt-1 block text-sm">{stages[id].name}</strong>
@@ -420,10 +474,10 @@ export function GameExperience() {
                   <button
                     key={id}
                     type="button"
-                    disabled={attemptId !== null}
-                    onClick={() => setStageId(id)}
+                    disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'}
+                    onClick={() => selectStage(id)}
                     style={{ backgroundImage: `linear-gradient(rgba(25,0,8,.28),rgba(25,0,8,.66)),url(/assets/maps-special/stage-${stages[id].number}-v2.png)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                    className={`relative min-w-0 overflow-hidden border px-3 py-4 text-center text-white [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:text-left ${stageId === id ? 'border-[#ff668f] ring-2 ring-[#ff3f72]/60' : 'border-[#713044]'}`}
+                    className={`relative min-w-0 overflow-hidden border px-3 py-4 text-center text-white disabled:cursor-wait disabled:opacity-60 [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:text-left ${stageId === id ? 'border-[#ff668f] ring-2 ring-[#ff3f72]/60' : 'border-[#713044]'}`}
                   >
                     <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
                     <strong className="mt-1 block text-sm">{stages[id].name}</strong>
@@ -433,9 +487,10 @@ export function GameExperience() {
             </div>
             <div className="mx-auto mt-4 flex w-full max-w-md justify-center gap-2 rounded-xl border border-[#514838] bg-[#12100d] p-1 sm:mx-0 sm:w-fit sm:max-w-none">
               {([['general', 'General Classes'], ['special', 'Special Classes']] as const).map(([group, label]) => (
-                <button key={group} type="button" disabled={attemptId !== null} onClick={() => { setCharacterGroup(group); setCharacterId(group === 'general' ? 'warrior' : 'conservative'); }} className={`flex-1 rounded-lg px-5 py-2.5 text-xs font-bold sm:flex-none ${characterGroup === group ? 'bg-[#e9dcc5] text-[#201c17]' : 'text-[#9f9583]'}`}>{label}</button>
+                <button key={group} type="button" disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'} onClick={() => selectCharacter(group === 'general' ? 'warrior' : 'conservative', group)} className={`flex-1 rounded-lg px-5 py-2.5 text-xs font-bold disabled:cursor-wait disabled:opacity-50 sm:flex-none ${characterGroup === group ? 'bg-[#e9dcc5] text-[#201c17]' : 'text-[#9f9583]'}`}>{label}</button>
               ))}
             </div>
+            {attemptId ? <p className="mt-2 text-[10px] font-semibold text-[#b8a98f]">{result || failure ? 'Choose another stage or class to prepare a new attempt.' : 'Changing the stage or class will ask before abandoning the current attempt.'}</p> : null}
             <div className="mt-3 grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {(characterGroup === 'general'
                 ? ([['warrior', 'Warrior', 'Sword-based melee combat'], ['mage', 'Mage', 'Magic and ranged effects'], ['spellblade', 'Spellblade', 'Arcane swordplay and teleportation'], ['archer', 'Archer', 'Wind-powered ranged attacks'], ['dualblade', 'Dualblade', 'Twin blades and high-speed flanking'], ['brawler', 'Brawler', 'Heavy punches and shockwaves'], ['dragonknight', 'Dragon Knight', 'Lance combat and draconic fire'], ['gunslinger', 'Gunslinger', 'Twin revolvers and bullet storms'], ['ssaulabi', 'Ssaulabi', 'Male hwando master with disciplined sword arts'], ['kickfighter', 'Kickfighter', 'Female aerial martial artist using only kicks'], ['venomancer', 'Venomancer', 'Female poison mage controlling plague and venom'], ['pyromancer', 'Pyromancer', 'Female fire mage wielding phoenix flames'], ['hammerguard', 'Hammerguard', 'Male armored warrior with a colossal hammer'], ['axereaver', 'Axe Reaver', 'Female predatory warrior with a battle axe'], ['warlock', 'Warlock', 'Male forbidden mage using curses and abyssal magic']] as const)
@@ -447,7 +502,7 @@ export function GameExperience() {
                   ] as const)
               ).map(([id, name, role]) => {
                 const special = id === 'conservative' || id === 'progressive' || id === 'elementalist' || id === 'assettycoon';
-                return <button key={id} type="button" disabled={attemptId !== null} onClick={() => setCharacterId(id)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id === 'gunslinger' ? 'gunslinger-v2' : id}.png`} alt="" width={180} height={210} className={`pointer-events-none absolute -right-5 h-[125%] w-[52%] object-contain object-bottom ${id === 'elementalist' ? '-bottom-4' : '-bottom-8'}`} /></button>;
+                return <button key={id} type="button" disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'} onClick={() => selectCharacter(id, characterGroup)} className={`relative flex h-full min-h-[112px] min-w-0 flex-col justify-center overflow-hidden rounded-xl border px-3 py-3 pr-[42%] text-left transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-wait disabled:opacity-60 sm:px-4 sm:pr-[42%] ${characterId === id ? special ? id === 'conservative' ? 'border-[#d94149] bg-[#451117]' : 'border-[#3089df] bg-[#092f56]' : 'border-[#9a6728] bg-[#f3eadc]' : 'border-[#ddd4c7] bg-white'}`}><span className="relative z-10"><strong className={`block text-sm ${id === 'conservative' ? 'faction-conservative' : id === 'progressive' ? 'faction-progressive' : 'text-[#201c17]'}`}>{name}</strong><span className="mt-1 flex min-h-8 items-center text-[10px] leading-4 text-[#6f685e]">{role}</span></span><Image src={`/assets/class-portraits/${id === 'gunslinger' ? 'gunslinger-v2' : id}.png`} alt="" width={180} height={210} className={`pointer-events-none absolute -right-5 h-[125%] w-[52%] object-contain object-bottom ${id === 'elementalist' ? '-bottom-4' : '-bottom-8'}`} /></button>;
               })}
             </div>
             {characterGroup === 'general' && !ASSET_TYCOON_LOCAL_TEST_UNLOCK ? (
@@ -455,7 +510,7 @@ export function GameExperience() {
                 <Image src="/assets/class-portraits/assettycoon.png" alt="Asset Tycoon" width={360} height={420} className="pointer-events-none absolute -bottom-14 right-0 h-[145%] w-[42%] object-contain object-bottom" />
                 <div className="relative z-10 flex min-h-36 flex-col items-start justify-center gap-3 text-left">
                   <div><span className="text-[10px] font-extrabold tracking-[.2em] text-[#f2c94c]">ULTRA-RARE NFT CLASS · 1% ON VERIFIED STAGES 27–30</span><strong className="mt-1 block text-lg font-black text-[#fff0ad]">Asset Tycoon</strong><p className="mt-1 text-xs font-semibold text-[#b9aa83]">Male apex class · nine max-level skills · Attack/Vitality/Defense +20. Ownership and play access transfer with the ERC-721 NFT.</p></div>
-                  <button type="button" disabled={(!ownsAssetTycoon && !ASSET_TYCOON_LOCAL_TEST_UNLOCK) || attemptId !== null} onClick={() => setCharacterId('assettycoon')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'SELECT · LOCAL TEST' : 'NFT REQUIRED'}</button>
+                  <button type="button" disabled={(!ownsAssetTycoon && !ASSET_TYCOON_LOCAL_TEST_UNLOCK) || starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'} onClick={() => selectCharacter('assettycoon', 'general')} className="relative z-20 rounded-lg border border-[#f2c94c] bg-[#6e5311]/95 px-6 py-3 text-xs font-extrabold text-[#fff5c2] disabled:cursor-not-allowed disabled:opacity-40">{ownsAssetTycoon ? 'SELECT ASSET TYCOON' : ASSET_TYCOON_LOCAL_TEST_UNLOCK ? 'SELECT · LOCAL TEST' : 'NFT REQUIRED'}</button>
                 </div>
               </div>
             ) : null}
@@ -487,6 +542,15 @@ export function GameExperience() {
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">ENHANCEMENT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Character upgrades</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4"><UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} /></div>
         </details>
+
+        {pendingSelection ? (
+          <SelectionChangeModal
+            selection={pendingSelection}
+            hasUnclaimedRewards={selectionHasUnclaimedRewards}
+            onCancel={() => setPendingSelection(null)}
+            onConfirm={confirmSelection}
+          />
+        ) : null}
 
         {result && showAdvancePrompt ? (
           <div className="fixed inset-0 z-[80] bg-black">
@@ -532,6 +596,81 @@ export function GameExperience() {
         {!isConnected ? <p className="mt-2 text-center text-xs text-[#c88f70]">Wallet connection required for reward attempts.</p> : null}
       </div>
     </main>
+  );
+}
+
+function SelectionChangeModal({
+  selection,
+  hasUnclaimedRewards,
+  onCancel,
+  onConfirm,
+}: {
+  selection: PendingSelection;
+  hasUnclaimedRewards: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onCancel]);
+
+  const isClassChange = selection.kind === 'class';
+  const targetLabel = isClassChange
+    ? formatCharacterName(selection.characterId)
+    : `Stage ${String(stages[selection.stageId].number).padStart(2, '0')} · ${stages[selection.stageId].name}`;
+  const title = isClassChange
+    ? `Change class to ${targetLabel}?`
+    : `Change expedition to ${targetLabel}?`;
+  const description = hasUnclaimedRewards
+    ? isClassChange
+      ? 'Changing class now will close the current reward screen. Any rewards you have not claimed or minted will remain uncollected.'
+      : 'Changing the expedition now will close the current reward screen. Any rewards you have not claimed or minted will remain uncollected.'
+    : isClassChange
+      ? 'The current attempt will end, and the selected class will be ready for a new attempt.'
+      : 'The current attempt will end, and the selected expedition will be ready for a new attempt.';
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="selection-change-title"
+        aria-describedby="selection-change-description"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-[#8d7858] bg-[#17130e] text-[#f1e2c6] shadow-[0_28px_90px_rgba(0,0,0,.75)]"
+      >
+        <div className="border-b border-[#4f4637] bg-gradient-to-r from-[#2b2115] to-[#18130d] px-5 py-4 sm:px-6">
+          <p className="text-[10px] font-extrabold tracking-[.22em] text-[#d0b47a]">
+            {isClassChange ? 'CHANGE CLASS' : 'CHANGE EXPEDITION'}
+          </p>
+          <h2 id="selection-change-title" className="mt-2 text-xl font-black text-white">{title}</h2>
+        </div>
+        <div className="px-5 py-5 sm:px-6">
+          <p id="selection-change-description" className="text-sm font-semibold leading-6 text-[#b8aa94]">{description}</p>
+          {hasUnclaimedRewards ? (
+            <p className="mt-3 rounded-lg border border-[#7d4444] bg-[#2b1919] px-4 py-3 text-xs font-bold leading-5 text-[#e7aaaa]">
+              Claim and mint every reward before changing if you want to keep them.
+            </p>
+          ) : null}
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <button type="button" onClick={onCancel} className="rounded-xl border border-[#6d6253] bg-[#211c16] px-4 py-3 text-xs font-extrabold text-[#d7cab5] transition hover:bg-[#2c251d]">
+              CANCEL
+            </button>
+            <button type="button" onClick={onConfirm} autoFocus className="rounded-xl border border-[#d0b47a] bg-[#a8793d] px-4 py-3 text-xs font-extrabold text-[#17120b] transition hover:bg-[#bd8b49]">
+              CONFIRM
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
