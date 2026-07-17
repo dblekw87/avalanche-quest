@@ -106,6 +106,8 @@ const SKILL_COOLDOWNS: Readonly<Record<string, number>> = {
   'crescent-fang': 1_500, 'phantom-cross': 3_400, 'shadow-reversal': 5_200, 'azure-focus': 11_000, 'infinite-blades': 8_500,
   'iron-jab': 1_400, 'hundred-fists': 3_600, 'titan-fist': 4_800, 'burning-spirit': 11_000, 'heaven-breaker': 8_800,
 };
+const MAGE_ATTACK_SKILL_IDS = new Set(['magic-missile', 'ice-storm', 'chain-lightning', 'meteor']);
+const MAGE_ATTACK_DAMAGE_MULTIPLIER = 1.5;
 
 const BOSS_PATTERN_SEQUENCES: readonly (readonly BossPattern[])[] = [
   ['fan', 'charge', 'leap'],
@@ -2245,17 +2247,18 @@ export class QuestScene extends Phaser.Scene {
       this.castWarlockAbyssBolt(skillId, damage, time, direction);
       return;
     }
+    if (key === 'W') {
+      this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 3)), 630, time, 154, -0.015);
+      this.spawnInnateParticles(this.player.x + direction * 70, this.player.y - 8, 18, 145);
+      return;
+    }
     if (key === 'E') {
-      const count = 3;
-      for (let index = 0; index < count; index += 1) {
-        const angle = (index - 1) * 0.16;
-        this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 2)), 720, time, 120, angle);
-      }
-      this.spawnInnateParticles(this.player.x + direction * 72, this.player.y - 8, 22, 180);
+      this.launchInnateProjectile(skillId, Math.max(1, Math.ceil(damage / 2)), 760, time, 168);
+      this.spawnInnateParticles(this.player.x + direction * 74, this.player.y - 8, 26, 190);
       return;
     }
     const view = this.cameras.main.worldView;
-    const centerX = key === 'W' ? this.player.x + direction * 150 : view.centerX;
+    const centerX = view.centerX;
     const pulses = key === 'C' ? 7 : key === 'Z' || key === 'X' ? 5 : 4;
     for (let pulse = 0; pulse < pulses; pulse += 1) this.time.delayedCall(pulse * 120, () => {
       if (this.finished) return;
@@ -3011,6 +3014,10 @@ export class QuestScene extends Phaser.Scene {
       this.tweens.add({ targets: projectile, angle: direction * 360, scaleX: projectile.scaleX * 1.22, scaleY: projectile.scaleY * 1.22, duration: 230, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     } else if (skillId === 'ember-lance') {
       this.tweens.add({ targets: projectile, angle: direction * 75, scaleX: projectile.scaleX * 1.28, scaleY: projectile.scaleY * 0.78, duration: 145, yoyo: true, repeat: -1 });
+    } else if (skillId === 'soul-chains') {
+      this.tweens.add({ targets: projectile, scaleX: projectile.scaleX * 1.12, scaleY: projectile.scaleY * 0.9, duration: 150, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    } else if (skillId === 'void-eruption') {
+      this.tweens.add({ targets: projectile, scaleX: projectile.scaleX * 1.18, scaleY: projectile.scaleY * 1.18, angle: direction * 12, duration: 180, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     } else {
       projectile.setAngle(0);
     }
@@ -3036,14 +3043,18 @@ export class QuestScene extends Phaser.Scene {
 
   private spawnClassProjectileTrail(projectile: PlayerSkillProjectile): void {
     const skillId = projectile.skillId;
-    if (!skillId || !['moonlit-draw', 'venom-needle', 'ember-lance', 'rending-arc'].includes(skillId)) return;
+    if (!skillId || !['moonlit-draw', 'venom-needle', 'ember-lance', 'rending-arc', 'soul-chains', 'void-eruption'].includes(skillId)) return;
     const config = skillId === 'moonlit-draw'
       ? { color: 0xef5568, edge: 0xfff4dd, width: 54, height: 18 }
       : skillId === 'venom-needle'
         ? { color: 0x7132a8, edge: 0xb8ff62, width: 34, height: 34 }
         : skillId === 'ember-lance'
           ? { color: 0xff542e, edge: 0xffd66b, width: 58, height: 24 }
-          : { color: 0x9b172d, edge: 0xff9b42, width: 62, height: 22 };
+          : skillId === 'soul-chains'
+            ? { color: 0x5b238e, edge: 0xe6c8ff, width: 48, height: 30 }
+            : skillId === 'void-eruption'
+              ? { color: 0x2a0b4f, edge: 0xb765ff, width: 66, height: 42 }
+              : { color: 0x9b172d, edge: 0xff9b42, width: 62, height: 22 };
     const mote = this.add.ellipse(projectile.sprite.x, projectile.sprite.y, config.width, config.height, config.color, 0.36)
       .setStrokeStyle(2, config.edge, 0.9)
       .setRotation(projectile.sprite.rotation)
@@ -3061,7 +3072,41 @@ export class QuestScene extends Phaser.Scene {
     });
   }
 
-  private spawnClassProjectileImpact(skillId: string, x: number, y: number): void {
+  private spawnClassProjectileImpact(skillId: string, x: number, y: number, damage: number): void {
+    if (skillId === 'soul-chains') {
+      this.showInnateSkillEffect(skillId, x, y, 190, 620);
+      [0, 110, 230].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const chainRing = this.add.ellipse(x, y, 72 + index * 22, 42 + index * 12, 0x4a176f, 0.12)
+          .setStrokeStyle(4, index % 2 === 0 ? 0xe6c8ff : 0x9c4de0, 0.95)
+          .setDepth(16)
+          .setAngle(index * 58)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: chainRing, scaleX: 2.1, scaleY: 1.8, alpha: 0, angle: chainRing.angle + 120, duration: 430, ease: 'Cubic.Out', onComplete: () => chainRing.destroy() });
+        if (index > 0) this.damageEnemiesInArea(x, 142, damage, 135);
+      }));
+      this.spawnInnateParticles(x, y, 28, 175);
+      return;
+    }
+    if (skillId === 'void-eruption') {
+      this.showInnateSkillEffect(skillId, x, y, 270, 720);
+      [0, 70, 140].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (this.finished) return;
+        const rift = this.add.ellipse(x, y, 86 + index * 34, 86 + index * 34, 0x23063f, 0.18)
+          .setStrokeStyle(6, index === 0 ? 0xf0d5ff : 0x8f3bd1, 0.96)
+          .setDepth(17 - index)
+          .setAngle(index * 37)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: rift, scale: 2.45, alpha: 0, angle: rift.angle + 145, duration: 520 + index * 90, ease: 'Cubic.Out', onComplete: () => rift.destroy() });
+      }));
+      this.time.delayedCall(80, () => {
+        if (!this.finished) this.damageEnemiesInArea(x, 205, damage, 190);
+      });
+      this.spawnInnateParticles(x, y, 42, 245);
+      this.cameras.main.flash(110, 120, 45, 190, false);
+      this.cameras.main.shake(260, 0.012);
+      return;
+    }
     if (!['moonlit-draw', 'venom-needle', 'ember-lance', 'rending-arc'].includes(skillId)) return;
     const color = skillId === 'moonlit-draw' ? 0xef5568 : skillId === 'venom-needle' ? 0x80e83f : skillId === 'ember-lance' ? 0xff542e : 0x9b172d;
     const edge = skillId === 'venom-needle' ? 0x7132a8 : skillId === 'moonlit-draw' ? 0xfff4dd : 0xffd66b;
@@ -3488,7 +3533,10 @@ export class QuestScene extends Phaser.Scene {
   private skillDamage(skillId: string, baseDamage: number): number {
     const skillLevel = isSecretCharacter(this.characterId) ? 7 : (this.skillUpgradeLevels[skillId] ?? 0);
     const damage = baseDamage + skillLevel * 2;
-    return this.time.now < this.classPowerUntil ? Math.ceil(damage * this.classPowerMultiplier) : damage;
+    const classAdjustedDamage = this.characterId === 'mage' && MAGE_ATTACK_SKILL_IDS.has(skillId)
+      ? Math.ceil(damage * MAGE_ATTACK_DAMAGE_MULTIPLIER)
+      : damage;
+    return this.time.now < this.classPowerUntil ? Math.ceil(classAdjustedDamage * this.classPowerMultiplier) : classAdjustedDamage;
   }
 
   private spawnEnhancedSkillEffect(skillId: string): void {
@@ -4018,7 +4066,7 @@ export class QuestScene extends Phaser.Scene {
       });
       if (enemy) {
         this.spawnSkillImpactBurst(enemy.sprite.x, enemy.sprite.y, this.skillAccentColor, enemy.boss || enemy.elite ? 0.78 : 0.55);
-        if (projectile.skillId) this.spawnClassProjectileImpact(projectile.skillId, enemy.sprite.x, enemy.sprite.y);
+        if (projectile.skillId) this.spawnClassProjectileImpact(projectile.skillId, enemy.sprite.x, enemy.sprite.y, projectile.damage);
         this.damageEnemy(enemy, projectile.damage);
         if (projectile.piercing) {
           projectile.hitEnemyIds?.add(enemy.id);
@@ -4366,6 +4414,8 @@ export class QuestScene extends Phaser.Scene {
     if (this.characterId === 'pyromancer') return 0xff6a25;
     if (this.characterId === 'hammerguard') return 0x68a9ff;
     if (this.characterId === 'axereaver') return 0xa7e63f;
+    if (this.characterId === 'elementalist') return 0xf0c96a;
+    if (this.characterId === 'warlock') return 0xa86cff;
     if (this.characterId === 'assettycoon') return 0xf2c94c;
     if (this.characterId === 'conservative') return 0xff4d55;
     return 0x42a5ff;

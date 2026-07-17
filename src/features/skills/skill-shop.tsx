@@ -95,11 +95,11 @@ const SKILL_ICON_TRANSFORMS: Readonly<Record<string, string>> = {
   'magma-fault': 'translate(0%, 2%)',
   'elemental-convergence': 'translate(0%, 6.3%)',
   'primordial-genesis': 'translate(6.3%, 7%)',
-  'abyss-bolt': 'translate(-6.8%, 0.4%)',
-  'soul-chains': 'translate(9.6%, -2.9%)',
-  'void-eruption': 'translate(1.2%, 4.1%)',
-  'dark-covenant': 'translate(-2.7%, -3.5%)',
-  'nightmare-apocalypse': 'translate(-0.8%, -3.7%)',
+  'abyss-bolt': 'translate(0.3%, -0.3%)',
+  'soul-chains': 'translate(0.8%, -1.7%)',
+  'void-eruption': 'translate(0%, 2.1%)',
+  'dark-covenant': 'translate(-0.3%, 1.5%)',
+  'nightmare-apocalypse': 'translate(-0.3%, 0.3%)',
 };
 const CLASS_SKILLS: Readonly<Record<GeneralCharacterId, readonly SkillDefinition[]>> = {
   warrior: warriorSkills, mage: mageSkills, spellblade: spellbladeSkills, archer: archerSkills,

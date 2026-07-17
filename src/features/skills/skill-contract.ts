@@ -140,8 +140,8 @@ export const elementalistSkills = [
 
 export const warlockSkills = [
   skill('abyss-bolt', 'Abyss Bolt', 'Q', 'Fire a piercing orb of forbidden magic.', '30', [0, 0]),
-  skill('soul-chains', 'Soul Chains', 'W', 'Bind and repeatedly damage nearby enemies.', '40', [0, 0]),
-  skill('void-eruption', 'Void Eruption', 'E', 'Open dark rifts beneath the enemy.', '50', [0, 0]),
+  skill('soul-chains', 'Soul Chains', 'W', 'Launch a chained curse orb that binds and repeatedly damages enemies on impact.', '40', [0, 0]),
+  skill('void-eruption', 'Void Eruption', 'E', 'Fire a compressed void core that erupts into dark rifts on impact.', '50', [0, 0]),
   skill('dark-covenant', 'Dark Covenant', 'R', 'Gain forbidden power and damage reduction.', '60', [0, 0]),
   skill('nightmare-apocalypse', 'Nightmare Apocalypse', 'T', 'Summon an abyssal eye and collapse the battlefield into darkness.', '90', [0, 0]),
 ] as const satisfies readonly SkillDefinition[];

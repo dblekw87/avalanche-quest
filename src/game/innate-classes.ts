@@ -143,8 +143,8 @@ export const innateClasses: Record<InnateCharacterId, InnateClassDefinition> = {
     id: 'warlock', name: 'Warlock', role: 'A male forbidden mage who commands curses, shadows and the abyss', accent: '#a86cff',
     skills: [
       { id: 'abyss-bolt', key: 'Q', name: 'Abyss Bolt', description: 'Fire a piercing orb of forbidden magic.', cooldownMs: 1_350, damage: 5 },
-      { id: 'soul-chains', key: 'W', name: 'Soul Chains', description: 'Bind and repeatedly damage nearby enemies.', cooldownMs: 3_600, damage: 6 },
-      { id: 'void-eruption', key: 'E', name: 'Void Eruption', description: 'Open dark rifts beneath the enemy.', cooldownMs: 4_800, damage: 7 },
+      { id: 'soul-chains', key: 'W', name: 'Soul Chains', description: 'Launch a chained curse orb that binds and repeatedly damages enemies on impact.', cooldownMs: 3_600, damage: 6 },
+      { id: 'void-eruption', key: 'E', name: 'Void Eruption', description: 'Fire a compressed void core that erupts into dark rifts on impact.', cooldownMs: 4_800, damage: 7 },
       { id: 'dark-covenant', key: 'R', name: 'Dark Covenant', description: 'Gain forbidden power and damage reduction.', cooldownMs: 11_000, damage: 0, buff: true },
       { id: 'nightmare-apocalypse', key: 'T', name: 'Nightmare Apocalypse', description: 'Summon an abyssal eye and collapse the battlefield into darkness.', cooldownMs: 30_000, damage: 14 },
     ],
