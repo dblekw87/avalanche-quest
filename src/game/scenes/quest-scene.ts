@@ -4157,8 +4157,11 @@ export class QuestScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.cameras.main.shake(420, 0.011);
     this.time.delayedCall(520, () => {
-      const veil = this.add.rectangle(512, 260, 1_024, 520, 0x05070b, 0).setScrollFactor(0).setDepth(40);
-      const label = this.add.text(512, 228, 'STAGE CLEAR', {
+      const camera = this.cameras.main;
+      const centerX = camera.width / 2;
+      const centerY = camera.height / 2;
+      const veil = this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x05070b, 0).setScrollFactor(0).setDepth(40);
+      const label = this.add.text(centerX, 228, 'STAGE CLEAR', {
         color: '#f4e6b8',
         fontFamily: 'Pretendard, sans-serif',
         fontSize: '42px',
@@ -4167,7 +4170,7 @@ export class QuestScene extends Phaser.Scene {
         strokeThickness: 8,
         letterSpacing: 8,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setAlpha(0).setScale(0.72);
-      const subtitle = this.add.text(512, 282, `${this.stage.name.toUpperCase()} CONQUERED`, {
+      const subtitle = this.add.text(centerX, 282, `${this.stage.name.toUpperCase()} CONQUERED`, {
         color: `#${this.stage.accentColor.toString(16).padStart(6, '0')}`,
         fontFamily: 'monospace',
         fontSize: '13px',
