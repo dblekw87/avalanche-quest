@@ -62,3 +62,12 @@ marketplace.
 - Relevant tests pass.
 - Lint passes.
 - Type checking passes with TypeScript strict mode enabled.
+
+## Agent Operating Manual
+
+Detailed role definitions, delegation rules, workflows, Web3 safeguards, and
+review checklists live in [`docs/agents/README.md`](docs/agents/README.md).
+Every agent working in this repository must read this file first, then read the
+documents assigned to its role. More specific `AGENTS.md` files, if added below
+a subdirectory, override this file only within that subtree and may strengthen
+but must not weaken its security rules.
