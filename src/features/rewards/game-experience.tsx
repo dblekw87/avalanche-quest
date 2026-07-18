@@ -617,7 +617,7 @@ export function GameExperience() {
         {failure ? <p className="mt-4 border border-[#7d4444] bg-[#2b1919] p-4 text-sm text-[#e7aaaa]">Expedition failed after {(failure.durationMs / 1000).toFixed(1)}s. Start a new attempt to retry.</p> : null}
         {message ? <p className={`mt-4 border p-3 text-sm ${transactionState === 'error' ? 'border-[#7d4444] text-[#e7aaaa]' : 'border-[#5d684d] text-[#c9d6aa]'}`}>{message}</p> : null}
         {transactionHash ? <a className="mt-3 block text-xs text-[#c49a5a] underline" href={`https://testnet.snowtrace.io/tx/${transactionHash}`} target="_blank" rel="noreferrer">View transaction on Snowtrace</a> : null}
-        <div className="mx-auto mt-4 max-w-3xl text-center text-xs font-semibold leading-5 text-[#938a7a]"><span className="sm:hidden">Touch controls: move · jump · dash · attack · skills</span><span className="hidden sm:inline">Arrow keys: move and double jump · SHIFT: dash · SPACE: attack · Q/W/E/R/T: purchased skills</span></div>
+        
         {!isConnected ? <p className="mt-2 text-center text-xs text-[#c88f70]">Wallet connection required for reward attempts.</p> : null}
       </div>
     </main>
