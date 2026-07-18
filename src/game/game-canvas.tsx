@@ -25,6 +25,8 @@ type GameCanvasProps = {
   stageId: StageId;
   onComplete: (result: StageResult) => void;
   onFailure: (failure: StageFailure) => void;
+  onRetry: () => void;
+  retrying: boolean;
   ownedSkillIds: readonly string[];
   armorEquipped: boolean;
   armorLevel: number;
@@ -34,7 +36,7 @@ type GameCanvasProps = {
   skillUpgradeLevels: Readonly<Record<string, number>>;
 };
 
-export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels }: GameCanvasProps) {
+export function GameCanvas({ attemptId, stageId, onComplete, onFailure, onRetry, retrying, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels }: GameCanvasProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<import('phaser').Game | null>(null);
@@ -182,10 +184,11 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, ownedSki
               </p>
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="mx-auto mt-7 block w-full max-w-xs border border-[#d0b47a] bg-[#a8793d] px-6 py-3 text-xs font-extrabold tracking-[0.14em] text-[#17120b] hover:bg-[#c49a5a] sm:w-auto"
+                onClick={onRetry}
+                disabled={retrying}
+                className="mx-auto mt-7 block w-full max-w-xs border border-[#d0b47a] bg-[#a8793d] px-6 py-3 text-xs font-extrabold tracking-[0.14em] text-[#17120b] hover:bg-[#c49a5a] disabled:cursor-wait disabled:opacity-50 sm:w-auto"
               >
-                {result ? 'PLAY AGAIN' : 'RETRY STAGE'}
+                {retrying ? 'PREPARING…' : result ? 'PLAY AGAIN' : 'RETRY STAGE'}
               </button>
             </div>
           </div>

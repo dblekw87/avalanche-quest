@@ -248,6 +248,31 @@ export function GameExperience() {
   };
   const advanceToNextStage = () => { void continueToNextStage(false); };
 
+  const retryStage = async () => {
+    setStarting(true);
+    setMessage(null);
+    try {
+      const nextAttempt = await requestAttempt(stageId);
+      setResult(null);
+      setFailure(null);
+      setTransactionState('idle');
+      setTransactionHash(null);
+      setLoot(null);
+      setLootTransactionState('idle');
+      setLootHash(null);
+      setAssetTycoonDrop(null);
+      setAssetTycoonMintState('idle');
+      setAssetTycoonHash(null);
+      setAttemptId(nextAttempt.attemptId);
+      setAttemptAuthorization(nextAttempt.authorization);
+      setShowAdvancePrompt(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not retry the stage.');
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const startStage = async (targetStageId: StageId = stageId) => {
     if (!address) {
       setMessage('Connect a wallet before starting a reward-eligible stage.');
@@ -396,6 +421,8 @@ export function GameExperience() {
               stageId={stageId}
               onComplete={handleStageComplete}
               onFailure={setFailure}
+              onRetry={() => void retryStage()}
+              retrying={starting}
               ownedSkillIds={activeOwnedSkillIds}
               armorEquipped={armorOwned}
               armorLevel={armorLevel}
