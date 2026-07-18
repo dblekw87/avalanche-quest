@@ -446,7 +446,11 @@ export function GameExperience() {
         <details open className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#1c1914]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left marker:hidden sm:px-5">
             <span><span className="block text-[10px] font-extrabold tracking-[.2em] text-[#a88350]">EXPEDITION SETUP</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Choose a stage and class</strong></span>
-            <span className="rounded-full border border-[#665946] px-3 py-1 text-[10px] font-bold text-[#c9b99c] group-open:bg-[#33271b]">OPEN / CLOSE</span>
+            <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">
+              <span className="group-open:hidden">OPEN</span>
+              <span className="hidden group-open:inline">CLOSE</span>
+              <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" />
+            </span>
           </summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-5">
           <div>
