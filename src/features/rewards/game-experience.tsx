@@ -530,82 +530,32 @@ export function GameExperience() {
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4">
         {isPoliticalCharacter(characterId) ? (
-          <section
-            className="relative overflow-hidden rounded-2xl border p-4 shadow-2xl sm:p-6"
-            style={{
-              background: characterId === 'conservative'
-                ? 'linear-gradient(135deg, #400d13 0%, #260b0f 52%, #12090a 100%)'
-                : 'linear-gradient(135deg, #0a3562 0%, #09213a 52%, #06111c 100%)',
-              borderColor: characterId === 'conservative' ? '#c9444b' : '#3288df',
-              boxShadow: characterId === 'conservative' ? '0 20px 45px rgba(92, 13, 20, 0.25)' : '0 20px 45px rgba(7, 59, 112, 0.3)',
-            }}
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full blur-3xl"
-              style={{ backgroundColor: characterId === 'conservative' ? 'rgba(239, 43, 45, 0.15)' : 'rgba(22, 137, 255, 0.2)' }}
-            />
-            <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black tracking-[.22em]" style={{ color: characterId === 'conservative' ? '#ff9b9f' : '#8dcbff' }}>POLICY AWAKENING LOADOUT</p>
-                <h3 className="mt-2 text-xl font-black leading-tight text-white sm:text-2xl">{politicalFighters[characterId].label}</h3>
-                <p className="mt-2 text-xs font-bold tracking-[.08em] text-white/70">8 EXCLUSIVE POLICY SKILLS · ALL SLOTS UNLOCKED</p>
-                <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-white/75">Every policy skill is fully enhanced for expedition combat. Select a key below to review its equipped awakening skill.</p>
+          <section className={`rounded-2xl border p-5 ${characterId === 'conservative' ? 'border-[#b9363c] bg-gradient-to-br from-[#3a0b10] to-[#160d0d]' : 'border-[#276fbe] bg-gradient-to-br from-[#082b50] to-[#08131f]'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold tracking-[.2em] text-[#d8c9b0]">POLICY AWAKENING LOADOUT</p>
+                <h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3>
+                <p className="mt-2 max-w-3xl text-xs font-medium leading-5 text-[#d1c7b8]">Every policy skill is unlocked at maximum enhancement. Expedition combat uses the full special-class preset without requiring contract purchases.</p>
               </div>
-              <span
-                className="inline-flex min-h-9 w-fit items-center justify-center rounded-full border px-4 py-2 text-[10px] font-black tracking-[.14em] shadow-lg"
-                style={{
-                  backgroundColor: characterId === 'conservative' ? '#72131c' : '#0d4f8c',
-                  borderColor: characterId === 'conservative' ? 'rgba(255, 119, 125, 0.8)' : 'rgba(114, 188, 255, 0.8)',
-                  color: characterId === 'conservative' ? '#ffe3e4' : '#e0f2ff',
-                  boxShadow: characterId === 'conservative' ? '0 8px 18px rgba(93, 11, 18, 0.4)' : '0 8px 18px rgba(4, 46, 87, 0.5)',
-                }}
-              >
-                FULL COMBAT PRESET
-              </span>
+              <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-[.14em] ${characterId === 'conservative' ? 'border-[#ff7a7f] bg-[#6b1119] text-[#ffd3d5]' : 'border-[#69b7ff] bg-[#0b477f] text-[#d8efff]'}`}>FULL COMBAT PRESET</span>
             </div>
-            <div className="relative mt-5 grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {politicalFighters[characterId].skills.map((skill) => (
-                <article
-                  key={skill.key}
-                  className="flex min-h-28 min-w-0 items-center gap-3 overflow-hidden rounded-xl border p-3 shadow-lg"
-                  style={{
-                    backgroundColor: characterId === 'conservative' ? 'rgba(22, 9, 11, 0.9)' : 'rgba(6, 21, 34, 0.92)',
-                    borderColor: characterId === 'conservative' ? 'rgba(169, 58, 64, 0.75)' : 'rgba(40, 118, 189, 0.75)',
-                    boxShadow: '0 10px 22px rgba(0, 0, 0, 0.25)',
-                  }}
-                >
+                <div key={skill.key} className="flex min-w-0 items-center gap-3 rounded-xl border border-white/15 bg-black/25 p-2.5">
                   <span
                     aria-hidden="true"
-                    className="size-16 shrink-0 rounded-xl border bg-black bg-no-repeat"
+                    className="size-12 shrink-0 rounded-lg border border-white/20 bg-black bg-no-repeat"
                     style={{
                       backgroundImage: `url(/assets/political-duel/skill-vfx/${characterId}-${skill.key.toLowerCase()}.png)`,
-                      backgroundPosition: '65.5% center',
-                      backgroundSize: '480% 120%',
-                      borderColor: characterId === 'conservative' ? 'rgba(232, 81, 88, 0.7)' : 'rgba(64, 152, 232, 0.7)',
-                      boxShadow: characterId === 'conservative'
-                        ? 'inset 0 0 18px rgba(255,255,255,0.04), 0 0 18px rgba(239,43,45,0.16)'
-                        : 'inset 0 0 18px rgba(255,255,255,0.04), 0 0 18px rgba(22,137,255,0.18)',
+                      backgroundPosition: '66.667% center',
+                      backgroundSize: '400% 100%',
                     }}
                   />
-                  <span className="flex min-h-20 min-w-0 flex-1 flex-col justify-center">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        className="inline-flex size-6 items-center justify-center rounded-md border text-[11px] font-black"
-                        style={{
-                          backgroundColor: characterId === 'conservative' ? '#5b1017' : '#0b416f',
-                          borderColor: characterId === 'conservative' ? 'rgba(232, 81, 88, 0.7)' : 'rgba(64, 152, 232, 0.7)',
-                          color: characterId === 'conservative' ? '#ffd7d9' : '#d8efff',
-                        }}
-                      >
-                        {skill.key}
-                      </span>
-                      <span className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[9px] font-black tracking-[.12em] text-white/80">MAX +7</span>
-                    </span>
-                    <strong className="mt-2 block min-h-10 text-sm font-black leading-5 text-white">{skill.name}</strong>
-                    <span className="mt-1 text-[10px] font-bold tracking-[.1em] text-white/50">COOLDOWN {(skill.cooldownMs / 1_000).toFixed(1)}S</span>
+                  <span className="min-w-0">
+                    <span className="block text-[9px] font-black tracking-[.16em] text-white/65">{skill.key} · MAX +7</span>
+                    <strong className="mt-1 block text-xs leading-4 text-white">{skill.name}</strong>
                   </span>
-                </article>
+                </div>
               ))}
             </div>
           </section>
