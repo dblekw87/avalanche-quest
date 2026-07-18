@@ -753,8 +753,9 @@ export class QuestScene extends Phaser.Scene {
     }
     if (!this.upgradeParticle?.active) this.upgradeParticle = this.createUpgradeParticle(totalUpgradeLevel);
     const playerCenter = this.player.getCenter();
+    const upgradeParticleYOffset = this.characterId === 'mage' ? 18 : 0;
     this.upgradeParticle
-      .setPosition(playerCenter.x, playerCenter.y + 18)
+      .setPosition(playerCenter.x, playerCenter.y + upgradeParticleYOffset)
       .setDepth(totalUpgradeLevel >= 5 ? 7 : 14)
       .setVisible(true);
     if (!this.upgradeParticle.anims.isPlaying) this.upgradeParticle.play(`upgrade-vfx-${this.characterId}`);
