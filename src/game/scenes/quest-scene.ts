@@ -3141,7 +3141,7 @@ export class QuestScene extends Phaser.Scene {
     const vfxAnimation = `quest-political-${skillId}-vfx`;
     const vfxTexture = `political-vfx-${skillId}`;
     const enhancementLevel = this.skillEnhancementLevel(skillId);
-    this.showPoliticalSkillCallout(`${skill.name} · MAX +${enhancementLevel}`);
+    this.showPoliticalSkillCallout(skill.name);
     if (skill.key !== 'V') this.spawnPoliticalPolicyAccent(skill.key, direction);
 
     if (skill.key === 'Q' || (skill.key === 'R' && this.characterId === 'conservative')) {
