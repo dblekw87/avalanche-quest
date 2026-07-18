@@ -530,34 +530,10 @@ export function GameExperience() {
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4">
         {isPoliticalCharacter(characterId) ? (
-          <section className={`rounded-2xl border p-5 ${characterId === 'conservative' ? 'border-[#b9363c] bg-gradient-to-br from-[#3a0b10] to-[#160d0d]' : 'border-[#276fbe] bg-gradient-to-br from-[#082b50] to-[#08131f]'}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-bold tracking-[.2em] text-[#d8c9b0]">POLICY AWAKENING LOADOUT</p>
-                <h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3>
-                <p className="mt-2 max-w-3xl text-xs font-medium leading-5 text-[#d1c7b8]">Every policy skill is unlocked at maximum enhancement. Expedition combat uses the full special-class preset without requiring contract purchases.</p>
-              </div>
-              <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-[.14em] ${characterId === 'conservative' ? 'border-[#ff7a7f] bg-[#6b1119] text-[#ffd3d5]' : 'border-[#69b7ff] bg-[#0b477f] text-[#d8efff]'}`}>FULL COMBAT PRESET</span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {politicalFighters[characterId].skills.map((skill) => (
-                <div key={skill.key} className="flex min-w-0 items-center gap-3 rounded-xl border border-white/15 bg-black/25 p-2.5">
-                  <span
-                    aria-hidden="true"
-                    className="size-12 shrink-0 rounded-lg border border-white/20 bg-black bg-no-repeat"
-                    style={{
-                      backgroundImage: `url(/assets/political-duel/skill-vfx/${characterId}-${skill.key.toLowerCase()}.png)`,
-                      backgroundPosition: '66.667% center',
-                      backgroundSize: '400% 100%',
-                    }}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-[9px] font-black tracking-[.16em] text-white/65">{skill.key} · MAX +7</span>
-                    <strong className="mt-1 block text-xs leading-4 text-white">{skill.name}</strong>
-                  </span>
-                </div>
-              ))}
-            </div>
+          <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5">
+            <p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p>
+            <h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3>
+            <p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p>
           </section>
         ) : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5 text-white [&_*]:!text-white"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
