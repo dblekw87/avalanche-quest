@@ -442,31 +442,7 @@ export function GameExperience() {
           )}
         </section>
 
-        <section className="mb-5 overflow-hidden rounded-2xl border border-[#5a5145] bg-gradient-to-r from-[#24090d] via-[#0b0d13] to-[#071a2b] p-4 shadow-xl sm:p-5">
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
-            <div className="text-center sm:text-left">
-              <span className="text-[10px] font-bold tracking-[.26em] text-[#d8c9b0]">NEW SPECIAL DUEL</span>
-              <h2 className="mt-2 text-xl font-black sm:text-2xl">
-                <span className="faction-conservative">Conservative Faction</span>
-                <span className="mx-2 text-white">VS</span>
-                <span className="faction-progressive">Progressive Faction</span>
-              </h2>
-              <p className="mt-2 max-w-2xl text-xs font-medium leading-5 text-[#aaa194]">Battle SD characters in an obstacle-free duel arena. All Q/W/E/R/Z/X/C/V skills and 12 hard boss patterns are enabled.</p>
-            </div>
-            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:w-auto sm:min-w-[330px] sm:gap-3">
-              {(['conservative', 'progressive'] as const).map((faction) => {
-                const fighter = politicalFighters[faction];
-                const conservative = faction === 'conservative';
-                return (
-                  <button key={faction} type="button" onClick={() => setDuelFaction(faction)} className={`min-w-0 rounded-xl border p-3 text-center transition hover:-translate-y-0.5 sm:p-4 sm:text-left ${conservative ? 'border-[#b9363c] bg-[#451117]/70 hover:bg-[#5b151d]' : 'border-[#276fbe] bg-[#092c50]/70 hover:bg-[#0b3b6e]'}`}>
-                    <strong className={`block text-sm ${conservative ? 'faction-conservative' : 'faction-progressive'}`}>{fighter.label}</strong>
-                    <span className={`mt-1 block text-[10px] font-semibold ${conservative ? 'text-[#ff9da1]' : 'text-[#8dccff]'}`}>Start as {fighter.role}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        {/* Special duel entry intentionally hidden while the mode is being reworked. */}
         <details open className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#1c1914]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left marker:hidden sm:px-5">
             <span><span className="block text-[10px] font-extrabold tracking-[.2em] text-[#a88350]">EXPEDITION SETUP</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Choose a stage and class</strong></span>
@@ -553,7 +529,37 @@ export function GameExperience() {
         <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
           <div className="border-t border-[#4f4637] p-3 sm:p-4">
-        {isPoliticalCharacter(characterId) ? <section className="rounded-2xl border border-[#5a5145] bg-[#15130f] p-5"><p className="text-[10px] font-bold tracking-[.2em] text-[#d0b47a]">SPECIAL CLASS LOADOUT</p><h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3><p className="mt-2 text-xs font-medium text-[#aaa194]">All Q/W/E/R/Z/X/C/V skills are unlocked and can be used against regular monsters and bosses in expedition stages.</p></section> : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5 text-white [&_*]:!text-white"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
+        {isPoliticalCharacter(characterId) ? (
+          <section className={`rounded-2xl border p-5 ${characterId === 'conservative' ? 'border-[#b9363c] bg-gradient-to-br from-[#3a0b10] to-[#160d0d]' : 'border-[#276fbe] bg-gradient-to-br from-[#082b50] to-[#08131f]'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold tracking-[.2em] text-[#d8c9b0]">POLICY AWAKENING LOADOUT</p>
+                <h3 className={`mt-2 text-xl font-black ${characterId === 'conservative' ? 'faction-conservative' : 'faction-progressive'}`}>{politicalFighters[characterId].label} · 8 EXCLUSIVE SKILLS</h3>
+                <p className="mt-2 max-w-3xl text-xs font-medium leading-5 text-[#d1c7b8]">Every policy skill is unlocked at maximum enhancement. Expedition combat uses the full special-class preset without requiring contract purchases.</p>
+              </div>
+              <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-[.14em] ${characterId === 'conservative' ? 'border-[#ff7a7f] bg-[#6b1119] text-[#ffd3d5]' : 'border-[#69b7ff] bg-[#0b477f] text-[#d8efff]'}`}>FULL COMBAT PRESET</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {politicalFighters[characterId].skills.map((skill) => (
+                <div key={skill.key} className="flex min-w-0 items-center gap-3 rounded-xl border border-white/15 bg-black/25 p-2.5">
+                  <span
+                    aria-hidden="true"
+                    className="size-12 shrink-0 rounded-lg border border-white/20 bg-black bg-no-repeat"
+                    style={{
+                      backgroundImage: `url(/assets/political-duel/skill-vfx/${characterId}-${skill.key.toLowerCase()}.png)`,
+                      backgroundPosition: '66.667% center',
+                      backgroundSize: '400% 100%',
+                    }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[9px] font-black tracking-[.16em] text-white/65">{skill.key} · MAX +7</span>
+                    <strong className="mt-1 block text-xs leading-4 text-white">{skill.name}</strong>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : isSecretCharacter(characterId) ? <section className="rounded-2xl border border-[#f2c94c] bg-gradient-to-r from-[#2d2209] via-[#15120b] to-[#34270a] p-5 text-white [&_*]:!text-white"><p className="text-[10px] font-extrabold tracking-[.22em] text-[#f2c94c]">ASSET TYCOON · {ownsAssetTycoon ? 'NFT LICENSE ACTIVE' : 'LOCAL TEST MODE'}</p><h3 className="mt-2 text-xl font-black text-[#fff1ae]">EVERY FAILURE COMPOUNDED INTO POWER</h3><p className="mt-2 text-xs font-semibold leading-5 text-[#c4b58e]">All nine Q/W/E/R/Z/X/C/V/T skills are fully enhanced. Attack, Vitality and Defense are fixed at +20{ownsAssetTycoon ? ' while this wallet owns the NFT.' : ' for local gameplay testing only.'}</p></section> : isGeneralCharacter(characterId) ? <SkillShop
           onOwnershipChange={handleSkillOwnershipChange}
           onArmorOwnershipChange={setArmorOwned}
           onSkillLevelsChange={handleSkillLevelsChange}
@@ -567,7 +573,19 @@ export function GameExperience() {
 
         <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">ENHANCEMENT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Character upgrades</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white">OPEN <span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
-          <div className="border-t border-[#4f4637] p-3 sm:p-4"><UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} /></div>
+          <div className="border-t border-[#4f4637] p-3 sm:p-4">
+            {isPoliticalCharacter(characterId) ? (
+              <section className={`rounded-xl border p-4 ${characterId === 'conservative' ? 'border-[#b9363c] bg-[#260b0f]' : 'border-[#276fbe] bg-[#071f38]'}`}>
+                <p className="text-[10px] font-black tracking-[.2em] text-[#d8c9b0]">SPECIAL CLASS · LOGIC PRESET</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {['SKILLS +7', 'ATTACK +20', 'VITALITY +20', 'DEFENSE +20', 'AEGIS +5'].map((label) => (
+                    <span key={label} className="rounded-lg border border-white/15 bg-black/25 px-3 py-3 text-center text-xs font-black text-white">{label}</span>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs font-medium leading-5 text-[#bdb3a4]">These values affect expedition combat only. Wallet ownership, token rewards, NFT rights, and contract state remain unchanged.</p>
+              </section>
+            ) : <UpgradeShop onLevelsChange={handleUpgradeLevelsChange} disabled={attemptId !== null} />}
+          </div>
         </details>
 
         {pendingSelection ? (

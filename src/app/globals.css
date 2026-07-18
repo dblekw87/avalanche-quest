@@ -125,7 +125,7 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
 .mobile-control-button--dash { border-color:#c4b5faaa; background:#3b2b67cc; }
 .mobile-control-button--attack { min-width:58px; border-color:#fca5a5bb; background:#732323dd; }
 .mobile-skill-button { min-width:46px; width:46px; height:46px; overflow:hidden; border-radius:50%; border:2px solid #f5cd76cc; background:#17120bdd; }
-.mobile-skill-button__icon { position:absolute; inset:3px; border-radius:50%; background-position:center; background-size:cover; opacity:.9; }
+.mobile-skill-button__icon { position:absolute; inset:3px; border-radius:50%; background-position:50% 50%; background-repeat:no-repeat; background-size:contain; opacity:.9; }
 .mobile-skill-button__key { position:absolute; right:-1px; bottom:-1px; display:grid; width:18px; height:18px; place-items:center; border:1px solid #f8ddb0; border-radius:50%; background:#090704; color:#fff4d6; font-size:9px; line-height:1; box-shadow:0 1px 5px #000; }
 .mobile-skill-button:disabled { opacity:.3; filter:grayscale(.85); }
 .mobile-game-stage:fullscreen {

@@ -5,7 +5,7 @@ import { assetTycoonSkills } from '@/game/asset-tycoon';
 import type { StageResult, StageTelemetryEvent } from '@/game/bridge/events';
 import { isInnateCharacter, isPoliticalCharacter, isSecretCharacter, type CharacterId } from '@/game/characters';
 import { stages, type StageId } from '@/game/config/stages';
-import { innateClasses } from '@/game/innate-classes';
+import { innateClasses, innateSkillIcon } from '@/game/innate-classes';
 import type { MobileGameAction } from '@/game/mobile-game-controls';
 import { politicalFighters } from '@/game/political-duel/definitions';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
@@ -331,7 +331,7 @@ export class QuestScene extends Phaser.Scene {
       if (!this.textures.exists(`quest-skill-icon-${skillId}`)) this.load.image(`quest-skill-icon-${skillId}`, `/assets/skill-effects-new/${skillId}${version}.png`);
     });
     Object.values(innateClasses).flatMap((definition) => definition.skills).forEach((skill) => {
-      if (!this.textures.exists(`quest-skill-icon-${skill.id}`)) this.load.image(`quest-skill-icon-${skill.id}`, `/assets/new-class-skills/${skill.id}.png`);
+      if (!this.textures.exists(`quest-skill-icon-${skill.id}`)) this.load.image(`quest-skill-icon-${skill.id}`, innateSkillIcon(skill.id));
     });
     assetTycoonSkills.forEach((skill) => {
       if (!this.textures.exists(`quest-skill-icon-${skill.id}`)) this.load.image(`quest-skill-icon-${skill.id}`, `/assets/new-class-skills/${skill.id}.png`);
@@ -745,7 +745,7 @@ export class QuestScene extends Phaser.Scene {
       }
     }
     this.updateArmorSurfaceSparkles();
-    const totalUpgradeLevel = this.attackLevel + this.vitalityLevel + this.defenseLevel + this.armorLevel;
+    const totalUpgradeLevel = this.attackLevel + this.vitalityLevel + this.defenseLevel + this.effectiveArmorLevel;
     if (!this.equipmentParticlesEnabled || totalUpgradeLevel <= 0) {
       this.upgradeParticle?.destroy();
       this.upgradeParticle = undefined;
@@ -754,14 +754,14 @@ export class QuestScene extends Phaser.Scene {
     if (!this.upgradeParticle?.active) this.upgradeParticle = this.createUpgradeParticle(totalUpgradeLevel);
     const playerCenter = this.player.getCenter();
     this.upgradeParticle
-      .setPosition(playerCenter.x, playerCenter.y)
+      .setPosition(playerCenter.x, playerCenter.y + 18)
       .setDepth(totalUpgradeLevel >= 5 ? 7 : 14)
       .setVisible(true);
     if (!this.upgradeParticle.anims.isPlaying) this.upgradeParticle.play(`upgrade-vfx-${this.characterId}`);
   }
 
   private updateArmorSurfaceSparkles(): void {
-    const armorEnhancementLevel = this.defenseLevel + this.armorLevel + (this.armorEquipped ? 1 : 0);
+    const armorEnhancementLevel = this.defenseLevel + this.effectiveArmorLevel + (this.effectiveArmorEquipped ? 1 : 0);
     if (armorEnhancementLevel <= 0 || !this.player.visible || this.time.now < this.lastArmorSparkleAt) return;
     const intensity = Phaser.Math.Clamp(armorEnhancementLevel / 11, 0.18, 1);
     const delay = Phaser.Math.Linear(620, 210, intensity);
@@ -1034,7 +1034,7 @@ export class QuestScene extends Phaser.Scene {
   private applyEquipmentTint(): void {
     this.player.clearTint();
     return;
-    const defenseLevel = this.defenseLevel + (this.armorEquipped ? 1 : 0) + this.armorLevel;
+    const defenseLevel = this.defenseLevel + (this.effectiveArmorEquipped ? 1 : 0) + this.effectiveArmorLevel;
     if (defenseLevel <= 0) return;
     if (this.characterId === 'warrior') this.player.setTint(defenseLevel >= 4 ? 0xffdfa0 : 0xd5e4ef);
     else this.player.setTint(defenseLevel >= 4 ? 0xc9b3ff : 0xd9d3ff);
@@ -1200,7 +1200,7 @@ export class QuestScene extends Phaser.Scene {
       this.add.image(x + 29, 473, political ? 'political-reference' : `quest-skill-icon-${skillId}`, political ? `political-stage-${skillId}` : undefined).setDisplaySize(political ? 40 : 44, 44).setAlpha(owned ? 1 : 0.28).setScrollFactor(0).setDepth(20);
       this.add.text(x + 5, 451, keyLabels[index] ?? '', { color: owned ? '#fff0bd' : '#777b76', fontFamily: 'monospace', fontSize: '10px', fontStyle: 'bold', backgroundColor: '#0b110d' }).setPadding(3, 1).setScrollFactor(0).setDepth(22);
       const fill = this.add.rectangle(x + 5, 508, SKILL_COOLDOWN_BAR_WIDTH, 5, this.stage.accentColor, 0.9).setOrigin(0, 0.5).setScrollFactor(0).setDepth(21);
-      const label = this.add.text(x + 29, 488, owned ? 'READY' : 'LOCKED', { color: '#ffffff', fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', align: 'center', backgroundColor: '#00000099' }).setOrigin(0.5).setPadding(3, 1).setScrollFactor(0).setDepth(22);
+      const label = this.add.text(x + 29, 488, owned ? political ? 'MAX +7' : 'READY' : 'LOCKED', { color: '#ffffff', fontFamily: 'monospace', fontSize: '8px', fontStyle: 'bold', align: 'center', backgroundColor: '#00000099' }).setOrigin(0.5).setPadding(3, 1).setScrollFactor(0).setDepth(22);
       this.skillCooldownBars.set(skillId, { fill, label });
     });
     this.updateObjective();
@@ -1858,12 +1858,12 @@ export class QuestScene extends Phaser.Scene {
     this.playPlayerAnimation('attack');
     if (this.characterId === 'archer') {
       this.time.delayedCall(110, () => {
-        if (!this.finished) this.fireBasicArrow(1 + this.attackLevel + this.armorLevel, this.time.now);
+        if (!this.finished) this.fireBasicArrow(1 + this.attackLevel + this.effectiveArmorLevel, this.time.now);
       });
       return;
     }
     if (this.characterId === 'gunslinger') {
-      this.launchInnateProjectile('quickdraw', 1 + this.attackLevel + this.armorLevel, 820, time, 54);
+      this.launchInnateProjectile('quickdraw', 1 + this.attackLevel + this.effectiveArmorLevel, 820, time, 54);
       this.spawnInnateParticles(this.player.x + (this.player.flipX ? -48 : 48), this.player.y - 5, 8, 70);
       return;
     }
@@ -1885,7 +1885,7 @@ export class QuestScene extends Phaser.Scene {
       const inRange = Math.abs(enemy.sprite.x - attackX) <= (enemy.boss ? 92 : 68) + innateRangeBonus;
       if (inRange && this.combatFootDistance(enemy) <= 42) {
         const bossBaseDamage = this.stage.special ? 18 : Math.ceil(enemy.maxHealth / 3);
-        this.damageEnemy(enemy, (enemy.boss ? bossBaseDamage : 1) + this.attackLevel + this.armorLevel);
+        this.damageEnemy(enemy, (enemy.boss ? bossBaseDamage : 1) + this.attackLevel + this.effectiveArmorLevel);
       }
     });
   }
@@ -3140,7 +3140,9 @@ export class QuestScene extends Phaser.Scene {
     const direction = this.player.flipX ? -1 : 1;
     const vfxAnimation = `quest-political-${skillId}-vfx`;
     const vfxTexture = `political-vfx-${skillId}`;
-    this.showPoliticalSkillCallout(skill.name);
+    const enhancementLevel = this.skillEnhancementLevel(skillId);
+    this.showPoliticalSkillCallout(`${skill.name} · MAX +${enhancementLevel}`);
+    if (skill.key !== 'V') this.spawnPoliticalPolicyAccent(skill.key, direction);
 
     if (skill.key === 'Q' || (skill.key === 'R' && this.characterId === 'conservative')) {
       const count = skill.key === 'R' ? 3 : 1;
@@ -3180,10 +3182,11 @@ export class QuestScene extends Phaser.Scene {
 
     if (skill.key === 'E') {
       if (this.characterId === 'conservative') {
-        this.defenseUntil = time + 5_000;
+        this.defenseUntil = time + 5_000 + enhancementLevel * 300;
+        this.activeDefenseReduction = Math.max(this.activeDefenseReduction, 3);
       }
       else {
-        this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 5);
+        this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 5 + Math.floor(enhancementLevel / 2));
         this.healthBar.width = 200 * (this.playerHealth / this.playerMaxHealth);
       }
       this.spinPoliticalBody();
@@ -3225,15 +3228,13 @@ export class QuestScene extends Phaser.Scene {
     }
 
     if (skill.key === 'C') {
-      this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 7);
+      this.playerHealth = Math.min(this.playerMaxHealth, this.playerHealth + 7 + Math.ceil(enhancementLevel / 2));
       this.healthBar.width = 200 * (this.playerHealth / this.playerMaxHealth);
       this.castPoliticalOverhead(vfxTexture, vfxAnimation, 5_200);
       return;
     }
 
-    this.cameras.main.flash(320, this.characterId === 'conservative' ? 255 : 40, this.characterId === 'progressive' ? 220 : 45, 65);
-    this.cameras.main.shake(520, 0.013);
-    this.castPoliticalArea(vfxTexture, vfxAnimation, damage, 520, this.player.x, 'ground');
+    if (skill.key === 'V') this.castPoliticalAwakening(vfxTexture, vfxAnimation, damage);
   }
 
   private castPoliticalArea(vfxTexture: string, vfxAnimation: string, damage: number, radius: number, x: number, placement: 'ground' | 'center', visualScaleX = 1, visualScaleY = visualScaleX, duration = 620): void {
@@ -3260,6 +3261,136 @@ export class QuestScene extends Phaser.Scene {
         ? this.combatFootDistance(enemy) <= 40
         : Math.abs(enemy.sprite.y - this.player.y) <= Math.min(96, effectHeight / 2);
       if (enemy.health > 0 && horizontalHit && verticalHit) this.damageEnemy(enemy, damage);
+    });
+  }
+
+  private spawnPoliticalPolicyAccent(key: 'Q' | 'W' | 'E' | 'R' | 'Z' | 'X' | 'C', direction: number): void {
+    if (!isPoliticalCharacter(this.characterId)) return;
+    const fighter = politicalFighters[this.characterId];
+    const primary = fighter.color;
+    const secondary = fighter.secondaryColor;
+    const centerX = this.player.x + (key === 'Q' || key === 'R' || key === 'X' ? direction * 58 : 0);
+    const centerY = this.player.y - 10;
+    const sigil = this.add.graphics().setPosition(centerX, centerY).setDepth(27).setBlendMode(Phaser.BlendModes.ADD);
+
+    sigil.lineStyle(3, primary, 0.92).strokeCircle(0, 0, key === 'E' || key === 'C' ? 54 : 42);
+    sigil.lineStyle(2, secondary, 0.76).strokeCircle(0, 0, key === 'E' || key === 'C' ? 38 : 29);
+    sigil.fillStyle(0xffffff, 0.88).fillCircle(0, 0, 4);
+
+    if (key === 'Q') {
+      [-18, 0, 18].forEach((offset) => {
+        sigil.lineStyle(4, offset === 0 ? 0xffffff : secondary, 0.86);
+        sigil.lineBetween(-34 * direction, offset, 38 * direction, offset * 0.45);
+      });
+    } else if (key === 'W') {
+      [-24, 0, 24].forEach((offset, index) => {
+        const height = 28 + index * 11;
+        sigil.lineStyle(5, index === 2 ? 0xffffff : secondary, 0.82);
+        sigil.lineBetween(offset, 26, offset, 26 - height);
+        sigil.lineBetween(offset, 26 - height, offset - 7, 19 - height);
+        sigil.lineBetween(offset, 26 - height, offset + 7, 19 - height);
+      });
+    } else if (key === 'E') {
+      sigil.lineStyle(4, 0xffffff, 0.74).strokeRoundedRect(-31, -38, 62, 72, 18);
+      sigil.lineStyle(3, secondary, 0.9).lineBetween(-31, -5, 0, 24).lineBetween(31, -5, 0, 24);
+    } else if (key === 'R') {
+      sigil.lineStyle(4, 0xffffff, 0.86);
+      for (let ray = 0; ray < 8; ray += 1) {
+        const angle = Phaser.Math.DegToRad(ray * 45);
+        sigil.lineBetween(Math.cos(angle) * 12, Math.sin(angle) * 12, Math.cos(angle) * 54, Math.sin(angle) * 54);
+      }
+    } else if (key === 'Z') {
+      [-28, -14, 0, 14, 28].forEach((offset, index) => {
+        const height = 18 + Math.abs(2 - index) * 8;
+        sigil.lineStyle(4, index === 2 ? 0xffffff : secondary, 0.82);
+        sigil.strokeRect(offset - 5, 24 - height, 10, height);
+      });
+    } else if (key === 'X') {
+      sigil.lineStyle(5, secondary, 0.9);
+      sigil.lineBetween(-38 * direction, 22, 12 * direction, -24);
+      sigil.lineBetween(12 * direction, -24, 10 * direction, -9);
+      sigil.lineBetween(12 * direction, -24, -3 * direction, -24);
+      sigil.lineStyle(3, 0xffffff, 0.72).strokeTriangle(-28, 24, 0, -6, 28, 24);
+    } else {
+      for (let node = 0; node < 6; node += 1) {
+        const angle = Phaser.Math.DegToRad(node * 60);
+        const x = Math.cos(angle) * 35;
+        const y = Math.sin(angle) * 35;
+        sigil.fillStyle(node % 2 === 0 ? primary : secondary, 0.9).fillCircle(x, y, 6);
+        sigil.lineStyle(2, 0xffffff, 0.55).lineBetween(0, 0, x, y);
+      }
+    }
+
+    this.tweens.add({
+      targets: sigil,
+      scale: key === 'E' || key === 'C' ? 1.9 : 1.55,
+      angle: this.characterId === 'conservative' ? direction * 20 : direction * -28,
+      alpha: 0,
+      duration: key === 'E' || key === 'C' ? 920 : 620,
+      ease: 'Cubic.Out',
+      onComplete: () => sigil.destroy(),
+    });
+  }
+
+  private castPoliticalAwakening(vfxTexture: string, vfxAnimation: string, damage: number): void {
+    if (!isPoliticalCharacter(this.characterId)) return;
+    const faction = this.characterId;
+    const fighter = politicalFighters[faction];
+    const conservative = faction === 'conservative';
+    const view = this.cameras.main.worldView;
+    const centerX = view.centerX;
+    const centerY = this.player.y - 18;
+    const overlay = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, conservative ? 0x230405 : 0x03152a, 0.36)
+      .setScrollFactor(0)
+      .setDepth(26);
+    const title = this.add.text(this.scale.width / 2, 92, conservative ? 'AWAKENING · FREE MARKET EXPLOSION' : 'AWAKENING · TOMORROW TOGETHER', {
+      fontFamily: 'Pretendard, sans-serif',
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: conservative ? '#ffd39a' : '#bdf6ff',
+      stroke: conservative ? '#5e0909' : '#062b59',
+      strokeThickness: 7,
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(32).setAlpha(0);
+    const sigil = this.add.graphics().setPosition(centerX, centerY).setDepth(29).setBlendMode(Phaser.BlendModes.ADD);
+    sigil.lineStyle(8, fighter.color, 0.94).strokeCircle(0, 0, 96);
+    sigil.lineStyle(5, fighter.secondaryColor, 0.92).strokeCircle(0, 0, 68);
+    sigil.lineStyle(3, 0xffffff, 0.88).strokeCircle(0, 0, 38);
+    for (let ray = 0; ray < 12; ray += 1) {
+      const angle = Phaser.Math.DegToRad(ray * 30);
+      sigil.lineStyle(ray % 2 === 0 ? 5 : 3, ray % 2 === 0 ? fighter.secondaryColor : 0xffffff, 0.78);
+      sigil.lineBetween(Math.cos(angle) * 30, Math.sin(angle) * 30, Math.cos(angle) * 128, Math.sin(angle) * 128);
+    }
+    sigil.fillStyle(0xffffff, 0.96).fillCircle(0, 0, 12);
+
+    this.skillLockedUntil = Math.max(this.skillLockedUntil, this.time.now + 1_260);
+    this.cameras.main.flash(280, conservative ? 255 : 55, conservative ? 75 : 205, conservative ? 35 : 255, false);
+    this.cameras.main.shake(1_000, 0.018);
+    this.tweens.add({ targets: title, alpha: 1, y: 76, duration: 220, yoyo: true, hold: 620, onComplete: () => title.destroy() });
+    this.tweens.add({ targets: sigil, scale: 2.35, angle: conservative ? 32 : -32, alpha: 0, duration: 1_180, ease: 'Cubic.Out', onComplete: () => sigil.destroy() });
+    this.tweens.add({ targets: overlay, alpha: 0, duration: 1_280, ease: 'Sine.In', onComplete: () => overlay.destroy() });
+
+    [0, 1, 2].forEach((pulse) => this.time.delayedCall(220 + pulse * 250, () => {
+      if (this.finished) return;
+      const wave = this.add.sprite(centerX, centerY, vfxTexture, 0)
+        .setDisplaySize(Math.min(view.width * (0.68 + pulse * 0.13), 1_050), 250 + pulse * 70)
+        .setDepth(28 + pulse)
+        .setAlpha(0.95)
+        .setBlendMode(pulse === 2 ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+      wave.play(vfxAnimation);
+      const ring = this.add.ellipse(centerX, this.player.y + 28, 260 + pulse * 170, 74 + pulse * 22, fighter.color, 0.1)
+        .setStrokeStyle(7 - pulse, pulse % 2 === 0 ? fighter.secondaryColor : 0xffffff, 0.86)
+        .setDepth(27 + pulse)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: wave, scaleX: wave.scaleX * 1.18, scaleY: wave.scaleY * 1.32, alpha: 0, duration: 720, onComplete: () => wave.destroy() });
+      this.tweens.add({ targets: ring, scaleX: 1.65, scaleY: 1.45, alpha: 0, duration: 680, onComplete: () => ring.destroy() });
+      this.damageEnemiesInArea(centerX, view.width, Math.max(1, Math.ceil(damage / 4)), view.height);
+      this.spawnSkillImpactBurst(centerX, this.player.y, fighter.secondaryColor, 1.75 + pulse * 0.35);
+    }));
+    this.time.delayedCall(1_020, () => {
+      if (this.finished) return;
+      this.damageEnemiesInArea(centerX, view.width, Math.max(1, Math.ceil(damage / 2)), view.height);
+      this.cameras.main.flash(240, conservative ? 255 : 105, conservative ? 150 : 245, conservative ? 70 : 255, false);
     });
   }
 
@@ -3531,8 +3662,9 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private skillDamage(skillId: string, baseDamage: number): number {
-    const skillLevel = isSecretCharacter(this.characterId) ? 7 : (this.skillUpgradeLevels[skillId] ?? 0);
-    const damage = baseDamage + skillLevel * 2;
+    const skillLevel = this.skillEnhancementLevel(skillId);
+    const specialClassAttackBonus = isPoliticalCharacter(this.characterId) ? this.attackLevel : 0;
+    const damage = baseDamage + skillLevel * 2 + specialClassAttackBonus;
     const classAdjustedDamage = this.characterId === 'mage' && MAGE_ATTACK_SKILL_IDS.has(skillId)
       ? Math.ceil(damage * MAGE_ATTACK_DAMAGE_MULTIPLIER)
       : damage;
@@ -3540,11 +3672,11 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private spawnEnhancedSkillEffect(skillId: string): void {
-    const level = isSecretCharacter(this.characterId) ? 7 : (this.skillUpgradeLevels[skillId] ?? 0);
+    const level = this.skillEnhancementLevel(skillId);
     if (level <= 0) return;
     const direction = this.player.flipX ? -1 : 1;
     const projectileSkills = ['arcane-bolt', 'magic-missile'];
-    const forwardSkills = ['frost-nova', 'flame-wave', 'ice-storm', 'chain-lightning'];
+    const forwardSkills = ['frost-nova', 'flame-wave'];
     const centeredSkills = ['healing-light', 'starfall', 'healing-circle'];
     const startX = this.player.x + (centeredSkills.includes(skillId) ? 0 : direction * 64);
     const startY = this.player.y + (skillId === 'meteor' ? -150 : 0);
@@ -3553,7 +3685,8 @@ export class QuestScene extends Phaser.Scene {
     const effect = this.add.image(startX, startY, textureKey)
       .setDepth(14)
       .setFlipX(direction < 0)
-      .setScale(0.38 + level * 0.085)
+      .setAngle(skillId === 'magic-missile' ? direction > 0 ? 45 : -45 : 0)
+      .setScale(0.24 + level * 0.045)
       .setAlpha(Math.min(1, 0.68 + level * 0.045))
       .setBlendMode(Phaser.BlendModes.ADD);
     const travel = projectileSkills.includes(skillId) ? 420 : forwardSkills.includes(skillId) ? 180 : 0;
@@ -3561,7 +3694,7 @@ export class QuestScene extends Phaser.Scene {
       targets: effect,
       x: effect.x + direction * travel,
       y: skillId === 'meteor' ? this.player.y + 35 : effect.y,
-      scale: effect.scale + 0.16 + level * 0.025,
+      scale: effect.scale + 0.09 + level * 0.012,
       alpha: 0,
       duration: projectileSkills.includes(skillId) ? 720 : 580 + level * 35,
       ease: projectileSkills.includes(skillId) ? 'Linear' : 'Sine.Out',
@@ -4150,7 +4283,7 @@ export class QuestScene extends Phaser.Scene {
   private damagePlayer(time: number, damage: number, sourceX: number): void {
     if (time < this.invulnerableUntil || this.finished) return;
     this.invulnerableUntil = time + DAMAGE_INVULNERABILITY_MS;
-    const totalReduction = (this.armorEquipped ? 1 : 0) + (time < this.defenseUntil ? this.activeDefenseReduction : 0) + Math.floor(this.defenseLevel / 2) + Math.floor(this.armorLevel / 2);
+    const totalReduction = (this.effectiveArmorEquipped ? 1 : 0) + (time < this.defenseUntil ? this.activeDefenseReduction : 0) + Math.floor(this.defenseLevel / 2) + Math.floor(this.effectiveArmorLevel / 2);
     const mitigatedDamage = Math.max(1, damage - totalReduction);
     this.playerHealth = Math.max(0, this.playerHealth - mitigatedDamage);
     this.healthBar.width = 200 * (this.playerHealth / this.playerMaxHealth);
@@ -4241,12 +4374,28 @@ export class QuestScene extends Phaser.Scene {
 
   private get playerMaxHealth(): number {
     const introductoryHealthBonus = Math.max(0, 6 - this.stage.number);
-    return PLAYER_MAX_HEALTH + introductoryHealthBonus + (this.armorEquipped ? 3 : 0) + this.vitalityLevel * 2 + this.armorLevel;
+    return PLAYER_MAX_HEALTH + introductoryHealthBonus + (this.effectiveArmorEquipped ? 3 : 0) + this.vitalityLevel * 2 + this.effectiveArmorLevel;
   }
 
-  private get attackLevel(): number { return isSecretCharacter(this.characterId) ? 20 : this.upgradeLevels.attack; }
-  private get vitalityLevel(): number { return isSecretCharacter(this.characterId) ? 20 : this.upgradeLevels.vitality; }
-  private get defenseLevel(): number { return isSecretCharacter(this.characterId) ? 20 : this.upgradeLevels.defense; }
+  private get usesMaxSpecialEnhancements(): boolean {
+    return isSecretCharacter(this.characterId) || isPoliticalCharacter(this.characterId);
+  }
+
+  private get effectiveArmorEquipped(): boolean {
+    return this.usesMaxSpecialEnhancements || this.armorEquipped;
+  }
+
+  private get effectiveArmorLevel(): number {
+    return this.usesMaxSpecialEnhancements ? 5 : this.armorLevel;
+  }
+
+  private get attackLevel(): number { return this.usesMaxSpecialEnhancements ? 20 : this.upgradeLevels.attack; }
+  private get vitalityLevel(): number { return this.usesMaxSpecialEnhancements ? 20 : this.upgradeLevels.vitality; }
+  private get defenseLevel(): number { return this.usesMaxSpecialEnhancements ? 20 : this.upgradeLevels.defense; }
+
+  private skillEnhancementLevel(skillId: string): number {
+    return this.usesMaxSpecialEnhancements ? 7 : Phaser.Math.Clamp(this.skillUpgradeLevels[skillId] ?? 0, 0, 7);
+  }
 
   private get bossSkillCooldownMs(): number {
     if (this.stage.special) return 1_250;
@@ -4288,7 +4437,7 @@ export class QuestScene extends Phaser.Scene {
       if (skill && baseCooldownMs === undefined) baseCooldownMs = skill.cooldownMs;
     }
     const cooldown = baseCooldownMs ?? SKILL_COOLDOWNS[skillId] ?? 1_000;
-    const level = isSecretCharacter(this.characterId) ? 7 : Phaser.Math.Clamp(this.skillUpgradeLevels[skillId] ?? 0, 0, 7);
+    const level = this.skillEnhancementLevel(skillId);
     const reduction = Math.min(MAX_SKILL_COOLDOWN_REDUCTION, level * SKILL_COOLDOWN_REDUCTION_PER_LEVEL);
     return Math.max(350, Math.round(cooldown * (1 - reduction)));
   }
@@ -4694,7 +4843,7 @@ export class QuestScene extends Phaser.Scene {
     if (this.textures.exists(key)) return;
     const graphics = this.add.graphics();
     graphics.fillStyle(0x5b3425).fillRoundedRect(8, 17, 22, 25, 6);
-    if (this.armorEquipped) {
+    if (this.effectiveArmorEquipped) {
       graphics.fillStyle(0x71859a).fillRoundedRect(5, 16, 28, 30, 5);
       graphics.fillStyle(0xc7d7e2).fillTriangle(7, 18, 2, 28, 9, 32).fillTriangle(31, 18, 38, 28, 31, 32);
       graphics.lineStyle(2, 0xeaf7ff, 0.8).lineBetween(9, 21, 29, 21);

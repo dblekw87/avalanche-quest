@@ -9,6 +9,7 @@ import { avalancheFuji } from 'wagmi/chains';
 import { aegisArmor, archerSkills, armorEnhancementAbi, axereaverSkills, brawlerSkills, dragonknightSkills, dualbladeSkills, elementalistSkills, gameTokenAbi, gunslingerSkills, hammerguardSkills, kickfighterSkills, mageSkills, pyromancerSkills, skillEnhancementAbi, skillShopAbi, skills, spellbladeSkills, ssaulabiSkills, venomancerSkills, warlockSkills, warriorSkills, type SkillDefinition } from '@/features/skills/skill-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 import type { GeneralCharacterId } from '@/game/characters';
+import { innateSkillIcon } from '@/game/innate-classes';
 
 type PurchaseState = 'idle' | 'pending' | 'success' | 'error';
 type Purchasable = { id: Hex; slug: string; name: string; price: bigint; key?: string };
@@ -87,14 +88,9 @@ const SKILL_ICON_TRANSFORMS: Readonly<Record<string, string>> = {
   'berserker-oath': 'translate(-1.4%, 3.3%)',
   'ragnarok-cleaver': 'translate(2.1%, 3.7%)',
   'flame-orbit': 'translate(-7.6%, -1.4%)',
-  'tidal-prison': 'translate(0.6%, -2%)',
   'tempest-lance': 'translate(-3.3%, 0%)',
-  'gaia-aegis': 'translate(-4.5%, 4.9%)',
-  'thunder-domain': 'translate(6.1%, -3.5%)',
-  'frost-comet': 'translate(0.8%, 0.4%)',
   'magma-fault': 'translate(0%, 2%)',
   'elemental-convergence': 'translate(0%, 6.3%)',
-  'primordial-genesis': 'translate(6.3%, 7%)',
   'abyss-bolt': 'translate(0.3%, -0.3%)',
   'soul-chains': 'translate(0.8%, -1.7%)',
   'void-eruption': 'translate(0%, 2.1%)',
@@ -326,25 +322,23 @@ export function SkillShop({ onOwnershipChange, onArmorOwnershipChange, onSkillLe
         {activeSkills.map((entry) => {
           const owned = ownedIds.includes(entry.slug);
           const iconTransform = SKILL_ICON_TRANSFORMS[entry.slug];
-          const iconSource = entry.slug === 'frost-comet'
-            ? '/assets/new-class-skills/frost-comet-v2.png'
-            : characterId === 'spellblade'
+          const iconSource = characterId === 'spellblade'
             ? `/assets/skill-effects-new/${entry.slug}-v2.png`
             : characterId === 'archer'
               ? `/assets/skill-effects-new/${entry.slug}.png`
               : GENERATED_CLASS_IDS.includes(characterId)
-                ? `/assets/new-class-skills/${entry.slug}.png`
+                ? innateSkillIcon(entry.slug)
                 : `/assets/skills-v2/${entry.slug}.png`;
           return <article key={entry.slug} className={`flex flex-col border-2 bg-[#11160f] p-3 transition-shadow ${skillCardFrame} ${owned ? 'ring-1 ring-inset ring-white/20' : ''}`}>
             <div className="mb-3 grid justify-items-center gap-2 text-center">
               <div className={`grid size-14 shrink-0 place-items-center rounded-md border-2 bg-black ${skillIconFrame}`}>
-                <div className={`size-12 overflow-hidden bg-black ${skillImageFrame}`}>
+                <div className={`grid size-12 place-items-center overflow-hidden bg-black ${skillImageFrame}`}>
                   <Image
                     src={iconSource}
                     alt={`${entry.name} skill icon`}
                     width={48}
                     height={48}
-                    className={`size-full object-contain ${characterId === 'archer' ? 'brightness-125 saturate-150 hue-rotate-[8deg]' : ''}`}
+                    className={`block size-full object-contain object-center ${characterId === 'archer' ? 'brightness-125 saturate-150 hue-rotate-[8deg]' : ''}`}
                     style={iconTransform ? { transform: iconTransform } : undefined}
                     unoptimized
                   />

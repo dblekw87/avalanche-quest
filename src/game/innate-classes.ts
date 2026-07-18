@@ -151,6 +151,14 @@ export const innateClasses: Record<InnateCharacterId, InnateClassDefinition> = {
   },
 };
 
+const INNATE_SKILL_ICON_OVERRIDES: Readonly<Record<string, string>> = {
+  'tidal-prison': '/assets/skills/elementalist/tidal-prison/tidal-prison-icon-v2.png',
+  'gaia-aegis': '/assets/skills/elementalist/gaia-aegis/gaia-aegis-icon-v2.png',
+  'thunder-domain': '/assets/skills/elementalist/thunder-domain/thunder-domain-icon-v2.png',
+  'frost-comet': '/assets/skills/elementalist/frost-comet/frost-comet-icon-v3.png',
+  'primordial-genesis': '/assets/skills/elementalist/primordial-genesis/primordial-genesis-icon-v2.png',
+};
+
 export function innateSkillIcon(skillId: string): string {
-  return `/assets/new-class-skills/${skillId}.png`;
+  return INNATE_SKILL_ICON_OVERRIDES[skillId] ?? `/assets/new-class-skills/${skillId}.png`;
 }
