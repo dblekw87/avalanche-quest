@@ -21,6 +21,8 @@ Avalanche Fuji and Arbitrum Sepolia, and production mainnets.
 9. [`08-gameplay-classes.md`](08-gameplay-classes.md): Phaser classes and systems.
 10. [`09-asset-spritesheet-standard.md`](09-asset-spritesheet-standard.md): visual asset contract.
 11. [`10-skill-combat-standard.md`](10-skill-combat-standard.md): skills and combat data.
+12. [`11-nft-progression-standard.md`](11-nft-progression-standard.md): NFT equipment, class, advancement and material boundaries.
+13. [`12-game-content-production-standard.md`](12-game-content-production-standard.md): actor coordinates, content assets, encounters and raid patterns.
 
 ## Rule precedence
 

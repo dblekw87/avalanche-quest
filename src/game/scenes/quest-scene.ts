@@ -4,11 +4,34 @@ import { QuestAudioDirector } from '@/game/audio/quest-audio-director';
 import { assetTycoonSkills } from '@/game/asset-tycoon';
 import type { StageResult, StageTelemetryEvent } from '@/game/bridge/events';
 import { isInnateCharacter, isPoliticalCharacter, isSecretCharacter, type CharacterId } from '@/game/characters';
+import { getStageDifficulty, type StageDifficultyProfile } from '@/game/config/difficulty';
 import { stages, type StageId } from '@/game/config/stages';
+import {
+  getStageCombatProfile,
+  type BossPatternEntry,
+  type EnemySignatureSkill,
+  type StageCombatProfile,
+  type TelegraphGeometry,
+} from '@/game/content/stage-combat-catalog';
+import {
+  getStageCombatPresentation,
+  type StageCombatPresentationManifest,
+} from '@/game/content/combat-presentation-manifest';
 import { innateClasses, innateSkillIcon } from '@/game/innate-classes';
 import type { MobileGameAction } from '@/game/mobile-game-controls';
 import { politicalFighters } from '@/game/political-duel/definitions';
+import {
+  applyEquipmentAttackPower,
+  applyEquipmentCooldownReduction,
+  applyEquipmentDamageReduction,
+  applyEquipmentMaxHealth,
+  applyEquipmentMovementSpeed,
+} from '@/game/systems/equipment-combat-application';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
+import {
+  EMPTY_EQUIPMENT_MODIFIERS,
+  type EquipmentCombatModifiers,
+} from '@/game/types/equipment';
 
 type EnemyState = {
   id: string;
@@ -23,7 +46,6 @@ type EnemyState = {
   elite: boolean;
   healthBar: Phaser.GameObjects.Rectangle;
   nextSkillAt: number;
-  nextJumpAt: number;
   nextAttackAt: number;
   patternIndex: number;
   bossMotion: 'idle' | 'move' | 'jump' | 'cast' | 'hit' | 'dead';
@@ -40,8 +62,6 @@ type BossProjectile = {
   lastTrailAt: number;
 };
 
-type BossPattern = 'fan' | 'rain' | 'charge' | 'leap' | 'burst' | 'teleport-left' | 'teleport-right' | 'retreat-volley' | 'blink-barrage' | 'sky-dive' | 'closing-walls' | 'crossfire' | 'gravity-cage' | 'doom-grid' | 'relentless-chain';
-
 type PlayerSkillProjectile = {
   sprite: Phaser.Physics.Arcade.Sprite | Phaser.Physics.Arcade.Image;
   expiresAt: number;
@@ -57,8 +77,6 @@ type PlayerSkillProjectile = {
 const PLAYER_MAX_HEALTH = 8;
 const ATTACK_COOLDOWN_MS = 360;
 const DAMAGE_INVULNERABILITY_MS = 850;
-const BOSS_SKILL_COOLDOWN_MS = 1_700;
-const BOSS_ENRAGED_SKILL_COOLDOWN_MS = 1_050;
 const BOSS_PROJECTILE_LIFETIME_MS = 3_200;
 const PLAYER_SKILL_PROJECTILE_LIFETIME_MS = 1_700;
 const BOSS_VISUAL_SCALE = 0.9;
@@ -73,6 +91,7 @@ const SKILL_COOLDOWN_BAR_WIDTH = 48;
 const AWAKENING_COOLDOWN_MS = 30_000;
 const SKILL_COOLDOWN_REDUCTION_PER_LEVEL = 0.03;
 const MAX_SKILL_COOLDOWN_REDUCTION = 0.21;
+const MAX_TOTAL_SKILL_COOLDOWN_REDUCTION = 0.4;
 const SPECIAL_PLATFORM_SURFACE_ORIGIN_Y: Readonly<Record<number, number>> = {
   31: 0.2099,
   32: 0.2497,
@@ -108,46 +127,6 @@ const SKILL_COOLDOWNS: Readonly<Record<string, number>> = {
 };
 const MAGE_ATTACK_SKILL_IDS = new Set(['magic-missile', 'ice-storm', 'chain-lightning', 'meteor']);
 const MAGE_ATTACK_DAMAGE_MULTIPLIER = 1.5;
-
-const BOSS_PATTERN_SEQUENCES: readonly (readonly BossPattern[])[] = [
-  ['fan', 'charge', 'leap'],
-  ['fan', 'retreat-volley', 'charge', 'leap'],
-  ['rain', 'fan', 'charge', 'leap'],
-  ['charge', 'fan', 'leap', 'burst'],
-  ['rain', 'retreat-volley', 'fan', 'charge'],
-  ['rain', 'charge', 'teleport-left', 'fan', 'leap'],
-  ['sky-dive', 'retreat-volley', 'blink-barrage', 'fan', 'teleport-right'],
-  ['teleport-left', 'blink-barrage', 'burst', 'retreat-volley', 'teleport-right'],
-  ['rain', 'burst', 'teleport-right', 'leap', 'fan'],
-  ['charge', 'leap', 'burst', 'sky-dive', 'fan'],
-  ['teleport-left', 'rain', 'burst', 'blink-barrage', 'retreat-volley'],
-  ['burst', 'fan', 'rain', 'sky-dive', 'teleport-right'],
-  ['charge', 'blink-barrage', 'fan', 'leap', 'teleport-left'],
-  ['teleport-right', 'rain', 'charge', 'retreat-volley', 'sky-dive'],
-  ['sky-dive', 'fan', 'blink-barrage', 'leap', 'burst'],
-  ['teleport-left', 'teleport-right', 'blink-barrage', 'rain', 'burst'],
-  ['leap', 'rain', 'charge', 'sky-dive', 'retreat-volley'],
-  ['sky-dive', 'burst', 'blink-barrage', 'teleport-left', 'fan'],
-  ['rain', 'teleport-right', 'burst', 'sky-dive', 'charge'],
-  ['teleport-left', 'sky-dive', 'burst', 'rain', 'blink-barrage'],
-  ['closing-walls', 'fan', 'crossfire', 'charge', 'rain'],
-  ['crossfire', 'blink-barrage', 'retreat-volley', 'gravity-cage', 'burst'],
-  ['gravity-cage', 'leap', 'closing-walls', 'fan', 'sky-dive'],
-  ['doom-grid', 'teleport-left', 'crossfire', 'rain', 'charge'],
-  ['relentless-chain', 'gravity-cage', 'sky-dive', 'closing-walls', 'burst'],
-  ['doom-grid', 'blink-barrage', 'relentless-chain', 'crossfire', 'teleport-right'],
-  ['relentless-chain', 'doom-grid', 'gravity-cage', 'closing-walls', 'blink-barrage'],
-  ['doom-grid', 'crossfire', 'relentless-chain', 'sky-dive', 'gravity-cage'],
-  ['relentless-chain', 'closing-walls', 'doom-grid', 'blink-barrage', 'crossfire', 'gravity-cage'],
-  ['doom-grid', 'relentless-chain', 'gravity-cage', 'crossfire', 'closing-walls', 'sky-dive'],
-];
-
-const SPECIAL_BOSS_PHASE_PATTERNS: readonly (readonly BossPattern[])[] = [
-  ['fan', 'rain', 'charge', 'retreat-volley', 'leap'],
-  ['crossfire', 'blink-barrage', 'closing-walls', 'sky-dive', 'burst'],
-  ['doom-grid', 'gravity-cage', 'teleport-left', 'relentless-chain', 'crossfire', 'teleport-right'],
-  ['relentless-chain', 'doom-grid', 'closing-walls', 'gravity-cage', 'blink-barrage', 'sky-dive', 'crossfire'],
-];
 
 export class QuestScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -186,6 +165,9 @@ export class QuestScene extends Phaser.Scene {
   private victorySequenceStarted = false;
   private telemetry: StageTelemetryEvent[] = [];
   private readonly stage;
+  private readonly difficulty: StageDifficultyProfile;
+  private readonly combatProfile: StageCombatProfile;
+  private readonly combatPresentation: StageCombatPresentationManifest;
   private readonly audioDirector: QuestAudioDirector;
   private mobileLeft = false;
   private mobileRight = false;
@@ -204,10 +186,14 @@ export class QuestScene extends Phaser.Scene {
     private readonly characterId: CharacterId = 'warrior',
     private readonly upgradeLevels: UpgradeLevels = { attack: 0, vitality: 0, defense: 0 },
     private readonly skillUpgradeLevels: Readonly<Record<string, number>> = {},
+    private readonly equipmentModifiers: EquipmentCombatModifiers = EMPTY_EQUIPMENT_MODIFIERS,
     private equipmentParticlesEnabled = true,
   ) {
     super('QuestScene');
     this.stage = stages[stageId];
+    this.difficulty = getStageDifficulty(this.stage.number);
+    this.combatProfile = getStageCombatProfile(this.stage.number);
+    this.combatPresentation = getStageCombatPresentation(this.stage.number);
     this.audioDirector = new QuestAudioDirector(this.stage.number);
   }
 
@@ -312,9 +298,9 @@ export class QuestScene extends Phaser.Scene {
         if (!this.textures.exists(`quest-${character}-run-${frame}`)) this.load.image(`quest-${character}-run-${frame}`, `/assets/class-poses/${character}-run-${frame}.png`);
       }
     });
-    ['goblin-warlord', 'mist-wolf', 'rune-golem', 'lava-dragon', 'ice-queen', 'desert-scorpion', 'wind-harpy', 'vampire-lord', 'deep-kraken', 'thunder-minotaur', 'plague-necromancer', 'crystal-hydra', 'clockwork-titan', 'sand-wyrm', 'celestial-griffin', 'void-witch', 'frost-mammoth', 'inferno-phoenix', 'abyss-leviathan', 'avalanche-emperor', 'obsidian-behemoth', 'spectral-broker', 'iron-seraph', 'toxic-singularity', 'solar-devourer', 'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord'].forEach((bossKey) => {
-      if (!this.textures.exists(`quest-${bossKey}`)) this.load.spritesheet(`quest-${bossKey}`, `/assets/boss-animation-sheets/${bossKey}.png`, { frameWidth: 256, frameHeight: 256 });
-    });
+    if (!this.textures.exists(`quest-${this.bossAssetKey}`)) {
+      this.load.spritesheet(`quest-${this.bossAssetKey}`, this.combatPresentation.bossActorSrc, { frameWidth: 256, frameHeight: 256 });
+    }
     ['warrior-power-slash', 'warrior-spin-slash', 'warrior-earth-slam', 'warrior-shield', 'warrior-roar', 'mage-missile', 'mage-ice-storm', 'mage-chain-lightning', 'mage-healing-circle', 'mage-meteor'].forEach((effectKey) => {
       if (!this.textures.exists(`quest-${effectKey}`)) this.load.image(`quest-${effectKey}`, `/assets/skill-effects/${effectKey}.png`);
     });
@@ -344,9 +330,9 @@ export class QuestScene extends Phaser.Scene {
       const textureKey = `quest-spellblade-vfx-${skillId}`;
       if (!this.textures.exists(textureKey)) this.load.spritesheet(textureKey, `/assets/spellblade-skill-vfx/${skillId}.png`, { frameWidth: 256, frameHeight: 256 });
     });
-    ['goblin-warlord', 'mist-wolf', 'rune-golem', 'lava-dragon', 'ice-queen', 'desert-scorpion', 'wind-harpy', 'vampire-lord', 'deep-kraken', 'thunder-minotaur', 'plague-necromancer', 'crystal-hydra', 'clockwork-titan', 'sand-wyrm', 'celestial-griffin', 'void-witch', 'frost-mammoth', 'inferno-phoenix', 'abyss-leviathan', 'avalanche-emperor', 'obsidian-behemoth', 'spectral-broker', 'iron-seraph', 'toxic-singularity', 'solar-devourer', 'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord'].forEach((effectKey) => {
-      if (!this.textures.exists(`quest-boss-${effectKey}`)) this.load.image(`quest-boss-${effectKey}`, `/assets/boss-projectiles/${effectKey}.png`);
-    });
+    if (!this.textures.exists(`quest-boss-${this.bossEffectKey}`)) {
+      this.load.image(`quest-boss-${this.bossEffectKey}`, this.combatPresentation.bossProjectileSrc);
+    }
     if (!this.textures.exists('quest-skill-sheet')) this.load.image('quest-skill-sheet', '/assets/sprites/skills.png');
     const hdStageKey = `quest-stage-hd-${this.stage.number}`;
     const stageMapUrl = this.stage.special
@@ -359,14 +345,12 @@ export class QuestScene extends Phaser.Scene {
       : `/assets/platforms-hd/stage-${String(this.stage.assetNumber).padStart(2, '0')}.png`;
     if (!this.textures.exists(hdPlatformKey)) this.load.image(hdPlatformKey, platformUrl);
     const hdMinionKey = `quest-minion-hd-${this.stage.number}`;
-    if (!this.textures.exists(hdMinionKey)) this.load.spritesheet(hdMinionKey, `/assets/minions-hd/stage-${String(this.stage.assetNumber).padStart(2, '0')}.png`, { frameWidth: 256, frameHeight: 256 });
+    if (!this.textures.exists(hdMinionKey)) this.load.spritesheet(hdMinionKey, this.combatPresentation.minionActorSrc, { frameWidth: 256, frameHeight: 256 });
     const hdProjectileKey = `quest-projectile-hd-${this.stage.number}`;
-    if (!this.textures.exists(hdProjectileKey)) this.load.spritesheet(hdProjectileKey, `/assets/projectiles-hd/stage-${String(this.stage.assetNumber).padStart(2, '0')}.png`, { frameWidth: 256, frameHeight: 256 });
+    if (!this.textures.exists(hdProjectileKey)) this.load.spritesheet(hdProjectileKey, this.combatPresentation.minionProjectileSrc, { frameWidth: 256, frameHeight: 256 });
     if (this.stage.special) {
-      if (!this.textures.exists('quest-special-minion')) this.load.spritesheet('quest-special-minion', '/assets/special-stage/minion.png', { frameWidth: 256, frameHeight: 256 });
       if (!this.textures.exists('quest-special-guardian')) this.load.spritesheet('quest-special-guardian', '/assets/special-stage/guardian.png', { frameWidth: 256, frameHeight: 256 });
       if (!this.textures.exists('quest-special-herald')) this.load.spritesheet('quest-special-herald', '/assets/special-stage/herald.png', { frameWidth: 256, frameHeight: 256 });
-      if (!this.textures.exists('quest-special-final')) this.load.spritesheet('quest-special-final', '/assets/special-stage/final-boss.png', { frameWidth: 256, frameHeight: 256 });
     }
   }
 
@@ -1042,7 +1026,9 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private bossAnimationKey(name: 'idle' | 'move' | 'jump' | 'attack' | 'hit' | 'death', visualKind: EnemyState['visualKind'] = 'standard'): string {
-    return visualKind === 'standard' ? `boss-${this.bossAssetKey}-${name}` : `boss-special-${visualKind}-${name}`;
+    return visualKind === 'standard' || visualKind === 'final'
+      ? `boss-${this.bossAssetKey}-${name}`
+      : `boss-special-${visualKind}-${name}`;
   }
 
   private registerCurrentBossAnimations(): void {
@@ -1058,7 +1044,7 @@ export class QuestScene extends Phaser.Scene {
       ? [
         { kind: 'guardian', texture: 'quest-special-guardian' },
         { kind: 'herald', texture: 'quest-special-herald' },
-        { kind: 'final', texture: 'quest-special-final' },
+        { kind: 'final', texture: `quest-${this.bossAssetKey}` },
       ]
       : [{ kind: 'standard', texture: `quest-${this.bossAssetKey}` }];
     sheets.forEach(({ kind, texture }) => {
@@ -1080,7 +1066,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private registerCurrentMinionAnimations(): void {
-    const textureKey = this.stage.special ? 'quest-special-minion' : `quest-minion-hd-${this.stage.number}`;
+    const textureKey = `quest-minion-hd-${this.stage.number}`;
     const definitions = [
       { name: 'idle', frames: [0], rate: 2, repeat: -1 },
       { name: 'walk', frames: [0, 1], rate: 6, repeat: -1 },
@@ -1111,12 +1097,21 @@ export class QuestScene extends Phaser.Scene {
     });
   }
 
-  private createHostileProjectile(x: number, y: number, width: number, height = width): Phaser.Physics.Arcade.Sprite {
-    const projectile = this.physics.add.sprite(x, y, `quest-projectile-hd-${this.stage.number}`, 0)
+  private createHostileProjectile(
+    x: number,
+    y: number,
+    width: number,
+    height = width,
+    source: 'boss' | 'minion' = 'boss',
+  ): Phaser.Physics.Arcade.Sprite {
+    const textureKey = source === 'boss'
+      ? `quest-boss-${this.bossEffectKey}`
+      : `quest-projectile-hd-${this.stage.number}`;
+    const projectile = this.physics.add.sprite(x, y, textureKey, 0)
       .setDisplaySize(width, height)
       .setDepth(10)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .play(`projectile-hd-${this.stage.number}`);
+      .setBlendMode(Phaser.BlendModes.ADD);
+    if (source === 'minion') projectile.play(`projectile-hd-${this.stage.number}`);
     projectile.body?.setAllowGravity(false);
     return projectile;
   }
@@ -1133,8 +1128,8 @@ export class QuestScene extends Phaser.Scene {
         : definition.id.endsWith('named-herald') ? 'herald' : definition.elite ? 'guardian' : 'standard';
       const bossUsesAnimatedSheet = true;
       const textureKey = namedEnemy
-        ? (visualKind === 'standard' ? `quest-${this.bossAssetKey}` : `quest-special-${visualKind}`)
-        : (this.stage.special ? 'quest-special-minion' : `quest-minion-hd-${this.stage.number}`);
+        ? (visualKind === 'standard' || visualKind === 'final' ? `quest-${this.bossAssetKey}` : `quest-special-${visualKind}`)
+        : `quest-minion-hd-${this.stage.number}`;
       const sprite = this.physics.add.sprite(definition.x, definition.y, textureKey, 0);
       sprite.setScale(definition.boss ? BOSS_VISUAL_SCALE : definition.elite ? ELITE_VISUAL_SCALE : 0.42).setCollideWorldBounds(true).setBounce(0.05).setDepth(7);
       const body = sprite.body;
@@ -1156,9 +1151,8 @@ export class QuestScene extends Phaser.Scene {
         leftBound: definition.left,
         rightBound: definition.boss ? definition.right : Math.min(definition.right, this.bossArenaStartX - 90),
         direction: -1, boss: definition.boss, elite: definition.elite === true, healthBar,
-        nextSkillAt: this.time.now + this.bossSkillCooldownMs,
-        nextJumpAt: this.time.now + 2_400,
-        nextAttackAt: this.time.now + Phaser.Math.Between(500, 1_200),
+        nextSkillAt: this.time.now + Math.max(850, this.difficulty.minionCastCadenceMs),
+        nextAttackAt: this.time.now + this.difficulty.minionMeleeCadenceMs,
         patternIndex: (this.stage.number - 1) % 5,
         bossMotion: namedEnemy ? 'idle' : 'move',
         bossMotionUntil: 0,
@@ -1258,7 +1252,8 @@ export class QuestScene extends Phaser.Scene {
       }
       return;
     }
-    const movementSpeed = time < this.classPowerUntil ? this.classMovementSpeed : 225;
+    const baseMovementSpeed = time < this.classPowerUntil ? this.classMovementSpeed : 225;
+    const movementSpeed = applyEquipmentMovementSpeed(baseMovementSpeed, this.equipmentModifiers);
     if (this.cursors.left.isDown || this.mobileLeft) this.player.setVelocityX(-movementSpeed).setFlipX(true);
     else if (this.cursors.right.isDown || this.mobileRight) this.player.setVelocityX(movementSpeed).setFlipX(false);
     else this.player.setVelocityX(0);
@@ -1327,19 +1322,11 @@ export class QuestScene extends Phaser.Scene {
         const distanceX = this.player.x - enemy.sprite.x;
         const direction = Math.sign(distanceX) || enemy.direction;
         enemy.direction = direction > 0 ? 1 : -1;
-        const enragedSpeed = enemy.health <= enemy.maxHealth / 2 ? 1.35 : 1;
-        const body = enemy.sprite.body;
-        if (body instanceof Phaser.Physics.Arcade.Body && body.blocked.down && this.time.now >= enemy.nextJumpAt) {
-          enemy.sprite.setVelocityY(-360 - Math.min(this.stage.number * 7, 120));
-          enemy.bossMotion = 'jump';
-          enemy.bossMotionUntil = this.time.now + 520;
-          enemy.nextJumpAt = this.time.now + Math.max(1_250, 3_400 - this.stage.number * 85);
-        }
         const distance = Math.abs(distanceX);
         const shouldChase = distance > this.bossPreferredRange;
         const shouldRetreat = distance < 135;
         const movementDirection = shouldRetreat ? -enemy.direction : enemy.direction;
-        enemy.sprite.setVelocityX(shouldChase || shouldRetreat ? enemy.speed * movementDirection * enragedSpeed : 0);
+        enemy.sprite.setVelocityX(shouldChase || shouldRetreat ? enemy.speed * movementDirection : 0);
         // Every v3 boss source faces left. Flip only when the player is to its right.
         enemy.sprite.setFlipX(enemy.direction > 0);
         if (this.time.now >= enemy.bossMotionUntil) enemy.bossMotion = shouldChase || shouldRetreat ? 'move' : 'idle';
@@ -1352,14 +1339,18 @@ export class QuestScene extends Phaser.Scene {
       const playerDistance = Math.abs(this.player.x - enemy.sprite.x);
       if (playerDistance <= 410 && this.time.now >= enemy.nextSkillAt) {
         this.castMinionSkill(enemy);
-        enemy.nextSkillAt = this.time.now + Math.max(1_350, 2_850 - this.stage.number * 42) + Phaser.Math.Between(0, 520);
+        enemy.nextSkillAt = this.time.now
+          + this.difficulty.minionCastCadenceMs
+          + ((enemy.patternIndex + this.stage.number) % 3) * 90;
         enemy.healthBar.setPosition(enemy.sprite.x, enemy.sprite.y - 40);
         return;
       }
       if (!namedEnemy && playerDistance < 92 && this.time.now >= enemy.nextAttackAt) {
         const attackDirection = this.player.x >= enemy.sprite.x ? 1 : -1;
-        enemy.nextAttackAt = this.time.now + Phaser.Math.Between(850, 1_250);
-        enemy.sprite.setVelocityX(attackDirection * 185).setFlipX(attackDirection < 0);
+        enemy.nextAttackAt = this.time.now
+          + this.difficulty.minionMeleeCadenceMs
+          + (enemy.patternIndex % 3) * 70;
+        enemy.sprite.setVelocityX(attackDirection * 150).setFlipX(attackDirection < 0);
         enemy.sprite.play(this.minionAnimationKey('attack'), true);
         this.spawnEnemyAttackEffect(enemy.sprite.x, enemy.sprite.y, attackDirection);
       } else {
@@ -1413,84 +1404,129 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castMinionSkill(enemy: EnemyState): void {
+    const skill = this.combatProfile.enemies.signature;
     const direction: -1 | 1 = this.player.x >= enemy.sprite.x ? 1 : -1;
-    const skillDecks = [
-      [0, 1, 4, 3],
-      [2, 0, 5, 1],
-      [4, 6, 0, 2],
-      [7, 3, 1, 6],
-      [5, 2, 4, 7],
-    ] as const;
-    const deck = skillDecks[(this.stage.number - 1) % skillDecks.length] ?? skillDecks[0];
-    const pattern = deck[(enemy.patternIndex + Math.floor((this.stage.number - 1) / 5)) % deck.length] ?? 0;
+    const variant = enemy.patternIndex % 4;
     enemy.patternIndex += 1;
     enemy.sprite.play(this.minionAnimationKey('attack'), true).setFlipX(direction < 0);
-    if (pattern === 0) {
-      this.fireMinionProjectile(enemy, 0);
-      return;
-    }
-    if (pattern === 1) {
-      enemy.actionLockedUntil = this.time.now + 360;
-      enemy.sprite.setVelocityX(direction * (310 + this.stage.number * 7));
-      this.spawnEnemyAttackEffect(enemy.sprite.x, enemy.sprite.y, direction);
-      return;
-    }
-    if (pattern === 2) {
-      enemy.actionLockedUntil = this.time.now + 520;
-      enemy.sprite.setVelocity(direction * (155 + this.stage.number * 3), -330 - Math.min(this.stage.number * 5, 90));
-      this.time.delayedCall(290, () => {
-        if (enemy.health > 0) this.dropBossProjectile(this.player.x + Phaser.Math.Between(-45, 45));
+    enemy.sprite.setVelocity(0, 0);
+    enemy.actionLockedUntil = this.time.now + skill.telegraphMs + skill.activeMs + skill.recoveryMs;
+    this.showHostileSkillName(skill.name, enemy.sprite.x, enemy.sprite.y - 62);
+    this.executeEnemySignatureSkill(enemy, skill, direction, variant);
+  }
+
+  private executeEnemySignatureSkill(
+    enemy: EnemyState,
+    skill: EnemySignatureSkill,
+    direction: -1 | 1,
+    variant: number,
+  ): void {
+    const targetX = Phaser.Math.Clamp(this.player.x, enemy.leftBound + 55, enemy.rightBound - 55);
+    const targetY = this.player.y;
+    const safeX = Phaser.Math.Clamp(
+      targetX + (variant % 2 === 0 ? -1 : 1) * (105 + variant * 18),
+      enemy.leftBound + 60,
+      enemy.rightBound - 60,
+    );
+    const healthAtWindup = enemy.health;
+
+    if (skill.geometry === 'ordered-cells') {
+      const offsets = [-130, 0, 130] as const;
+      const safeIndex = variant % offsets.length;
+      offsets.forEach((offset, index) => {
+        const x = targetX + offset;
+        this.spawnPatternTelegraph('ordered-cells', x, targetY + 32, skill.telegraphMs + index * 120, index + 1, index === safeIndex);
+        if (index !== safeIndex) this.time.delayedCall(
+          skill.telegraphMs + index * 120,
+          () => enemy.health > 0 && this.dropBossProjectile(x, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+        );
       });
       return;
     }
-    if (pattern === 3) {
-      [-0.2, 0, 0.2].forEach((angle, index) => this.time.delayedCall(index * 85, () => {
-        if (enemy.health > 0) this.fireMinionProjectile(enemy, angle);
-      }));
-      return;
-    }
-    if (pattern === 4) {
-      enemy.actionLockedUntil = this.time.now + 720;
-      enemy.sprite.setVelocity(0, 0);
-      this.spawnSkillImpactBurst(enemy.sprite.x, enemy.sprite.y, this.stage.accentColor, 0.75);
-      this.tweens.add({ targets: enemy.sprite, alpha: 0.08, duration: 180, yoyo: true, hold: 150 });
-      this.time.delayedCall(220, () => {
+
+    if (skill.geometry === 'safe-glyph' || skill.geometry === 'moving-zone' || skill.geometry === 'tether') {
+      this.spawnPatternTelegraph(skill.geometry, safeX, targetY + 22, skill.telegraphMs, variant + 1, true);
+      if (skill.geometry === 'tether') {
+        const tether = this.add.line(0, 0, enemy.sprite.x, enemy.sprite.y, safeX, targetY, this.stage.accentColor, 0.2)
+          .setOrigin(0)
+          .setStrokeStyle(4, this.stage.accentColor, 0.86)
+          .setDepth(10);
+        this.tweens.add({ targets: tether, alpha: 0, duration: skill.telegraphMs, onComplete: () => tether.destroy() });
+      }
+      this.time.delayedCall(skill.telegraphMs, () => {
         if (enemy.health <= 0) return;
-        enemy.sprite.setX(Phaser.Math.Clamp(this.player.x - direction * 112, enemy.leftBound, enemy.rightBound));
-        this.spawnEnemyAttackEffect(enemy.sprite.x, enemy.sprite.y, direction);
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, safeX, targetY) > 92) {
+          this.damagePlayer(this.time.now, 1, enemy.sprite.x);
+        } else {
+          this.spawnSkillImpactBurst(safeX, targetY, 0xf6f0b8, 0.85);
+        }
       });
       return;
     }
-    if (pattern === 5) {
-      enemy.actionLockedUntil = this.time.now + 560;
-      [-0.42, -0.21, 0, 0.21, 0.42].forEach((angle, index) => this.time.delayedCall(index * 55, () => {
-        if (enemy.health > 0) this.fireMinionProjectile(enemy, angle);
-      }));
+
+    if (skill.geometry === 'weak-point') {
+      this.spawnPatternTelegraph('weak-point', enemy.sprite.x, enemy.sprite.y - 25, skill.telegraphMs, variant + 1, true);
+      this.time.delayedCall(skill.telegraphMs, () => {
+        if (enemy.health <= 0) return;
+        if (enemy.health >= healthAtWindup) {
+          [-0.18, 0, 0.18].forEach((angle) => this.fireMinionProjectile(enemy, angle));
+        } else {
+          enemy.actionLockedUntil = this.time.now + skill.recoveryMs + 650;
+          this.spawnSkillImpactBurst(enemy.sprite.x, enemy.sprite.y, 0xffffff, 1.1);
+        }
+      });
       return;
     }
-    if (pattern === 6) {
-      enemy.actionLockedUntil = this.time.now + 520;
-      const wave = this.createHostileProjectile(enemy.sprite.x + direction * 32, enemy.sprite.y + 28, 70, 38)
-        .setFlipX(direction < 0);
-      wave.setVelocityX(direction * (325 + this.stage.number * 6));
-      this.bossProjectiles.push({ sprite: wave, expiresAt: this.time.now + 2_100, lastTrailAt: 0 });
-      this.cameras.main.shake(120, 0.0025);
+
+    if (skill.geometry === 'target-ring') {
+      this.spawnPatternTelegraph('target-ring', targetX, targetY + 28, skill.telegraphMs, variant + 1, false);
+      this.time.delayedCall(
+        skill.telegraphMs,
+        () => enemy.health > 0 && this.dropBossProjectile(targetX, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+      );
       return;
     }
-    enemy.actionLockedUntil = this.time.now + 620;
-    enemy.sprite.setVelocityX(-direction * 230);
-    this.time.delayedCall(190, () => {
+
+    if (skill.geometry === 'sweep-line' || skill.geometry === 'lane') {
+      this.spawnPatternTelegraph(skill.geometry, enemy.sprite.x + direction * 145, enemy.sprite.y + 22, skill.telegraphMs, variant + 1, false);
+      this.time.delayedCall(skill.telegraphMs, () => {
+        if (enemy.health <= 0) return;
+        const wave = this.createHostileProjectile(enemy.sprite.x + direction * 32, enemy.sprite.y + 26, 70, 38, 'minion').setFlipX(direction < 0);
+        wave.setVelocityX(direction * this.difficulty.hostileProjectileSpeedPxPerSec);
+        this.bossProjectiles.push({ sprite: wave, expiresAt: this.time.now + 2_200, lastTrailAt: 0 });
+      });
+      return;
+    }
+
+    const echoX = targetX;
+    this.spawnPatternTelegraph('target-ring', echoX, targetY + 28, skill.telegraphMs, 1, false);
+    this.time.delayedCall(
+      skill.telegraphMs,
+      () => enemy.health > 0 && this.dropBossProjectile(echoX, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+    );
+    this.time.delayedCall(skill.telegraphMs + 900, () => {
       if (enemy.health <= 0) return;
-      this.fireMinionProjectile(enemy, -0.14);
-      this.fireMinionProjectile(enemy, 0.14);
+      this.spawnPatternTelegraph('target-ring', echoX + direction * 120, targetY + 28, 340, 2, false);
+      this.time.delayedCall(
+        340,
+        () => enemy.health > 0 && this.dropBossProjectile(
+          echoX + direction * 120,
+          this.difficulty.hostileProjectileSpeedPxPerSec,
+          'minion',
+        ),
+      );
     });
   }
 
   private fireMinionProjectile(enemy: EnemyState, angleOffset: number): void {
-    const projectileSize = 48 + Math.min(this.stage.number, 10);
-    const projectile = this.createHostileProjectile(enemy.sprite.x, enemy.sprite.y - 12, projectileSize);
+    const projectileSize = 52;
+    const projectile = this.createHostileProjectile(enemy.sprite.x, enemy.sprite.y - 12, projectileSize, projectileSize, 'minion');
     const angle = Phaser.Math.Angle.Between(projectile.x, projectile.y, this.player.x, this.player.y) + angleOffset;
-    this.physics.velocityFromRotation(angle, 225 + this.stage.number * 7, projectile.body?.velocity);
+    this.physics.velocityFromRotation(
+      angle,
+      this.difficulty.hostileProjectileSpeedPxPerSec,
+      projectile.body?.velocity,
+    );
     projectile.setRotation(angle);
     this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + 2_600, lastTrailAt: 0 });
     this.spawnSkillImpactBurst(enemy.sprite.x, enemy.sprite.y - 10, this.stage.accentColor, 0.42);
@@ -1499,37 +1535,36 @@ export class QuestScene extends Phaser.Scene {
   private updateBossSkills(time: number): void {
     this.enemies.forEach((boss) => {
       if ((!boss.boss && !boss.elite) || boss.health <= 0) return;
-      this.updateSpecialBossPhase(boss);
+      this.updateBossPhase(boss);
       if (time < boss.nextSkillAt) return;
       if (Math.abs(this.player.x - boss.sprite.x) > this.bossAggroRange) return;
 
       const actionDuration = this.castBossPattern(boss);
-      if (this.stage.special && boss.boss) {
-        boss.nextSkillAt = time + actionDuration + Math.max(120, 460 - boss.bossPhase * 85);
-        return;
-      }
       if (boss.elite) {
-        boss.nextSkillAt = time + actionDuration + (boss.id.endsWith('named-herald') ? 520 : 760);
+        const elitePadding = boss.id.endsWith('named-herald')
+          ? this.difficulty.bossRecoveryPaddingMs
+          : this.difficulty.bossRecoveryPaddingMs + 100;
+        boss.nextSkillAt = time + actionDuration + elitePadding;
         return;
       }
-      const cooldown = boss.health <= boss.maxHealth / 2
-        ? this.bossEnragedSkillCooldownMs
-        : this.bossSkillCooldownMs;
-      boss.nextSkillAt = time + Math.max(actionDuration + 260, cooldown - this.stage.number * 38);
+      boss.nextSkillAt = time + actionDuration + this.difficulty.bossRecoveryPaddingMs;
     });
   }
 
-  private updateSpecialBossPhase(boss: EnemyState): void {
-    if (!this.stage.special || !boss.boss) return;
+  private updateBossPhase(boss: EnemyState): void {
+    if (!boss.boss) return;
     const ratio = boss.health / boss.maxHealth;
-    const nextPhase = ratio <= 0.25 ? 4 : ratio <= 0.5 ? 3 : ratio <= 0.75 ? 2 : 1;
+    const phaseCount = this.combatProfile.boss.phases.length;
+    const nextPhase = Math.min(phaseCount, Math.floor((1 - ratio) * phaseCount) + 1);
     if (nextPhase <= boss.bossPhase) return;
     boss.bossPhase = nextPhase;
-    boss.patternIndex = (this.stage.number + nextPhase) % 3;
-    boss.nextSkillAt = this.time.now + 900;
+    boss.patternIndex = 0;
+    boss.nextSkillAt = this.time.now + 1_150;
+    boss.actionLockedUntil = this.time.now + 900;
     boss.sprite.setVelocity(0, 0).setTintFill(nextPhase === 4 ? 0xffffff : this.stage.accentColor);
     this.time.delayedCall(520, () => boss.health > 0 && boss.sprite.setTint(this.bossTint));
-    const banner = this.add.text(this.cameras.main.centerX, 145, `PHASE ${nextPhase}  //  ${nextPhase === 4 ? 'FINAL ANNIHILATION' : 'PATTERN SHIFT'}`, {
+    const phaseAnchor = this.combatProfile.boss.signatureMechanics[(nextPhase - 1) % this.combatProfile.boss.signatureMechanics.length] ?? 'pattern-shift';
+    const banner = this.add.text(this.cameras.main.centerX, 145, `PHASE ${nextPhase}  //  ${phaseAnchor.replaceAll('-', ' ').toUpperCase()}`, {
       color: nextPhase === 4 ? '#ffffff' : '#ffd0df',
       fontFamily: 'monospace',
       fontSize: nextPhase === 4 ? '28px' : '23px',
@@ -1593,189 +1628,248 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private castBossPattern(boss: EnemyState): number {
-    const stageNumber = this.stage.number;
-    const eliteSequence: readonly BossPattern[] = boss.id.endsWith('named-herald')
-      ? ['crossfire', 'gravity-cage', 'rain', 'blink-barrage', 'closing-walls']
-      : ['fan', 'charge', 'leap', 'retreat-volley', 'burst'];
-    const sequence = boss.elite
-      ? eliteSequence
-      : this.stage.special
-        ? SPECIAL_BOSS_PHASE_PATTERNS[boss.bossPhase - 1] ?? SPECIAL_BOSS_PHASE_PATTERNS[0]!
-      : BOSS_PATTERN_SEQUENCES[stageNumber - 1] ?? BOSS_PATTERN_SEQUENCES[0]!;
-    const specialOffset = this.stage.special ? stageNumber - 31 : 0;
-    const pattern = sequence[(boss.patternIndex + specialOffset) % sequence.length] ?? 'fan';
+    const phase = this.combatProfile.boss.phases[boss.bossPhase - 1] ?? this.combatProfile.boss.phases[0]!;
+    const firstCycleLength = phase.firstCycle.length;
+    const entry = boss.patternIndex < firstCycleLength
+      ? phase.firstCycle[boss.patternIndex]
+      : phase.repeatDeck[(boss.patternIndex - firstCycleLength) % phase.repeatDeck.length];
     boss.patternIndex += 1;
+    if (!entry) return 1_200;
+
+    boss.sprite.setVelocity(0, 0);
+    boss.actionLockedUntil = this.time.now + entry.telegraphMs + entry.activeMs + entry.recoveryMs;
     this.spawnBossCastTelegraph(boss);
-    const direction = this.player.x >= boss.sprite.x ? 1 : -1;
-    const power = 0.92 + stageNumber * 0.035;
-
-    if (pattern === 'fan') {
-      const count = Math.min(9, 3 + Math.floor(stageNumber / 4));
-      this.fanAngles(count, 0.14 + (stageNumber % 3) * 0.025).forEach((angle, index) => this.time.delayedCall(index * 48, () => {
-        if (boss.health > 0) this.fireBossProjectile(boss, angle, power);
-      }));
-      return 420;
-    }
-    if (pattern === 'rain') {
-      const targetX = this.player.x;
-      this.centeredOffsets(3 + (stageNumber % 5), 82 + stageNumber * 2).forEach((offset, index) => this.time.delayedCall(index * 72, () => {
-        if (boss.health > 0) this.dropBossProjectile(targetX + offset);
-      }));
-      return 520;
-    }
-    if (pattern === 'charge') {
-      boss.sprite.setVelocityX(direction * (440 + Math.min(stageNumber * 12, 220)));
-      boss.sprite.setTintFill(this.stage.accentColor);
-      this.cameras.main.shake(180, 0.006 + stageNumber * 0.0002);
-      this.time.delayedCall(170, () => boss.health > 0 && this.fireBossProjectile(boss, 0, power * 1.08));
-      this.time.delayedCall(300, () => boss.health > 0 && boss.sprite.setTint(this.bossTint));
-      return 420;
-    }
-    if (pattern === 'leap') {
-      boss.bossMotion = 'jump';
-      boss.bossMotionUntil = this.time.now + 760;
-      boss.sprite.setVelocity(direction * (150 + stageNumber * 4), -390 - Math.min(stageNumber * 8, 150));
-      this.time.delayedCall(470, () => {
-        if (boss.health <= 0) return;
-        this.cameras.main.shake(220, 0.008);
-        this.centeredOffsets(3 + (stageNumber % 3), 96).forEach((offset) => this.dropBossProjectile(boss.sprite.x + offset));
-      });
-      return 760;
-    }
-    if (pattern === 'burst') {
-      [0, 105, 210].forEach((delay, volley) => this.time.delayedCall(delay, () => {
-        if (boss.health <= 0) return;
-        this.fanAngles(2 + ((stageNumber + volley) % 4), 0.18).forEach((angle) => this.fireBossProjectile(boss, angle, power * 1.08));
-      }));
-      return 520;
-    }
-    if (pattern === 'retreat-volley') {
-      boss.sprite.setVelocityX(-direction * (300 + stageNumber * 5));
-      [0, 130, 260].forEach((delay, index) => this.time.delayedCall(delay, () => {
-        if (boss.health > 0) this.fireBossProjectile(boss, (index - 1) * 0.16, power);
-      }));
-      return 560;
-    }
-    if (pattern === 'blink-barrage') {
-      const startingY = boss.sprite.y;
-      [0, 220, 440].forEach((delay, index) => this.time.delayedCall(delay, () => {
-        if (boss.health <= 0) return;
-        const side = index % 2 === 0 ? -1 : 1;
-        boss.sprite.setPosition(Phaser.Math.Clamp(this.player.x + side * (150 + index * 25), boss.leftBound, boss.rightBound), startingY);
-        this.spawnBossBlinkFlash(boss.sprite.x, boss.sprite.y);
-        this.fireBossProjectile(boss, 0, power * 1.12);
-      }));
-      return 760;
-    }
-    if (pattern === 'sky-dive') {
-      boss.bossMotion = 'jump';
-      boss.bossMotionUntil = this.time.now + 900;
-      boss.sprite.setVelocity(direction * 240, -500);
-      this.time.delayedCall(520, () => {
-        if (boss.health <= 0) return;
-        boss.sprite.setVelocity(direction * 380, 520);
-        this.fanAngles(5, 0.2).forEach((angle) => this.fireBossProjectile(boss, angle, power));
-        this.cameras.main.shake(260, 0.01);
-      });
-      return 940;
-    }
-    if (pattern === 'closing-walls') {
-      const arenaCenter = Phaser.Math.Clamp(this.player.x, boss.leftBound + 190, boss.rightBound - 190);
-      const warningLeft = this.add.rectangle(arenaCenter - 280, 320, 8, 310, 0xff355d, 0.7).setDepth(12);
-      const warningRight = this.add.rectangle(arenaCenter + 280, 320, 8, 310, 0xff355d, 0.7).setDepth(12);
-      this.tweens.add({ targets: [warningLeft, warningRight], alpha: 0.15, yoyo: true, repeat: 3, duration: 120 });
-      this.time.delayedCall(620, () => {
-        warningLeft.destroy(); warningRight.destroy();
-        [245, 330, 415].forEach((y, index) => {
-          if (index === (stageNumber % 3)) return; // one readable dodge lane always remains.
-          const left = this.createHostileProjectile(arenaCenter - 300, y, 94, 58).setVelocityX(390);
-          const right = this.createHostileProjectile(arenaCenter + 300, y, 94, 58).setVelocityX(-390);
-          this.bossProjectiles.push({ sprite: left, expiresAt: this.time.now + 1_900, lastTrailAt: 0 }, { sprite: right, expiresAt: this.time.now + 1_900, lastTrailAt: 0 });
-        });
-      });
-      return 1_080;
-    }
-    if (pattern === 'crossfire') {
-      const targetX = this.player.x;
-      const safeOffset = ((stageNumber % 3) - 1) * 110;
-      this.centeredOffsets(9, 82).filter((offset) => Math.abs(offset - safeOffset) > 70).forEach((offset, index) => {
-        const marker = this.add.rectangle(targetX + offset, 410, 54, 8, 0xffd34d, 0.8).setDepth(12);
-        this.tweens.add({ targets: marker, alpha: 0.12, duration: 420, yoyo: true, onComplete: () => marker.destroy() });
-        this.time.delayedCall(520 + index * 38, () => boss.health > 0 && this.dropBossProjectile(targetX + offset));
-      });
-      this.time.delayedCall(260, () => boss.health > 0 && this.fanAngles(7, 0.16).forEach((angle) => this.fireBossProjectile(boss, angle, power * 1.18)));
-      return 1_180;
-    }
-    if (pattern === 'gravity-cage') {
-      const x = this.player.x;
-      const cage = this.add.circle(x, this.player.y, 132, this.stage.accentColor, 0.06).setStrokeStyle(7, this.stage.accentColor, 0.8).setDepth(11).setScale(1.7);
-      this.tweens.add({ targets: cage, scale: 0.7, alpha: 0.8, duration: 760, ease: 'Cubic.In', onComplete: () => cage.destroy() });
-      this.time.delayedCall(780, () => {
-        if (boss.health <= 0) return;
-        this.fanAngles(10, Math.PI * 2 / 10).forEach((angle) => {
-          const projectile = this.createHostileProjectile(x + Math.cos(angle) * 165, this.player.y + Math.sin(angle) * 115, 62);
-          this.physics.velocityFromRotation(angle + Math.PI, 300, projectile.body?.velocity);
-          this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + 1_350, lastTrailAt: 0 });
-        });
-      });
-      return 1_300;
-    }
-    if (pattern === 'doom-grid') {
-      const startX = Phaser.Math.Clamp(this.player.x - 360, boss.leftBound, boss.rightBound - 720);
-      const safeColumn = stageNumber % 7;
-      for (let column = 0; column < 7; column += 1) {
-        if (column === safeColumn) continue;
-        const x = startX + column * 120;
-        const marker = this.add.rectangle(x, 272, 72, 285, 0xff244f, 0.12).setStrokeStyle(2, 0xff5577, 0.75).setDepth(10);
-        this.tweens.add({ targets: marker, alpha: 0.55, duration: 680, yoyo: true, onComplete: () => marker.destroy() });
-        [0, 150].forEach((delay) => this.time.delayedCall(720 + delay + column * 24, () => boss.health > 0 && this.dropBossProjectile(x)));
-      }
-      return 1_500;
-    }
-    if (pattern === 'relentless-chain') {
-      [0, 360, 720, 1_080].forEach((delay, index) => this.time.delayedCall(delay, () => {
-        if (boss.health <= 0) return;
-        const aim = this.player.x >= boss.sprite.x ? 1 : -1;
-        const warning = this.add.rectangle(boss.sprite.x + aim * 170, boss.sprite.y + 42, 320, 12, 0xffc24a, 0.72).setRotation(aim < 0 ? Math.PI : 0).setDepth(11);
-        this.tweens.add({ targets: warning, alpha: 0, duration: 230, onComplete: () => warning.destroy() });
-        this.time.delayedCall(250, () => {
-          if (boss.health <= 0) return;
-          boss.sprite.setVelocityX(aim * (620 + index * 35));
-          this.fanAngles(3, 0.19).forEach((angle) => this.fireBossProjectile(boss, angle, power * 1.2));
-        });
-      }));
-      return 1_720;
-    }
-
-    return this.castBossTeleportFlank(boss, pattern === 'teleport-left' ? -1 : 1, power);
+    this.showHostileSkillName(entry.name, boss.sprite.x, boss.sprite.y - 152);
+    return this.executeBossPatternEntry(boss, entry);
   }
 
-  private castBossTeleportFlank(boss: EnemyState, side: -1 | 1, power: number): number {
-    const body = boss.sprite.body;
-    if (!(body instanceof Phaser.Physics.Arcade.Body)) return 0;
-    const reappearDelay = 1_900 + (this.stage.number % 3) * 80;
-    const savedY = boss.sprite.y;
-    boss.actionLockedUntil = this.time.now + reappearDelay + 420;
-    boss.sprite.setVelocity(0, 0).setVisible(false);
-    boss.healthBar.setVisible(false);
-    body.enable = false;
-    this.spawnBossBlinkFlash(boss.sprite.x, savedY);
-    this.time.delayedCall(reappearDelay, () => {
-      if (boss.health <= 0 || !boss.sprite.active) return;
-      const destination = Phaser.Math.Clamp(this.player.x + side * 170, boss.leftBound, boss.rightBound);
-      body.enable = true;
-      body.reset(destination, savedY);
-      boss.sprite.setVisible(true).setAlpha(1).setTint(this.bossTint);
-      boss.healthBar.setVisible(true);
-      boss.direction = this.player.x >= destination ? 1 : -1;
-      boss.sprite.setFlipX(boss.direction > 0);
-      boss.bossMotion = 'cast';
-      boss.bossMotionUntil = this.time.now + 520;
-      this.spawnBossBlinkFlash(destination, savedY);
-      this.cameras.main.flash(100, 90, 55, 150);
-      this.fanAngles(3 + (this.stage.number % 3), 0.16).forEach((angle) => this.fireBossProjectile(boss, angle, power * 1.18));
+  private executeBossPatternEntry(boss: EnemyState, entry: BossPatternEntry): number {
+    const totalDuration = entry.telegraphMs + entry.activeMs + entry.recoveryMs;
+    const targetX = Phaser.Math.Clamp(this.player.x, boss.leftBound + 80, boss.rightBound - 80);
+    const targetY = this.player.y + 24;
+    const variant = boss.patternIndex;
+    const safeIndex = (this.stage.number + boss.bossPhase + variant) % 5;
+
+    if (entry.executorId === 'ordered-sigils' || entry.executorId === 'collapsing-floor') {
+      this.centeredOffsets(5, 118).forEach((offset, index) => {
+        const x = Phaser.Math.Clamp(targetX + offset, boss.leftBound + 50, boss.rightBound - 50);
+        this.spawnPatternTelegraph('ordered-cells', x, targetY, entry.telegraphMs + index * 90, index + 1, index === safeIndex);
+        if (index !== safeIndex) {
+          this.time.delayedCall(entry.telegraphMs + index * 90, () => boss.health > 0 && this.dropBossProjectile(x, 220));
+        }
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'baited-impact') {
+      this.spawnPatternTelegraph('target-ring', targetX, targetY, entry.telegraphMs, 1, false);
+      this.time.delayedCall(entry.telegraphMs, () => {
+        if (boss.health <= 0) return;
+        [-72, 0, 72].forEach((offset, index) => this.time.delayedCall(index * 120, () => this.dropBossProjectile(targetX + offset, 215)));
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'moving-sanctuary') {
+      const startX = Phaser.Math.Clamp(targetX - 150, boss.leftBound + 100, boss.rightBound - 100);
+      const endX = Phaser.Math.Clamp(targetX + 150, boss.leftBound + 100, boss.rightBound - 100);
+      const sanctuary = this.add.circle(startX, targetY, 86, 0xf5efb8, 0.08)
+        .setStrokeStyle(6, 0xf5efb8, 0.95)
+        .setDepth(11);
+      const glyph = this.add.text(startX, targetY, 'SAFE', {
+        color: '#fff7cf', fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', stroke: '#17120a', strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(12);
+      this.tweens.add({ targets: [sanctuary, glyph], x: endX, duration: entry.telegraphMs, ease: 'Sine.InOut' });
+      this.time.delayedCall(entry.telegraphMs, () => {
+        sanctuary.destroy();
+        glyph.destroy();
+        if (boss.health > 0 && Phaser.Math.Distance.Between(this.player.x, this.player.y, endX, targetY) > 92) {
+          this.damagePlayer(this.time.now, 1, boss.sprite.x);
+        }
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'interrupt-ritual' || entry.executorId === 'weakpoint-break') {
+      const healthAtWindup = boss.health;
+      this.spawnPatternTelegraph('weak-point', boss.sprite.x, boss.sprite.y - 34, entry.telegraphMs, 1, true);
+      this.time.delayedCall(entry.telegraphMs, () => {
+        if (boss.health <= 0) return;
+        if (boss.health < healthAtWindup) {
+          boss.actionLockedUntil = this.time.now + entry.recoveryMs + 500;
+          this.spawnSkillImpactBurst(boss.sprite.x, boss.sprite.y, 0xffffff, 1.5);
+          return;
+        }
+        this.fanAngles(5, 0.2).forEach((angle) => this.fireBossProjectile(boss, angle, 0.88));
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'line-of-sight') {
+      const safeX = Phaser.Math.Clamp(boss.sprite.x + (targetX >= boss.sprite.x ? 1 : -1) * 220, boss.leftBound + 90, boss.rightBound - 90);
+      this.spawnPatternTelegraph('safe-glyph', safeX, targetY, entry.telegraphMs, 1, true);
+      const cover = this.add.rectangle(safeX, targetY - 52, 42, 138, 0xe8dcad, 0.24)
+        .setStrokeStyle(4, 0xe8dcad, 0.95)
+        .setDepth(10);
+      this.time.delayedCall(entry.telegraphMs, () => {
+        cover.destroy();
+        if (boss.health > 0 && Math.abs(this.player.x - safeX) > 72) this.damagePlayer(this.time.now, 1, boss.sprite.x);
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'delayed-echo') {
+      const echoX = targetX;
+      [0, 900].forEach((delay, index) => {
+        this.time.delayedCall(delay, () => {
+          if (boss.health <= 0) return;
+          const x = Phaser.Math.Clamp(echoX + (index === 0 ? 0 : (variant % 2 === 0 ? -130 : 130)), boss.leftBound + 60, boss.rightBound - 60);
+          this.spawnPatternTelegraph('target-ring', x, targetY, entry.telegraphMs, index + 1, false);
+          this.time.delayedCall(entry.telegraphMs, () => boss.health > 0 && this.dropBossProjectile(x, 210));
+        });
+      });
+      return totalDuration + 900;
+    }
+
+    if (entry.executorId === 'marked-pursuit') {
+      [0, 520, 1_040].forEach((delay, index) => this.time.delayedCall(delay, () => {
+        if (boss.health <= 0) return;
+        const x = Phaser.Math.Clamp(this.player.x, boss.leftBound + 60, boss.rightBound - 60);
+        this.spawnPatternTelegraph('target-ring', x, this.player.y + 24, entry.telegraphMs, index + 1, false);
+        this.time.delayedCall(entry.telegraphMs, () => boss.health > 0 && this.dropBossProjectile(x, 205));
+      }));
+      return totalDuration + 1_040;
+    }
+
+    if (entry.executorId === 'tether-guide') {
+      const endpointX = Phaser.Math.Clamp(targetX + (variant % 2 === 0 ? -240 : 240), boss.leftBound + 100, boss.rightBound - 100);
+      const tether = this.add.line(0, 0, boss.sprite.x, boss.sprite.y, endpointX, targetY, this.stage.accentColor, 0.16)
+        .setOrigin(0)
+        .setStrokeStyle(5, this.stage.accentColor, 0.9)
+        .setDepth(10);
+      this.spawnPatternTelegraph('tether', endpointX, targetY, entry.telegraphMs, 1, true);
+      this.time.delayedCall(entry.telegraphMs, () => {
+        tether.destroy();
+        if (boss.health > 0 && Phaser.Math.Distance.Between(this.player.x, this.player.y, endpointX, targetY) > 96) {
+          this.damagePlayer(this.time.now, 1, boss.sprite.x);
+        }
+      });
+      return totalDuration;
+    }
+
+    if (entry.executorId === 'rotating-gates') {
+      const safeLane = safeIndex % 3;
+      [245, 330, 415].forEach((y, lane) => {
+        this.spawnPatternTelegraph('sweep-line', targetX, y, entry.telegraphMs, lane + 1, lane === safeLane);
+        if (lane === safeLane) return;
+        this.time.delayedCall(entry.telegraphMs, () => {
+          if (boss.health <= 0) return;
+          const left = this.createHostileProjectile(boss.leftBound + 70, y, 82, 42).setVelocityX(220);
+          const right = this.createHostileProjectile(boss.rightBound - 70, y, 82, 42).setVelocityX(-220);
+          this.bossProjectiles.push(
+            { sprite: left, expiresAt: this.time.now + 3_000, lastTrailAt: 0 },
+            { sprite: right, expiresAt: this.time.now + 3_000, lastTrailAt: 0 },
+          );
+        });
+      });
+      return totalDuration;
+    }
+
+    const laneOrder = [safeIndex % 4, (safeIndex + 2) % 4, (safeIndex + 1) % 4] as const;
+    laneOrder.forEach((lane, index) => {
+      const laneX = Phaser.Math.Clamp(targetX + (lane - 1.5) * 120, boss.leftBound + 55, boss.rightBound - 55);
+      this.spawnPatternTelegraph('lane', laneX, targetY, entry.telegraphMs + index * 180, index + 1, false);
+      this.time.delayedCall(entry.telegraphMs + index * 180, () => boss.health > 0 && this.dropBossProjectile(laneX, 215));
     });
-    return reappearDelay + 520;
+    return totalDuration;
+  }
+
+  private showHostileSkillName(name: string, x: number, y: number): void {
+    const label = this.add.text(x, y, name.toUpperCase(), {
+      color: '#fff3d0',
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      stroke: '#1b1008',
+      strokeThickness: 5,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(30).setAlpha(0);
+    this.tweens.add({
+      targets: label,
+      alpha: 1,
+      y: y - 10,
+      duration: 180,
+      yoyo: true,
+      hold: 780,
+      onComplete: () => label.destroy(),
+    });
+  }
+
+  private spawnPatternTelegraph(
+    geometry: TelegraphGeometry,
+    x: number,
+    y: number,
+    durationMs: number,
+    order: number,
+    safe: boolean,
+  ): void {
+    const color = safe ? 0xf5efb8 : this.stage.accentColor;
+    const glyphs: Readonly<Record<TelegraphGeometry, string>> = {
+      lane: '↕',
+      'ordered-cells': String(order),
+      'target-ring': '◎',
+      'safe-glyph': '◇',
+      'sweep-line': '⇆',
+      tether: '⌁',
+      'moving-zone': '◈',
+      'weak-point': '✦',
+    };
+    const width = geometry === 'lane' || geometry === 'sweep-line' ? 220 : geometry === 'ordered-cells' ? 94 : 132;
+    const height = geometry === 'lane' ? 260 : geometry === 'sweep-line' ? 42 : geometry === 'ordered-cells' ? 82 : 96;
+    const marker = geometry === 'target-ring' || geometry === 'moving-zone' || geometry === 'tether'
+      ? this.add.ellipse(x, y, width, height, color, safe ? 0.08 : 0.14)
+      : this.add.rectangle(x, y, width, height, color, safe ? 0.06 : 0.12);
+    marker.setStrokeStyle(safe ? 5 : 4, color, 0.92).setDepth(10);
+    const sigilPoints = 5 + (this.stage.number % 8);
+    const sigil = this.add.star(
+      x,
+      y,
+      sigilPoints,
+      18 + (this.stage.number % 5) * 2,
+      31 + (this.stage.number % 7) * 3,
+      color,
+      safe ? 0.06 : 0.1,
+    ).setStrokeStyle(2, color, 0.66)
+      .setAngle((this.stage.number * 37) % 360)
+      .setDepth(10);
+    const glyph = this.add.text(x, y, glyphs[geometry], {
+      color: safe ? '#fff8d6' : '#ffffff',
+      fontFamily: 'monospace',
+      fontSize: geometry === 'ordered-cells' ? '22px' : '18px',
+      fontStyle: 'bold',
+      stroke: '#17110a',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(11);
+    this.tweens.add({
+      targets: [marker, glyph],
+      alpha: safe ? 0.45 : 0.18,
+      duration: Math.max(100, Math.round(durationMs / 6)),
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        marker.destroy();
+        glyph.destroy();
+      },
+    });
+    this.tweens.add({
+      targets: sigil,
+      alpha: safe ? 0.38 : 0.16,
+      angle: sigil.angle + (this.stage.number % 2 === 0 ? 1 : -1) * (45 + this.stage.number),
+      duration: Math.max(100, Math.round(durationMs / 6)),
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => sigil.destroy(),
+    });
   }
 
   private spawnBossBlinkFlash(x: number, y: number): void {
@@ -1801,11 +1895,14 @@ export class QuestScene extends Phaser.Scene {
     boss.sprite.setTintFill(this.stage.accentColor);
     this.time.delayedCall(145, () => {
       if (boss.health <= 0) return;
-      const displaySize = 78 + Math.min(this.stage.number, 10);
+      const displaySize = 76;
       const projectile = this.createHostileProjectile(boss.sprite.x, boss.sprite.y - 8, displaySize);
       if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(56, 44, true);
       const angle = Phaser.Math.Angle.Between(projectile.x, projectile.y, this.player.x, this.player.y) + angleOffset;
-      const speed = (boss.health <= boss.maxHealth / 2 ? 310 : 250) * speedMultiplier;
+      const speed = Math.min(
+        250,
+        this.difficulty.hostileProjectileSpeedPxPerSec * speedMultiplier,
+      );
       this.physics.velocityFromRotation(angle, speed, projectile.body?.velocity);
       projectile.setRotation(angle);
       this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + BOSS_PROJECTILE_LIFETIME_MS, lastTrailAt: 0 });
@@ -1817,11 +1914,21 @@ export class QuestScene extends Phaser.Scene {
     this.cameras.main.shake(80, 0.0025);
   }
 
-  private dropBossProjectile(x: number): void {
-    const displaySize = 88 + Math.min(this.stage.number, 12);
-    const projectile = this.createHostileProjectile(Phaser.Math.Clamp(x, 40, this.worldWidth - 40), 90, displaySize).setRotation(Math.PI / 2);
+  private dropBossProjectile(
+    x: number,
+    speed = this.difficulty.hostileProjectileSpeedPxPerSec,
+    source: 'boss' | 'minion' = 'boss',
+  ): void {
+    const displaySize = 82;
+    const projectile = this.createHostileProjectile(
+      Phaser.Math.Clamp(x, 40, this.worldWidth - 40),
+      90,
+      displaySize,
+      displaySize,
+      source,
+    ).setRotation(Math.PI / 2);
     if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(58, 58, true);
-    projectile.setVelocityY(330);
+    projectile.setVelocityY(speed);
     this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + BOSS_PROJECTILE_LIFETIME_MS, lastTrailAt: 0 });
   }
 
@@ -1885,8 +1992,8 @@ export class QuestScene extends Phaser.Scene {
       const innateRangeBonus = this.characterId === 'dualblade' ? 18 : this.characterId === 'dragonknight' ? 26 : this.characterId === 'brawler' ? 10 : 0;
       const inRange = Math.abs(enemy.sprite.x - attackX) <= (enemy.boss ? 92 : 68) + innateRangeBonus;
       if (inRange && this.combatFootDistance(enemy) <= 42) {
-        const bossBaseDamage = this.stage.special ? 18 : Math.ceil(enemy.maxHealth / 3);
-        this.damageEnemy(enemy, (enemy.boss ? bossBaseDamage : 1) + this.attackLevel + this.effectiveArmorLevel);
+        const basicDamage = enemy.boss || enemy.elite ? 2 : 1;
+        this.damageEnemy(enemy, basicDamage + this.attackLevel + this.effectiveArmorLevel);
       }
     });
   }
@@ -4232,7 +4339,8 @@ export class QuestScene extends Phaser.Scene {
 
   private damageEnemy(enemy: EnemyState, damage = 1): void {
     const namedEnemy = enemy.boss || enemy.elite;
-    enemy.health = Math.max(0, enemy.health - damage);
+    const equipmentDamage = applyEquipmentAttackPower(damage, this.equipmentModifiers);
+    enemy.health = Math.max(0, enemy.health - equipmentDamage);
     enemy.sprite.setTintFill(0xffffff);
     if (namedEnemy) {
       enemy.bossMotion = enemy.health > 0 ? 'hit' : 'dead';
@@ -4284,8 +4392,10 @@ export class QuestScene extends Phaser.Scene {
   private damagePlayer(time: number, damage: number, sourceX: number): void {
     if (time < this.invulnerableUntil || this.finished) return;
     this.invulnerableUntil = time + DAMAGE_INVULNERABILITY_MS;
+    const scaledDamage = Math.ceil((damage * this.difficulty.incomingDamagePermille) / 1_000);
     const totalReduction = (this.effectiveArmorEquipped ? 1 : 0) + (time < this.defenseUntil ? this.activeDefenseReduction : 0) + Math.floor(this.defenseLevel / 2) + Math.floor(this.effectiveArmorLevel / 2);
-    const mitigatedDamage = Math.max(1, damage - totalReduction);
+    const flatMitigatedDamage = Math.max(1, scaledDamage - totalReduction);
+    const mitigatedDamage = applyEquipmentDamageReduction(flatMitigatedDamage, this.equipmentModifiers);
     this.playerHealth = Math.max(0, this.playerHealth - mitigatedDamage);
     this.healthBar.width = 200 * (this.playerHealth / this.playerMaxHealth);
     this.playPlayerAnimation('hit');
@@ -4375,7 +4485,12 @@ export class QuestScene extends Phaser.Scene {
 
   private get playerMaxHealth(): number {
     const introductoryHealthBonus = Math.max(0, 6 - this.stage.number);
-    return PLAYER_MAX_HEALTH + introductoryHealthBonus + (this.effectiveArmorEquipped ? 3 : 0) + this.vitalityLevel * 2 + this.effectiveArmorLevel;
+    const baseMaxHealth = PLAYER_MAX_HEALTH
+      + introductoryHealthBonus
+      + (this.effectiveArmorEquipped ? 3 : 0)
+      + this.vitalityLevel * 2
+      + this.effectiveArmorLevel;
+    return applyEquipmentMaxHealth(baseMaxHealth, this.equipmentModifiers);
   }
 
   private get usesMaxSpecialEnhancements(): boolean {
@@ -4398,20 +4513,10 @@ export class QuestScene extends Phaser.Scene {
     return this.usesMaxSpecialEnhancements ? 7 : Phaser.Math.Clamp(this.skillUpgradeLevels[skillId] ?? 0, 0, 7);
   }
 
-  private get bossSkillCooldownMs(): number {
-    if (this.stage.special) return 1_250;
-    return this.stage.number <= 5 ? 3_800 - this.stage.number * 300 : BOSS_SKILL_COOLDOWN_MS;
-  }
-
-  private get bossEnragedSkillCooldownMs(): number {
-    if (this.stage.special) return 720;
-    return this.stage.number <= 5 ? 2_800 - this.stage.number * 220 : BOSS_ENRAGED_SKILL_COOLDOWN_MS;
-  }
-
   private get worldWidth(): number { return this.stage.worldWidth; }
   private get bossArenaStartX(): number { return this.stage.bossArenaStartX; }
   private get bossAggroRange(): number { return this.stage.special ? 920 : 540; }
-  private get bossPreferredRange(): number { return this.stage.special ? 340 : 230; }
+  private get bossPreferredRange(): number { return this.combatProfile.boss.preferredRangePx; }
 
   private get classSkillIds(): readonly string[] {
     if (this.characterId === 'warrior') return ['arcane-bolt', 'frost-nova', 'flame-wave', 'healing-light', 'starfall'];
@@ -4439,8 +4544,12 @@ export class QuestScene extends Phaser.Scene {
     }
     const cooldown = baseCooldownMs ?? SKILL_COOLDOWNS[skillId] ?? 1_000;
     const level = this.skillEnhancementLevel(skillId);
-    const reduction = Math.min(MAX_SKILL_COOLDOWN_REDUCTION, level * SKILL_COOLDOWN_REDUCTION_PER_LEVEL);
-    return Math.max(350, Math.round(cooldown * (1 - reduction)));
+    return applyEquipmentCooldownReduction(
+      cooldown,
+      Math.min(MAX_SKILL_COOLDOWN_REDUCTION, level * SKILL_COOLDOWN_REDUCTION_PER_LEVEL),
+      this.equipmentModifiers,
+      MAX_TOTAL_SKILL_COOLDOWN_REDUCTION,
+    );
   }
 
   private isSpellbladeSkill(skillId: string): boolean {
@@ -4534,7 +4643,16 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private get bossAssetKey(): string {
-    return ['goblin-warlord', 'mist-wolf', 'rune-golem', 'lava-dragon', 'ice-queen', 'desert-scorpion', 'wind-harpy', 'vampire-lord', 'deep-kraken', 'thunder-minotaur', 'plague-necromancer', 'crystal-hydra', 'clockwork-titan', 'sand-wyrm', 'celestial-griffin', 'void-witch', 'frost-mammoth', 'inferno-phoenix', 'abyss-leviathan', 'avalanche-emperor', 'obsidian-behemoth', 'spectral-broker', 'iron-seraph', 'toxic-singularity', 'solar-devourer', 'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord'][this.stage.assetNumber - 1] ?? 'goblin-warlord';
+    return [
+      'goblin-warlord', 'mist-wolf', 'rune-golem', 'lava-dragon', 'ice-queen',
+      'desert-scorpion', 'wind-harpy', 'vampire-lord', 'deep-kraken', 'thunder-minotaur',
+      'plague-necromancer', 'crystal-hydra', 'clockwork-titan', 'sand-wyrm', 'celestial-griffin',
+      'void-witch', 'frost-mammoth', 'inferno-phoenix', 'abyss-leviathan', 'avalanche-emperor',
+      'obsidian-behemoth', 'spectral-broker', 'iron-seraph', 'toxic-singularity', 'solar-devourer',
+      'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord',
+      'eclipse-executioner', 'paradox-machinist', 'blood-moon-tyrant', 'infinite-tempest', 'godfall-arbiter',
+      'chronos-warden', 'astral-gravekeeper', 'hellfire-origin', 'absolute-zero', 'eternity-devourer',
+    ][this.stage.number - 1] ?? 'goblin-warlord';
   }
 
   private get bossEffectKey(): string {

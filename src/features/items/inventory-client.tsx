@@ -7,6 +7,11 @@ import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
 
 import { gameItemAbi } from '@/features/items/item-contract';
+import {
+  equipmentLoadoutStorageKey,
+  isTokenEquipped,
+  loadEquipmentSelection,
+} from '@/features/items/equipment-loadout-storage';
 import { decodeMetadata, marketplaceAbi, type ItemMetadata } from '@/features/marketplace/marketplace-contract';
 import { transactionErrorMessage } from '@/features/web3/transaction-feedback';
 
@@ -51,13 +56,23 @@ export function InventoryClient() {
   const listItem = async (tokenId: bigint) => {
     const itemValue = process.env.NEXT_PUBLIC_GAME_ITEM_ADDRESS; const marketValue = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS;
     if (!address || !publicClient || !itemValue || !marketValue || !isAddress(itemValue) || !isAddress(marketValue)) { setState('error'); setMessage('Marketplace configuration is missing.'); return; }
+    const itemAddress = getAddress(itemValue);
+    const equipmentSelection = loadEquipmentSelection(
+      window.localStorage,
+      equipmentLoadoutStorageKey(avalancheFuji.id, itemAddress, address),
+    );
+    if (isTokenEquipped(equipmentSelection, tokenId.toString())) {
+      setState('error');
+      setMessage('Unequip this NFT on the Game page before listing it.');
+      return;
+    }
     const price = prices[tokenId.toString()] ?? '';
     let parsedPrice: bigint; try { parsedPrice = parseEther(price); } catch { setState('error'); setMessage('Enter a valid AQT price for this item.'); return; }
     if (parsedPrice <= 0n) { setState('error'); setMessage('Price must be greater than zero.'); return; }
     setState('pending'); setMessage('Confirm NFT listing approval in your wallet.');
     try {
       const market = getAddress(marketValue);
-      const approvalHash = await writeContractAsync({ address: getAddress(itemValue), abi: gameItemAbi, functionName: 'setApprovalForAll', args: [market, true], chainId: avalancheFuji.id });
+      const approvalHash = await writeContractAsync({ address: itemAddress, abi: gameItemAbi, functionName: 'setApprovalForAll', args: [market, true], chainId: avalancheFuji.id });
       setHash(approvalHash); await publicClient.waitForTransactionReceipt({ hash: approvalHash });
       setMessage('Confirm the NFT listing transaction in your wallet.');
       const nonce = await publicClient.getTransactionCount({ address, blockTag: 'pending' });

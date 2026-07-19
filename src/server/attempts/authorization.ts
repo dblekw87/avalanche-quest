@@ -8,16 +8,18 @@ export type AttemptAuthorization = Readonly<{
   attemptId: Hex;
   player: Address;
   stageId: StageId;
+  equipmentSnapshotHash: Hex;
   expiresAt: number;
   signature: Hex;
 }>;
 
 function payload(authorization: Omit<AttemptAuthorization, 'signature'>): string {
   return [
-    'avalanche-quest:stage-attempt:v1',
+    'avalanche-quest:stage-attempt:v2',
     authorization.attemptId,
     authorization.player,
     authorization.stageId,
+    authorization.equipmentSnapshotHash,
     authorization.expiresAt.toString(),
   ].join('\n');
 }
@@ -48,6 +50,9 @@ export function parseAttemptAuthorization(value: unknown): AttemptAuthorization 
     || !isStageId(candidate.stageId)
     || typeof candidate.expiresAt !== 'number'
     || !Number.isSafeInteger(candidate.expiresAt)
+    || typeof candidate.equipmentSnapshotHash !== 'string'
+    || !isHex(candidate.equipmentSnapshotHash, { strict: true })
+    || candidate.equipmentSnapshotHash.length !== 66
     || typeof candidate.signature !== 'string'
     || !isHex(candidate.signature, { strict: true })
   ) {
@@ -57,6 +62,7 @@ export function parseAttemptAuthorization(value: unknown): AttemptAuthorization 
     attemptId: candidate.attemptId,
     player: getAddress(candidate.player),
     stageId: candidate.stageId,
+    equipmentSnapshotHash: candidate.equipmentSnapshotHash,
     expiresAt: candidate.expiresAt,
     signature: candidate.signature,
   };

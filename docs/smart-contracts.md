@@ -1,5 +1,10 @@
 # Avalanche Quest Smart-Contract Specification
 
+> 이 문서는 현재 MVP 계약 기준선이다. 장비 V2, 클래스 NFT, 전직,
+> 진행 재료와 다중 컬렉션 마켓의 구현 전 설계는
+> [`docs/nft-system/04-contract-architecture.md`](nft-system/04-contract-architecture.md)에
+> 있으며 기존 비업그레이드 계약을 in-place로 변경하지 않는다.
+
 ## 1. Scope and Assumptions
 
 The MVP deploys four non-upgradeable contracts to Avalanche Fuji C-Chain:

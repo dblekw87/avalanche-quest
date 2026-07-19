@@ -7,6 +7,7 @@ import type { CharacterId } from '@/game/characters';
 import { stages, type StageId } from '@/game/config/stages';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
 import { MobileGameControls, questMobileSkills, type MobileGameAction } from '@/game/mobile-game-controls';
+import type { EquipmentCombatModifiers } from '@/game/types/equipment';
 
 type QuestSceneControls = {
   setEquipmentParticlesEnabled: (enabled: boolean) => void;
@@ -34,9 +35,10 @@ type GameCanvasProps = {
   characterId: CharacterId;
   upgradeLevels: UpgradeLevels;
   skillUpgradeLevels: Readonly<Record<string, number>>;
+  equipmentModifiers: EquipmentCombatModifiers;
 };
 
-export function GameCanvas({ attemptId, stageId, onComplete, onFailure, onRetry, retrying, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels }: GameCanvasProps) {
+export function GameCanvas({ attemptId, stageId, onComplete, onFailure, onRetry, retrying, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels, equipmentModifiers }: GameCanvasProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<import('phaser').Game | null>(null);
@@ -100,7 +102,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, onRetry,
           arcade: { gravity: { x: 0, y: 980 }, debug: false },
         },
         scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-        scene: [new QuestScene(stageId, attemptId, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels, true)],
+        scene: [new QuestScene(stageId, attemptId, ownedSkillIds, armorEquipped, armorLevel, aqtBalance, characterId, upgradeLevels, skillUpgradeLevels, equipmentModifiers, true)],
       });
       gameRef.current = game;
 
@@ -129,7 +131,7 @@ export function GameCanvas({ attemptId, stageId, onComplete, onFailure, onRetry,
       sceneRef.current = null;
       game?.destroy(true);
     };
-  }, [armorEquipped, armorLevel, aqtBalance, attemptId, characterId, onComplete, onFailure, ownedSkillIds, skillUpgradeLevels, stageId, upgradeLevels]);
+  }, [armorEquipped, armorLevel, aqtBalance, attemptId, characterId, equipmentModifiers, onComplete, onFailure, ownedSkillIds, skillUpgradeLevels, stageId, upgradeLevels]);
 
   useEffect(() => {
     const refreshScale = () => window.requestAnimationFrame(() => gameRef.current?.scale.refresh());

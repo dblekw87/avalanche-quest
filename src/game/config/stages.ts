@@ -1,3 +1,12 @@
+import {
+  getStageDifficulty,
+  scaleStageHealth,
+} from '@/game/config/difficulty';
+import {
+  getStageCombatProfile,
+  type EnemyArchetypeId,
+} from '@/game/content/stage-combat-catalog';
+
 export const stageIds = [
   'verdant-pass', 'mistwood-den', 'ruined-city', 'volcanic-frontier', 'frozen-sanctum',
   'desert-tomb', 'sky-reach', 'blood-castle', 'abyssal-reef', 'thunder-coliseum',
@@ -25,7 +34,20 @@ export type StageDefinition = {
   bossArenaStartX: number;
   special: boolean;
   platforms: readonly { x: number; y: number; width: number }[];
-  enemies: readonly { id: string; x: number; y: number; health: number; speed: number; left: number; right: number; boss: boolean; elite?: boolean }[];
+  enemies: readonly {
+    id: string;
+    x: number;
+    y: number;
+    health: number;
+    speed: number;
+    left: number;
+    right: number;
+    boss: boolean;
+    elite?: boolean;
+    archetypeId?: EnemyArchetypeId;
+    encounterId?: string;
+    combatDefinitionId: string;
+  }[];
 };
 
 const bossNames = [
@@ -138,12 +160,13 @@ function createPlatforms(stageNumber: number) {
 
 function createStage(id: StageId, index: number): StageDefinition {
   const number = index + 1;
+  const combatProfile = getStageCombatProfile(number);
+  const difficulty = getStageDifficulty(number);
   const platforms = createPlatforms(number);
   const random = createSeededRandom(number * 13_337 + 97);
   const introductoryStage = number <= 5;
-  const hardStage = number >= 21;
   const specialStage = number >= 31;
-  const regularCount = introductoryStage ? 4 + Math.floor((number - 1) / 2) : specialStage ? 30 + (number - 31) : hardStage ? Math.min(18 + Math.floor((number - 21) * 0.8), 25) : Math.min(6 + Math.floor(number * 0.55), 17);
+  const regularCount = introductoryStage ? 5 + Math.floor((number - 1) / 2) : 9 + ((number - 1) % 4);
   const regularEnemyPlatforms = specialStage
     ? platforms.filter((platform) => !(
       (platform.x >= 2_400 && platform.x <= 4_400)
@@ -160,47 +183,84 @@ function createStage(id: StageId, index: number): StageDefinition {
     const right = platform.x + platform.width / 2 - platformEdgePadding;
     const desiredX = platform.x + Math.round((random() - 0.5) * Math.min(platform.width * 0.42, 78));
     const x = Math.max(left, Math.min(right, desiredX));
+    const encounterIndex = Math.min(2, Math.floor(routeProgress * 3));
+    const encounter = combatProfile.enemies.encounters[encounterIndex] ?? combatProfile.enemies.encounters[0]!;
+    const archetypeId = combatProfile.enemies.signature.archetypes[
+      enemyIndex % combatProfile.enemies.signature.archetypes.length
+    ] ?? combatProfile.enemies.signature.archetypes[0];
+    const baseHealth = number <= 3
+      ? 1
+      : introductoryStage
+        ? 2 + Math.floor(number / 3)
+        : 4 + Math.floor((number - 1) / 8) + (enemyIndex % 2);
     return {
       id: `${id}-monster-${enemyIndex + 1}`,
       x,
       y: platform.y - 90,
-      health: number <= 3 ? 1 : introductoryStage ? 1 + Math.floor((number + enemyIndex) / 4) : specialStage ? 82 + (number - 31) * 9 + enemyIndex : hardStage ? 20 + number + Math.floor(enemyIndex / 2) : 2 + Math.floor(number / 2) + Math.floor(enemyIndex / 4),
-      speed: introductoryStage ? 42 + number * 3 + (enemyIndex % 3) * 5 : specialStage ? 330 + (number - 31) * 16 + (enemyIndex % 6) * 14 : hardStage ? 150 + number * 5 + (enemyIndex % 5) * 10 : 54 + number * 5 + (enemyIndex % 4) * 7,
+      health: scaleStageHealth(
+        baseHealth,
+        difficulty.normalHealthPermille,
+        difficulty.minimumNormalHealth,
+      ),
+      speed: 42 + ((number + enemyIndex) % 6) * 5,
       left,
       right,
       boss: false,
+      archetypeId,
+      encounterId: encounter.id,
+      combatDefinitionId: combatProfile.enemies.signature.id,
     };
   });
   if (specialStage) {
     enemies.push(
       {
         id: `${id}-named-guardian`, x: 3_400, y: 250,
-        health: 460 + (number - 31) * 85, speed: 285 + (number - 31) * 14,
+        health: scaleStageHealth(
+          48 + (number - 31) * 4,
+          difficulty.eliteHealthPermille,
+          difficulty.minimumEliteHealth,
+        ),
+        speed: 82,
         left: 2_600, right: 4_200, boss: false, elite: true,
+        combatDefinitionId: combatProfile.boss.id,
       },
       {
         id: `${id}-named-herald`, x: 7_000, y: 250,
-        health: 620 + (number - 31) * 110, speed: 320 + (number - 31) * 16,
+        health: scaleStageHealth(
+          64 + (number - 31) * 5,
+          difficulty.eliteHealthPermille,
+          difficulty.minimumEliteHealth,
+        ),
+        speed: 90,
         left: 6_200, right: 7_800, boss: false, elite: true,
+        combatDefinitionId: combatProfile.boss.id,
       },
     );
   }
+  const baseBossHealth = number <= 3
+    ? 7 + number * 2
+    : specialStage
+      ? 180 + (number - 31) * 18
+      : 18 + number * 5;
   enemies.push({
     id: id === 'avalanche-throne' ? 'avalanche-emperor' : `${id}-boss`,
     x: specialStage ? 10_700 : 4_880, y: 250,
-    health: number <= 3 ? 7 + number * 2 : specialStage ? 1_200 + (number - 31) * 240 : hardStage ? 180 + (number - 20) * 42 : 10 + number * 5,
-    speed: specialStage ? 390 + (number - 31) * 22 : hardStage ? 190 + (number - 20) * 11 : 88 + number * 4,
+    health: scaleStageHealth(
+      baseBossHealth,
+      difficulty.bossHealthPermille,
+      difficulty.minimumBossHealth,
+    ),
+    speed: combatProfile.boss.baselineSpeedPxPerSec,
     left: specialStage ? 9_850 : 4_380, right: specialStage ? 11_520 : 5_100,
     boss: true,
+    combatDefinitionId: combatProfile.boss.id,
   });
   const palette = palettes[index] ?? palettes[0]!;
   const bossName = bossNames[index] ?? 'Unknown Boss';
   const name = stageNames[index] ?? `Stage ${number}`;
   return {
     id, number, name,
-    subtitle: specialStage
-      ? `SPECIAL NAMED RAID · Defeat ${bossName} through four escalating phases.`
-      : `Defeat the ${bossName} and survive its evolving patterns.`,
+    subtitle: `${difficulty.label} · Skill +${difficulty.recommendedSkillLevel} recommended · Defeat ${bossName} through ${specialStage ? 'four' : 'three'} escalating phases.`,
     worldLabel: name.toUpperCase(),
     backgroundColor: palette[0], groundColor: palette[1], accentColor: palette[2],
     assetNumber: specialStage ? 21 + ((number - 31) % 10) : number,

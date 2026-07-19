@@ -15,6 +15,7 @@ import { assetTycoonLicenseAbi } from '@/features/asset-tycoon/asset-tycoon-cont
 // authorization continue to use the on-chain license checks below.
 const ASSET_TYCOON_LOCAL_TEST_UNLOCK = process.env.NODE_ENV === 'development';
 import { gameItemAbi } from '@/features/items/item-contract';
+import { EquipmentLoadout } from '@/features/items/equipment-loadout';
 import { SkillShop } from '@/features/skills/skill-shop';
 import { UpgradeShop } from '@/features/upgrades/upgrade-shop';
 import type { UpgradeLevels } from '@/features/upgrades/upgrade-contract';
@@ -25,6 +26,12 @@ import { stageIds, stages, type StageId } from '@/game/config/stages';
 import { GameCanvas } from '@/game/game-canvas';
 import { PoliticalDuelCanvas } from '@/game/political-duel/political-duel-canvas';
 import { politicalFighters, type PoliticalFaction } from '@/game/political-duel/definitions';
+import {
+  EMPTY_EQUIPMENT_MODIFIERS,
+  equipmentSlots,
+  type EquipmentLoadoutSnapshot,
+  type EquipmentTokenSelection,
+} from '@/game/types/equipment';
 
 type TransactionState = 'idle' | 'pending' | 'success' | 'error';
 
@@ -56,6 +63,7 @@ type AttemptAuthorization = {
   attemptId: Hex;
   player: Hex;
   stageId: StageId;
+  equipmentSnapshotHash: Hex;
   expiresAt: number;
   signature: Hex;
 };
@@ -63,6 +71,7 @@ type AttemptAuthorization = {
 type CreatedAttempt = {
   attemptId: string;
   authorization: AttemptAuthorization;
+  equipmentSnapshot: EquipmentLoadoutSnapshot;
 };
 
 type PendingSelection =
@@ -101,6 +110,9 @@ export function GameExperience() {
   const [assetTycoonMintState, setAssetTycoonMintState] = useState<TransactionState>('idle');
   const [assetTycoonHash, setAssetTycoonHash] = useState<Hex | null>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [equipmentSelection, setEquipmentSelection] = useState<EquipmentTokenSelection>({});
+  const [equipmentLoadoutReady, setEquipmentLoadoutReady] = useState(false);
+  const [equipmentSnapshot, setEquipmentSnapshot] = useState<EquipmentLoadoutSnapshot | null>(null);
   const handleUpgradeLevelsChange = useCallback((nextLevels: UpgradeLevels) => {
     setUpgradeLevels((current) => current.attack === nextLevels.attack && current.vitality === nextLevels.vitality && current.defense === nextLevels.defense ? current : nextLevels);
   }, []);
@@ -109,6 +121,9 @@ export function GameExperience() {
   }, []);
   const handleSkillLevelsChange = useCallback((nextLevels: Readonly<Record<string, number>>) => {
     setSkillUpgradeLevels((current) => JSON.stringify(current) === JSON.stringify(nextLevels) ? current : nextLevels);
+  }, []);
+  const handleEquipmentSelectionChange = useCallback((next: EquipmentTokenSelection) => {
+    setEquipmentSelection(next);
   }, []);
   const stage = stages[stageId];
   const selectionHasUnclaimedRewards = result !== null && (
@@ -141,6 +156,7 @@ export function GameExperience() {
   const resetRun = useCallback(() => {
     setAttemptId(null);
     setAttemptAuthorization(null);
+    setEquipmentSnapshot(null);
     setResult(null);
     setFailure(null);
     setShowAdvancePrompt(false);
@@ -200,7 +216,11 @@ export function GameExperience() {
     const response = await fetch('/api/attempts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ player: address, stageId: targetStageId }),
+      body: JSON.stringify({
+        player: address,
+        stageId: targetStageId,
+        equipmentTokenIds: equipmentSelection,
+      }),
     });
     const data: unknown = await response.json();
     if (
@@ -211,10 +231,16 @@ export function GameExperience() {
       || typeof data.attemptId !== 'string'
       || !('attemptAuthorization' in data)
       || !isAttemptAuthorization(data.attemptAuthorization)
+      || !('equipmentSnapshot' in data)
+      || !isEquipmentLoadoutSnapshot(data.equipmentSnapshot)
     ) {
       throw new Error(readError(data, 'Could not create a stage attempt.'));
     }
-    return { attemptId: data.attemptId, authorization: data.attemptAuthorization };
+    return {
+      attemptId: data.attemptId,
+      authorization: data.attemptAuthorization,
+      equipmentSnapshot: data.equipmentSnapshot,
+    };
   };
 
   const continueToNextStage = async (preserveAuthorizedLoot = false) => {
@@ -239,6 +265,7 @@ export function GameExperience() {
       setStageId(nextStageId);
       setAttemptId(nextAttempt.attemptId);
       setAttemptAuthorization(nextAttempt.authorization);
+      setEquipmentSnapshot(nextAttempt.equipmentSnapshot);
       setShowAdvancePrompt(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not continue to the next stage.');
@@ -265,6 +292,7 @@ export function GameExperience() {
       setAssetTycoonHash(null);
       setAttemptId(nextAttempt.attemptId);
       setAttemptAuthorization(nextAttempt.authorization);
+      setEquipmentSnapshot(nextAttempt.equipmentSnapshot);
       setShowAdvancePrompt(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not retry the stage.');
@@ -282,12 +310,17 @@ export function GameExperience() {
       setMessage('Switch your wallet to Avalanche Fuji before starting.');
       return;
     }
+    if (!equipmentLoadoutReady) {
+      setMessage('Wait for the equipment NFT loadout to finish loading.');
+      return;
+    }
     setStarting(true);
     setMessage(null);
     try {
       const nextAttempt = await requestAttempt(targetStageId);
       setAttemptId(nextAttempt.attemptId);
       setAttemptAuthorization(nextAttempt.authorization);
+      setEquipmentSnapshot(nextAttempt.equipmentSnapshot);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not start the stage.');
     } finally {
@@ -407,8 +440,8 @@ export function GameExperience() {
               <p className="mt-1 text-xs font-bold !text-white">{stage.subtitle} · {formatCharacterName(characterId)}</p>
             </div>
             {!attemptId ? (
-              <button type="button" onClick={() => void startStage()} disabled={starting} className="w-full rounded-xl border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-8 py-4 text-sm font-black text-white shadow-[0_0_22px_rgba(239,189,88,.28)] disabled:opacity-40 sm:w-auto sm:min-w-56">
-                {starting ? 'PREPARING…' : 'PLAY NOW'}
+              <button type="button" onClick={() => void startStage()} disabled={starting || !equipmentLoadoutReady} className="w-full rounded-xl border border-[#efbd58] bg-gradient-to-r from-[#6e3f12] to-[#9a6728] px-8 py-4 text-sm font-black text-white shadow-[0_0_22px_rgba(239,189,88,.28)] disabled:opacity-40 sm:w-auto sm:min-w-56">
+                {starting ? 'PREPARING…' : !equipmentLoadoutReady ? 'LOADING NFTS…' : 'PLAY NOW'}
               </button>
             ) : (
               <button type="button" onClick={resetRun} className="w-full rounded-xl border border-[#81715b] bg-[#17140f] px-8 py-4 text-sm font-extrabold text-[#eadcc0] sm:w-auto sm:min-w-56">NEW ATTEMPT</button>
@@ -430,6 +463,7 @@ export function GameExperience() {
               characterId={characterId}
               upgradeLevels={upgradeLevels}
               skillUpgradeLevels={skillUpgradeLevels}
+              equipmentModifiers={equipmentSnapshot?.modifiers ?? EMPTY_EQUIPMENT_MODIFIERS}
             />
           ) : (
             <div className="grid min-h-64 place-items-center rounded-xl border border-[#4f604f] bg-[#0d1813] p-5 text-center sm:aspect-[112/52] sm:min-h-0 sm:p-8">
@@ -492,7 +526,11 @@ export function GameExperience() {
                 ))}
               </div>
             </div>
-            <div className="mx-auto mt-4 flex w-full max-w-md justify-center gap-2 rounded-xl border border-[#514838] bg-[#12100d] p-1 sm:mx-0 sm:w-fit sm:max-w-none">
+            <div className="mb-4 mt-4 flex flex-col items-center gap-1 border border-[#4f4637] bg-[#17140f] px-4 py-3 text-center sm:block sm:text-left">
+              <strong className="text-[#e6d7ba]">{stage.name}</strong>
+              <span className="text-xs text-[#938a7a] sm:ml-3">{stage.subtitle}</span>
+            </div>
+            <div className="mx-auto flex w-full max-w-md justify-center gap-2 rounded-xl border border-[#514838] bg-[#12100d] p-1 sm:mx-0 sm:w-fit sm:max-w-none">
               {([['general', 'General Classes'], ['special', 'Special Classes']] as const).map(([group, label]) => (
                 <button key={group} type="button" disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'} onClick={() => selectCharacter(group === 'general' ? 'warrior' : 'conservative', group)} className={`flex-1 rounded-lg px-5 py-2.5 text-xs font-bold disabled:cursor-wait disabled:opacity-50 sm:flex-none ${characterGroup === group ? 'bg-[#e9dcc5] text-[#201c17]' : 'text-[#9f9583]'}`}>{label}</button>
               ))}
@@ -525,10 +563,23 @@ export function GameExperience() {
           </div>
         </details>
 
-        <div className="mb-4 flex flex-col items-center gap-1 border border-[#4f4637] bg-[#17140f] px-4 py-3 text-center sm:block sm:text-left">
-          <strong className="text-[#e6d7ba]">{stage.name}</strong>
-          <span className="text-xs text-[#938a7a] sm:ml-3">{stage.subtitle}</span>
-        </div>
+        <details open className="group mb-4 overflow-hidden rounded-2xl border border-[#6b5635] bg-[#1c1914]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] sm:px-5">
+            <span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">NFT EQUIPMENT LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Equip up to three marketplace NFTs</strong></span>
+            <span className="nft-loadout-disclosure inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black text-[#ead6ae]">
+              <span className="group-open:hidden">OPEN</span>
+              <span className="hidden group-open:inline">CLOSE</span>
+              <span aria-hidden="true" className="nft-loadout-chevron block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" />
+            </span>
+          </summary>
+          <div className="border-t border-[#4f4637] p-3 sm:p-4">
+            <EquipmentLoadout
+              disabled={attemptId !== null}
+              onReadyChange={setEquipmentLoadoutReady}
+              onSelectionChange={handleEquipmentSelectionChange}
+            />
+          </div>
+        </details>
 
         <details className="group mb-4 overflow-hidden rounded-2xl border border-[#4f4637] bg-[#15130f]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 marker:hidden transition-colors hover:bg-[#2b2419] focus-visible:bg-[#2b2419] focus-visible:outline-none group-open:bg-[#211c15] sm:px-5"><span><span className="text-[10px] font-extrabold tracking-[.2em] text-[#d0b47a]">LOADOUT</span><strong className="mt-1 block text-base font-black text-[#f1e2c6]">Skills and class information</strong></span><span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#74634d] bg-[#0d0b08] px-3 py-2 text-xs font-black leading-none text-[#ead6ae] transition group-hover:border-[#d0b47a] group-hover:text-white"><span className="group-open:hidden">OPEN</span><span className="hidden group-open:inline">CLOSE</span><span aria-hidden="true" className="block size-2.5 -translate-y-0.5 rotate-45 border-b-2 border-r-2 border-current transition-transform group-open:translate-y-0.5 group-open:rotate-[225deg]" /></span></summary>
@@ -724,10 +775,49 @@ function isAttemptAuthorization(value: unknown): value is AttemptAuthorization {
     && isAddress(candidate.player)
     && typeof candidate.stageId === 'string'
     && stageIds.includes(candidate.stageId as StageId)
+    && typeof candidate.equipmentSnapshotHash === 'string'
+    && isHex(candidate.equipmentSnapshotHash, { strict: true })
+    && candidate.equipmentSnapshotHash.length === 66
     && typeof candidate.expiresAt === 'number'
     && Number.isSafeInteger(candidate.expiresAt)
     && typeof candidate.signature === 'string'
     && isHex(candidate.signature, { strict: true });
+}
+
+function isEquipmentLoadoutSnapshot(value: unknown): value is EquipmentLoadoutSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<EquipmentLoadoutSnapshot>;
+  if (
+    candidate.version !== 1
+    || candidate.chainId !== avalancheFuji.id
+    || !(candidate.contract === null || (typeof candidate.contract === 'string' && isAddress(candidate.contract)))
+    || typeof candidate.hash !== 'string'
+    || !isHex(candidate.hash, { strict: true })
+    || candidate.hash.length !== 66
+    || !Array.isArray(candidate.items)
+    || !candidate.modifiers
+    || typeof candidate.modifiers !== 'object'
+  ) {
+    return false;
+  }
+  const modifiers = candidate.modifiers;
+  const validModifiers = [
+    modifiers.attackPower,
+    modifiers.maxHealth,
+    modifiers.damageReductionBps,
+    modifiers.cooldownReductionBps,
+    modifiers.movementSpeedBps,
+  ].every((modifier) => typeof modifier === 'number' && Number.isSafeInteger(modifier) && modifier >= 0);
+  return validModifiers && candidate.items.every((item) => (
+    Boolean(item)
+    && typeof item === 'object'
+    && typeof item.tokenId === 'string'
+    && equipmentSlots.includes(item.slot)
+    && typeof item.rarity === 'number'
+    && Number.isSafeInteger(item.rarity)
+    && typeof item.power === 'number'
+    && Number.isSafeInteger(item.power)
+  ));
 }
 
 function isAuthorizedReward(value: unknown): value is AuthorizedReward {

@@ -221,14 +221,16 @@ secret scan
 
 Prioritize only after the MVP is stable:
 
-1. Embedded/social wallet onboarding.
-2. Additional stages and versioned stage editor.
-3. Achievement NFT badges.
-4. Wallet-based rankings.
-5. Gas sponsorship or account abstraction.
-6. Offers or auctions.
-7. More authoritative server simulation and anti-cheat signals.
-8. Production-grade event indexer and monitoring.
+1. [NFT equipment, class, advancement and material progression](nft-system/README.md).
+2. [Manifest-driven game content and raid production](game-content/README.md).
+3. Embedded/social wallet onboarding.
+4. Additional stages and versioned stage editor.
+5. Achievement NFT badges.
+6. Wallet-based rankings.
+7. Gas sponsorship or account abstraction.
+8. Offers or auctions.
+9. More authoritative server simulation and anti-cheat signals.
+10. Production-grade event indexer and monitoring.
 
 ## 13. Scope-Control Rules
 

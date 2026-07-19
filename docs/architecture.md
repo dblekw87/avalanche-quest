@@ -1,5 +1,12 @@
 # Avalanche Quest Architecture
 
+> 장비 loadout, 클래스 NFT, 전직과 ERC-1155 재료의 구현 전 목표 구조는
+> [`docs/nft-system/README.md`](nft-system/README.md)를 참고한다. 아래 내용은
+> 현재 MVP 경계이며 확장안이 이미 배포되었다는 뜻이 아니다.
+>
+> 캐릭터/적 frame 좌표, asset manifest, stage encounter와 raid boss의 구현 전
+> 목표 구조는 [`docs/game-content/README.md`](game-content/README.md)를 참고한다.
+
 ## 1. Architectural Principles
 
 - Keep gameplay, application UI, server verification, and blockchain code as

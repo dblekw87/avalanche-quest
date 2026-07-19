@@ -57,6 +57,89 @@ main :not(.game-frame, .game-frame *) [class*="text-[#c9d6aa]"] { color:#4d702b!
 .upgrade-card [class*="bg-[#0b0907]"] { background:#0b0907!important; }
 .upgrade-card button[class*="bg-[#211a11]"] { background:#211a11!important; color:#ead4ad!important; }
 .upgrade-card button[class*="bg-[#211a11]"]:hover { background:#342718!important; color:#fff!important; }
+main .nft-equipment-loadout .nft-dark-card {
+  background:linear-gradient(135deg,#4a351b 0%,#271b10 58%,#15100b 100%)!important;
+  border-color:#e1b85f!important;
+  color:#fff4dc!important;
+}
+main .nft-equipment-loadout .nft-dark-card [class] { color:#e8d8b9!important; }
+main .nft-equipment-loadout .nft-dark-card strong[class] { color:#fff!important; }
+main .nft-equipment-loadout .nft-dark-card p:first-of-type { color:#ffd27a!important; }
+main .nft-equipment-loadout .nft-active-badge {
+  background:#a97425!important;
+  border-color:#ffe09a!important;
+  color:#fff!important;
+}
+main .nft-equipment-loadout .nft-unequip-button {
+  background:#17110b!important;
+  border-color:#d5b06c!important;
+  color:#fff0cf!important;
+}
+main .nft-equipment-loadout button.nft-owned-equipped {
+  background:linear-gradient(135deg,#65451d 0%,#3c2815 55%,#1f150d 100%)!important;
+  border-color:#ffd36f!important;
+  color:#fff4dc!important;
+}
+main .nft-equipment-loadout button.nft-owned-equipped [class] { color:#f1d9a9!important; }
+main .nft-equipment-loadout button.nft-owned-equipped strong[class] { color:#fff!important; }
+main .nft-equipment-loadout .nft-equipped-ribbon {
+  background:#b77d25!important;
+  border-color:#ffe29b!important;
+  color:#fff!important;
+}
+main .nft-equipment-loadout .nft-equipped-ribbon,
+main .nft-equipment-loadout .nft-equipped-ribbon[class] { color:#fff!important; }
+main .nft-equipment-loadout .nft-equipped-ribbon > span {
+  background:#fff!important;
+  color:#71460f!important;
+}
+main .nft-equipment-loadout button.nft-owned-equipped .nft-status-pill {
+  background:#fff7e7!important;
+  border-color:#fff!important;
+  color:#4c300c!important;
+}
+main .nft-equipment-loadout .nft-grade-pill {
+  background:#fff!important;
+  border-color:#d8cdbc!important;
+  color:#3d2c16!important;
+}
+main .nft-equipment-loadout .nft-grade-pill.nft-grade-common,
+main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-common { color:#6f685f!important; }
+main .nft-equipment-loadout .nft-grade-pill.nft-grade-rare,
+main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-rare { color:#0879b4!important; }
+main .nft-equipment-loadout .nft-grade-pill.nft-grade-legendary,
+main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-legendary { color:#9a3ac4!important; }
+main .nft-equipment-loadout .nft-grade-pill.nft-grade-relic,
+main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-relic { color:#b06b00!important; }
+main .nft-equipment-loadout .nft-rarity-common {
+  background:#8a847b!important;
+  border-color:#ece7df!important;
+  box-shadow:0 0 7px #b4aea4bf!important;
+}
+main .nft-equipment-loadout .nft-rarity-rare {
+  background:#2da9df!important;
+  border-color:#c8efff!important;
+  box-shadow:0 0 9px #2da9dfe6!important;
+}
+main .nft-equipment-loadout .nft-rarity-legendary {
+  background:#a855d4!important;
+  border-color:#efc8ff!important;
+  box-shadow:0 0 10px #a855d4f2!important;
+}
+main .nft-equipment-loadout .nft-rarity-relic {
+  background:#f0a51b!important;
+  border-color:#fff0a8!important;
+  box-shadow:0 0 12px #f0a51b!important;
+}
+main .nft-loadout-disclosure {
+  background:#201911!important;
+  border-color:#8c7655!important;
+  color:#f2dfbd!important;
+}
+main .nft-loadout-disclosure .nft-loadout-chevron {
+  border-color:#201c17!important;
+  color:#201c17!important;
+}
 .data-skeleton .animate-pulse div { background-color:#e5e7eb!important; border-color:#d1d5db!important; }
 @keyframes contract-skeleton-pulse {
   0%,100% { opacity:.48; }

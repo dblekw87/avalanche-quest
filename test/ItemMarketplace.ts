@@ -17,9 +17,12 @@ async function deployItems() {
   return { admin, signer, seller, buyer, token, item, market };
 }
 
-async function mintDrop(fixture: Awaited<ReturnType<typeof deployItems>>) {
+async function mintDrop(
+  fixture: Awaited<ReturnType<typeof deployItems>>,
+  overrides: Partial<{ itemType: number; rarity: number; power: number }> = {},
+) {
   const uri = `data:application/json;base64,${Buffer.from('{"name":"Mythic Blade"}').toString('base64')}`;
-  const claim = { claimId: `0x${'11'.repeat(32)}` as Hex, attemptId: `0x${'22'.repeat(32)}` as Hex, player: fixture.seller.account.address, itemType: 0, rarity: 2, power: 42, metadataHash: keccak256(toBytes(uri)), nonce: 0n, deadline: BigInt(Math.floor(Date.now() / 1000) + 3600) };
+  const claim = { claimId: `0x${'11'.repeat(32)}` as Hex, attemptId: `0x${'22'.repeat(32)}` as Hex, player: fixture.seller.account.address, itemType: overrides.itemType ?? 0, rarity: overrides.rarity ?? 2, power: overrides.power ?? 42, metadataHash: keccak256(toBytes(uri)), nonce: 0n, deadline: BigInt(Math.floor(Date.now() / 1000) + 3600) };
   const chainId = await (await viem.getPublicClient()).getChainId();
   const signature = await fixture.signer.signTypedData({ account: fixture.signer.account, domain: { name: 'Avalanche Quest Items', version: '1', chainId, verifyingContract: fixture.item.address }, primaryType: 'MintClaim', types: { MintClaim: [
     { name: 'claimId', type: 'bytes32' }, { name: 'attemptId', type: 'bytes32' }, { name: 'player', type: 'address' }, { name: 'itemType', type: 'uint8' }, { name: 'rarity', type: 'uint8' }, { name: 'power', type: 'uint32' }, { name: 'metadataHash', type: 'bytes32' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint64' },
@@ -44,5 +47,13 @@ describe('GameItem and ItemMarketplace', () => {
     await fixture.market.write.buy([1n], { account: fixture.buyer.account });
     assert.equal((await fixture.item.read.ownerOf([1n])).toLowerCase(), fixture.buyer.account.address.toLowerCase());
     assert.equal(await fixture.token.read.balanceOf([fixture.seller.account.address]), price);
+  });
+
+  it('rejects unsupported item types, rarities, and power values', async () => {
+    const fixture = await networkHelpers.loadFixture(deployItems);
+    await assert.rejects(() => mintDrop(fixture, { itemType: 3 }), /InvalidItemType/);
+    await assert.rejects(() => mintDrop(fixture, { rarity: 4 }), /InvalidRarity/);
+    await assert.rejects(() => mintDrop(fixture, { power: 0 }), /InvalidPower/);
+    await assert.rejects(() => mintDrop(fixture, { power: 10_001 }), /InvalidPower/);
   });
 });

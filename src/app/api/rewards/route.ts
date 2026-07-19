@@ -54,6 +54,7 @@ export async function POST(request: Request) {
           id: authorization.attemptId,
           player: authorization.player,
           stageId: authorization.stageId,
+          equipmentSnapshotHash: authorization.equipmentSnapshotHash,
           expiresAt: authorization.expiresAt,
           status: 'started' as const,
         }
@@ -191,11 +192,11 @@ function rollLoot(stageId: StageId) {
   const stage = stages[stageId];
   const roll = randomInt(100);
   const rarity = roll < Math.min(8 + stage.number * 2, 25) ? 3 : roll < 35 + stage.number * 2 ? 2 : roll < 78 ? 1 : 0;
-  const rarityNames = ['Common', 'Rare', 'Epic', 'Legendary'] as const;
-  const itemType = randomInt(2);
-  const typeNames = ['Weapon', 'Armor'] as const;
+  const rarityNames = ['Common', 'Rare', 'Legendary', 'Relic'] as const;
+  const itemType = randomInt(3);
+  const typeNames = ['Weapon', 'Armor', 'Accessory'] as const;
   const prefixes = ['Rugged', 'Runed', 'Mythic', 'Sovereign'] as const;
-  const suffixes = ['Blade', 'Aegis'] as const;
+  const suffixes = ['Blade', 'Aegis', 'Relic'] as const;
   return {
     itemType, rarity, power: 8 + stage.number * 4 + rarity * 7 + randomInt(8),
     rarityName: rarityNames[rarity] ?? 'Common', typeName: typeNames[itemType] ?? 'Weapon',
