@@ -14,6 +14,9 @@ const bossKeys = [
   'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord',
   'eclipse-executioner', 'paradox-machinist', 'blood-moon-tyrant', 'infinite-tempest', 'godfall-arbiter',
   'chronos-warden', 'astral-gravekeeper', 'hellfire-origin', 'absolute-zero', 'eternity-devourer',
+  'unwritten-sovereign', 'shattered-halo', 'bone-tide-leviathan', 'clockwork-oracle',
+  'crimson-moon-beast', 'storm-executioner', 'void-archivist', 'glacial-war-engine',
+  'reality-duelist', 'apocalypse-dragon-emperor',
 ];
 
 function packArguments() {
@@ -180,17 +183,221 @@ async function splitStagePack(stageNumber, inputPath) {
     .toBuffer();
 
   await writePng(
-    await clearAlphaMargins(bossSheet, { top: 70, right: 5, bottom: 3, left: 5 }),
+    await clearAlphaMargins(bossSheet, { top: 70, right: 16, bottom: 12, left: 16 }),
     join(root, 'public', 'assets', 'boss-animation-sheets-special', `${bossKey}.png`),
   );
   await writePng(
-    await clearAlphaMargins(minionSheet, { top: 70, right: 5, bottom: 3, left: 5 }),
+    await clearAlphaMargins(minionSheet, { top: 70, right: 16, bottom: 12, left: 16 }),
     join(root, 'public', 'assets', 'minions-special', `${bossKey}.png`),
   );
   await writePng(
-    await clearAlphaMargins(projectileSheet, { top: 70, right: 8, bottom: 4, left: 8 }),
+    await clearAlphaMargins(projectileSheet, { top: 70, right: 16, bottom: 12, left: 16 }),
     join(root, 'public', 'assets', 'projectiles-special', `${bossKey}.png`),
   );
+}
+
+async function splitStage41MidbossPack(inputPath) {
+  const transparentPack = await sharp(inputPath)
+    .resize(1_024, 1_024, { fit: 'fill' })
+    .ensureAlpha()
+    .png()
+    .toBuffer();
+
+  const writeMidbossSheet = async (key, rowOffset) => {
+    const frames = [];
+    for (let frame = 0; frame < 8; frame += 1) {
+      frames.push({
+        input: await sharp(transparentPack).extract({
+          left: (frame % 4) * cellSize,
+          top: (rowOffset + Math.floor(frame / 4)) * cellSize,
+          width: cellSize,
+          height: cellSize,
+        }).png().toBuffer(),
+        left: frame * cellSize,
+        top: 0,
+      });
+    }
+    const sheet = await sharp({
+      create: { width: 2_048, height: cellSize, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    }).composite(frames).png().toBuffer();
+    await writePng(
+      await clearAlphaMargins(sheet, { top: 16, right: 16, bottom: 12, left: 16 }),
+      join(root, 'public', 'assets', 'midbosses-special', `${key}.png`),
+    );
+  };
+
+  await writeMidbossSheet('null-choir-sentinel', 0);
+  await writeMidbossSheet('axiom-butcher', 2);
+}
+
+async function writeStage41Platform(inputPath) {
+  const outputPath = join(root, 'public', 'assets', 'platforms-special', 'stage-41.png');
+  await writePng(
+    await sharp(inputPath)
+      .resize(1_776, 888, { fit: 'fill' })
+      .png()
+      .toBuffer(),
+    outputPath,
+  );
+}
+
+async function writeStage41BossProjectile(inputPath) {
+  const outputPath = join(
+    root,
+    'public',
+    'assets',
+    'boss-projectiles-special-alpha',
+    'unwritten-sovereign.png',
+  );
+  const metadata = await sharp(inputPath).metadata();
+  if (!metadata.width || !metadata.height) throw new Error('Stage 41 boss projectile has no dimensions.');
+  const cropSize = Math.round(Math.min(metadata.width, metadata.height) * 0.75);
+  const cropLeft = Math.round((metadata.width - cropSize) / 2);
+  const cropTop = Math.round((metadata.height - cropSize) / 2);
+  await writePng(
+    await sharp(inputPath)
+      .extract({ left: cropLeft, top: cropTop, width: cropSize, height: cropSize })
+      .resize(420, 420, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .extend({
+        top: 46,
+        bottom: 46,
+        left: 46,
+        right: 46,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer(),
+    outputPath,
+  );
+}
+
+async function writeApexCampaignBossAssets(inputPath) {
+  const atlas = await sharp(inputPath)
+    .resize(1_536, 1_536, { fit: 'fill' })
+    .ensureAlpha()
+    .png()
+    .toBuffer();
+  const minionSource = join(root, 'public', 'assets', 'minions-special', 'unwritten-sovereign.png');
+  const minionProjectileSource = join(root, 'public', 'assets', 'projectiles-special', 'unwritten-sovereign.png');
+  const bossProjectileSource = join(
+    root,
+    'public',
+    'assets',
+    'boss-projectiles-special-alpha',
+    'unwritten-sovereign.png',
+  );
+  const bobOffsets = [2, -2, -5, -2, 1, -1, -4, 0];
+  const angles = [-1.2, -0.4, 0.5, 1.1, 0.6, -0.2, -0.8, 0];
+
+  for (let stageNumber = 42; stageNumber <= 50; stageNumber += 1) {
+    const atlasIndex = stageNumber - 42;
+    const key = bossKeys[stageNumber - 1];
+    if (!key) throw new Error(`Missing apex boss key for stage ${stageNumber}.`);
+    const extractedCell = await sharp(atlas)
+      .extract({
+        left: (atlasIndex % 3) * 512,
+        top: Math.floor(atlasIndex / 3) * 512,
+        width: 512,
+        height: 512,
+      })
+      .png()
+      .toBuffer();
+    const cell = await sharp(extractedCell)
+      .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize(206, 216, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+
+    const frames = [];
+    for (let frameIndex = 0; frameIndex < 8; frameIndex += 1) {
+      const actor = await sharp(cell)
+        .rotate(angles[frameIndex], { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(
+          Math.round(206 * (1 + (frameIndex % 4) * 0.006)),
+          Math.round(216 * (1 + (frameIndex % 3) * 0.005)),
+          { fit: 'fill' },
+        )
+        .png()
+        .toBuffer();
+      const actorMetadata = await sharp(actor).metadata();
+      frames.push({
+        input: actor,
+        left: frameIndex * cellSize + Math.round((cellSize - (actorMetadata.width ?? 206)) / 2),
+        top: Math.max(8, 20 + bobOffsets[frameIndex]),
+      });
+    }
+    const bossSheet = await sharp({
+      create: {
+        width: cellSize * 8,
+        height: cellSize,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    }).composite(frames).png().toBuffer();
+    await writePng(
+      await clearAlphaMargins(bossSheet, { top: 8, right: 18, bottom: 8, left: 18 }),
+      join(root, 'public', 'assets', 'boss-animation-sheets-special', `${key}.png`),
+    );
+
+    const hue = ((stageNumber - 41) * 34) % 360;
+    await writePng(
+      await sharp(minionSource).modulate({ hue, saturation: 1.04 }).png().toBuffer(),
+      join(root, 'public', 'assets', 'minions-special', `${key}.png`),
+    );
+    await writePng(
+      await sharp(minionProjectileSource).modulate({ hue, saturation: 1.12 }).png().toBuffer(),
+      join(root, 'public', 'assets', 'projectiles-special', `${key}.png`),
+    );
+    await writePng(
+      await sharp(bossProjectileSource)
+        .rotate((stageNumber - 41) * 17, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(512, 512, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .modulate({ hue, saturation: 1.08 })
+        .png()
+        .toBuffer(),
+      join(root, 'public', 'assets', 'boss-projectiles-special-alpha', `${key}.png`),
+    );
+  }
+}
+
+async function writeApexCampaignMaps(inputPath) {
+  const atlas = await sharp(inputPath)
+    .resize(1_536, 1_536, { fit: 'fill' })
+    .png()
+    .toBuffer();
+  const platformSource = join(root, 'public', 'assets', 'platforms-special', 'stage-41.png');
+  for (let stageNumber = 42; stageNumber <= 50; stageNumber += 1) {
+    const atlasIndex = stageNumber - 42;
+    await writePng(
+      await sharp(atlas)
+        .extract({
+          left: (atlasIndex % 3) * 512,
+          top: Math.floor(atlasIndex / 3) * 512,
+          width: 512,
+          height: 512,
+        })
+        .resize(1_776, 888, { fit: 'fill' })
+        .png()
+        .toBuffer(),
+      join(root, 'public', 'assets', 'maps-special', `stage-${stageNumber}-v2.png`),
+    );
+    await writePng(
+      await sharp(platformSource)
+        .modulate({ hue: ((stageNumber - 41) * 34) % 360, saturation: 1.06 })
+        .png()
+        .toBuffer(),
+      join(root, 'public', 'assets', 'platforms-special', `stage-${stageNumber}.png`),
+    );
+  }
 }
 
 async function cleanRuntimeProjectiles() {
@@ -241,10 +448,25 @@ async function cleanRuntimeProjectiles() {
   }
 }
 
-await cleanRuntimeProjectiles();
+if (process.argv.includes('--clean-runtime')) await cleanRuntimeProjectiles();
 for (const [stageNumber, inputPath] of packArguments()) {
-  if (stageNumber < 31 || stageNumber > 40) {
-    throw new Error(`Special stage pack must be stage 31-40, received ${stageNumber}.`);
+  if (stageNumber < 31 || stageNumber > 50) {
+    throw new Error(`Special stage pack must be stage 31-50, received ${stageNumber}.`);
   }
   await splitStagePack(stageNumber, inputPath);
 }
+
+const midbossPack = process.argv.find((value) => value.startsWith('--midboss-pack='));
+if (midbossPack) await splitStage41MidbossPack(midbossPack.slice('--midboss-pack='.length));
+
+const platform = process.argv.find((value) => value.startsWith('--platform='));
+if (platform) await writeStage41Platform(platform.slice('--platform='.length));
+
+const bossProjectile = process.argv.find((value) => value.startsWith('--boss-projectile='));
+if (bossProjectile) await writeStage41BossProjectile(bossProjectile.slice('--boss-projectile='.length));
+
+const apexBossAtlas = process.argv.find((value) => value.startsWith('--apex-boss-atlas='));
+if (apexBossAtlas) await writeApexCampaignBossAssets(apexBossAtlas.slice('--apex-boss-atlas='.length));
+
+const apexMapAtlas = process.argv.find((value) => value.startsWith('--apex-map-atlas='));
+if (apexMapAtlas) await writeApexCampaignMaps(apexMapAtlas.slice('--apex-map-atlas='.length));

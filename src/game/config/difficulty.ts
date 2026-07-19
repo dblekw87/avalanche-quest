@@ -3,7 +3,8 @@ export type StageDifficultyTier =
   | 'master'
   | 'hard'
   | 'extreme'
-  | 'cataclysm';
+  | 'cataclysm'
+  | 'apocalypse';
 
 export type StageDifficultyProfile = Readonly<{
   tier: StageDifficultyTier;
@@ -103,12 +104,29 @@ const DIFFICULTY_PROFILES: Readonly<Record<StageDifficultyTier, StageDifficultyP
     bossRecoveryPaddingMs: 140,
     hostileProjectileSpeedPxPerSec: 250,
   },
+  apocalypse: {
+    tier: 'apocalypse',
+    label: 'APOCALYPSE',
+    recommendedSkillLevel: 7,
+    normalHealthPermille: 7_200,
+    eliteHealthPermille: 8_200,
+    bossHealthPermille: 9_200,
+    minimumNormalHealth: 96,
+    minimumEliteHealth: 960,
+    minimumBossHealth: 3_200,
+    incomingDamagePermille: 3_800,
+    minionCastCadenceMs: 880,
+    minionMeleeCadenceMs: 400,
+    bossRecoveryPaddingMs: 80,
+    hostileProjectileSpeedPxPerSec: 250,
+  },
 };
 
 export function getStageDifficulty(stageNumber: number): StageDifficultyProfile {
-  if (!Number.isInteger(stageNumber) || stageNumber < 1 || stageNumber > 40) {
+  if (!Number.isInteger(stageNumber) || stageNumber < 1 || stageNumber > 50) {
     throw new Error(`Unsupported stage difficulty number: ${stageNumber}.`);
   }
+  if (stageNumber >= 41) return DIFFICULTY_PROFILES.apocalypse;
   if (stageNumber >= 37) return DIFFICULTY_PROFILES.cataclysm;
   if (stageNumber >= 31) return DIFFICULTY_PROFILES.extreme;
   if (stageNumber >= 21) return DIFFICULTY_PROFILES.hard;

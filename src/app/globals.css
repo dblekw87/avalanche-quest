@@ -111,6 +111,61 @@ main .nft-equipment-loadout .nft-grade-pill.nft-grade-legendary,
 main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-legendary { color:#9a3ac4!important; }
 main .nft-equipment-loadout .nft-grade-pill.nft-grade-relic,
 main .nft-equipment-loadout button.nft-owned-equipped .nft-grade-pill.nft-grade-relic { color:#b06b00!important; }
+
+main .inventory-item-equipped {
+  background:linear-gradient(135deg,#3f2a12 0%,#24180d 55%,#120d08 100%)!important;
+  border-color:#e2b857!important;
+  box-shadow:0 0 0 2px #e2b85766,0 12px 28px #3f2a124d,inset 0 0 28px #d79a2730!important;
+}
+main .inventory-item-equipped .inventory-equipped-ribbon {
+  background:linear-gradient(90deg,#b77d25,#805014)!important;
+  border-color:#ffe09a!important;
+  color:#fff!important;
+  text-shadow:0 1px 3px #4a2b08;
+}
+main .inventory-item-equipped .inventory-equipped-ribbon [class] { color:#fff!important; }
+main .inventory-item-equipped .inventory-equipped-check {
+  background:#fff!important;
+  color:#71460f!important;
+  text-shadow:none;
+  box-shadow:0 0 0 2px #ffe6ad66;
+}
+main .inventory-item-equipped .inventory-token-id { color:#ffd98d!important; }
+main .inventory-item-equipped .inventory-item-title {
+  color:#fff!important;
+  text-shadow:0 2px 5px #000;
+}
+main .inventory-item-equipped .inventory-item-description { color:#ead9b7!important; }
+main .inventory-item-equipped img {
+  background:#17130f!important;
+  border-color:#e2b857!important;
+  box-shadow:0 0 18px #e2b85755;
+}
+main .inventory-item-equipped .inventory-item-attribute {
+  background:#17100a!important;
+  border-color:#9f7b3d!important;
+  color:#ffe6b5!important;
+}
+main .inventory-item-equipped .inventory-listing-label { color:#e6c985!important; }
+main .inventory-item-equipped .inventory-price-control {
+  background:#fffaf0!important;
+  border-color:#b9a786!important;
+}
+main .inventory-item-equipped .inventory-price-control input {
+  background:#fffaf0!important;
+  color:#4b4032!important;
+}
+main .inventory-item-equipped .inventory-price-control input::placeholder {
+  color:#756d60!important;
+  opacity:1;
+}
+main .inventory-item-equipped .inventory-price-control span { color:#6f5c3d!important; }
+main .inventory-item-equipped .inventory-list-button {
+  background:#17110b!important;
+  border-color:#d5b06c!important;
+  color:#ffe4b5!important;
+  opacity:1!important;
+}
 main .nft-equipment-loadout .nft-rarity-common {
   background:#8a847b!important;
   border-color:#ece7df!important;

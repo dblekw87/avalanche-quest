@@ -511,7 +511,7 @@ export function GameExperience() {
               </div>
               <p className="mt-2 text-[10px] font-semibold leading-4 text-white/90">Extended route · two named mid-boss arenas · sealed progression gates · phase-changing final encounter.</p>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                {stageIds.filter((id) => stages[id].special).map((id) => (
+                {stageIds.filter((id) => stages[id].special && stages[id].number <= 40).map((id) => (
                   <button
                     key={id}
                     type="button"
@@ -522,6 +522,28 @@ export function GameExperience() {
                   >
                     <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
                     <strong className="mt-1 block text-sm">{stages[id].name}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 overflow-hidden rounded-xl border border-[#73efff] bg-gradient-to-r from-[#02080b] via-[#10191d] to-[#21090d] p-3 shadow-[0_0_28px_rgba(115,239,255,.16)] sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <span><span className="block text-[10px] font-black tracking-[.24em] text-[#9ff7ff] [text-shadow:0_2px_5px_rgba(0,0,0,.95)]">APEX CAMPAIGN · 41—50</span><strong className="mt-1 block text-base font-black text-white">Ten Long-Form Apocalypse Stages</strong></span>
+                <span className="w-fit rounded-full border border-[#ff6b79]/80 px-3 py-1 text-[9px] font-black tracking-[.16em] text-white">5 PHASE FINAL BOSSES</span>
+              </div>
+              <p className="mt-2 text-[10px] font-semibold leading-4 text-white/90">5× route length · 80—98 empowered monsters · two named mid-boss sectors · aimed sky projectiles · faster five-phase final bosses.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {stageIds.filter((id) => stages[id].number >= 41).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={starting || transactionState === 'pending' || lootTransactionState === 'pending' || assetTycoonMintState === 'pending'}
+                    onClick={() => selectStage(id)}
+                    style={{ backgroundImage: `linear-gradient(90deg,rgba(2,8,11,.36),rgba(2,8,11,.78)),url(/assets/maps-special/stage-${stages[id].number}-v2.png)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                    className={`relative min-w-0 overflow-hidden border px-3 py-4 text-center text-white disabled:cursor-wait disabled:opacity-60 [text-shadow:0_2px_4px_rgba(0,0,0,.95)] sm:text-left ${stageId === id ? 'border-[#a5f8ff] ring-2 ring-[#73efff]/70' : 'border-[#356f78] hover:border-[#73efff]'}`}
+                  >
+                    <span className="block text-[9px] tracking-[.16em]">STAGE {String(stages[id].number).padStart(2, '0')}</span>
+                    <strong className="mt-1 block truncate text-sm">{stages[id].name}</strong>
                   </button>
                 ))}
               </div>

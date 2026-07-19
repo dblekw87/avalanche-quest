@@ -4,6 +4,10 @@ import { QuestAudioDirector } from '@/game/audio/quest-audio-director';
 import { assetTycoonSkills } from '@/game/asset-tycoon';
 import type { StageResult, StageTelemetryEvent } from '@/game/bridge/events';
 import { isInnateCharacter, isPoliticalCharacter, isSecretCharacter, type CharacterId } from '@/game/characters';
+import {
+  DUALBLADE_FRAME_BASELINES_PX,
+  DUALBLADE_TARGET_BASELINE_PX,
+} from '@/game/config/character-visuals';
 import { getStageDifficulty, type StageDifficultyProfile } from '@/game/config/difficulty';
 import { stages, type StageId } from '@/game/config/stages';
 import {
@@ -60,6 +64,11 @@ type BossProjectile = {
   sprite: Phaser.Physics.Arcade.Image | Phaser.Physics.Arcade.Sprite;
   expiresAt: number;
   lastTrailAt: number;
+  motion?: 'homing';
+  motionSpeed?: number;
+  turnRateRadPerSec?: number;
+  homingUntil?: number;
+  lastMotionAt?: number;
 };
 
 type PlayerSkillProjectile = {
@@ -103,6 +112,7 @@ const SPECIAL_PLATFORM_SURFACE_ORIGIN_Y: Readonly<Record<number, number>> = {
   38: 0.2683,
   39: 0.2583,
   40: 0.2277,
+  41: 0.266,
 };
 const AWAKENING_SKILL_IDS = new Set([
   'starfall', 'meteor', 'constellation-storm', 'emerald-rain', 'infinite-blades', 'heaven-breaker',
@@ -127,6 +137,23 @@ const SKILL_COOLDOWNS: Readonly<Record<string, number>> = {
 };
 const MAGE_ATTACK_SKILL_IDS = new Set(['magic-missile', 'ice-storm', 'chain-lightning', 'meteor']);
 const MAGE_ATTACK_DAMAGE_MULTIPLIER = 1.5;
+const GUARDIAN_PATTERN_EXECUTORS: ReadonlySet<BossPatternEntry['executorId']> = new Set([
+  'ordered-sigils',
+  'moving-sanctuary',
+  'line-of-sight',
+  'rotating-gates',
+  'collapsing-floor',
+  'gravity-shear',
+]);
+const HERALD_PATTERN_EXECUTORS: ReadonlySet<BossPatternEntry['executorId']> = new Set([
+  'baited-impact',
+  'interrupt-ritual',
+  'weakpoint-break',
+  'delayed-echo',
+  'marked-pursuit',
+  'axiom-crossfire',
+  'fractured-orbit',
+]);
 
 export class QuestScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -349,8 +376,10 @@ export class QuestScene extends Phaser.Scene {
     const hdProjectileKey = `quest-projectile-hd-${this.stage.number}`;
     if (!this.textures.exists(hdProjectileKey)) this.load.spritesheet(hdProjectileKey, this.combatPresentation.minionProjectileSrc, { frameWidth: 256, frameHeight: 256 });
     if (this.stage.special) {
-      if (!this.textures.exists('quest-special-guardian')) this.load.spritesheet('quest-special-guardian', '/assets/special-stage/guardian.png', { frameWidth: 256, frameHeight: 256 });
-      if (!this.textures.exists('quest-special-herald')) this.load.spritesheet('quest-special-herald', '/assets/special-stage/herald.png', { frameWidth: 256, frameHeight: 256 });
+      const guardianKey = `quest-special-${this.stage.number}-guardian`;
+      const heraldKey = `quest-special-${this.stage.number}-herald`;
+      if (!this.textures.exists(guardianKey)) this.load.spritesheet(guardianKey, this.combatPresentation.guardianActorSrc, { frameWidth: 256, frameHeight: 256 });
+      if (!this.textures.exists(heraldKey)) this.load.spritesheet(heraldKey, this.combatPresentation.heraldActorSrc, { frameWidth: 256, frameHeight: 256 });
     }
   }
 
@@ -368,6 +397,7 @@ export class QuestScene extends Phaser.Scene {
     this.registerCurrentProjectileAnimation();
     this.createWorld();
     const platforms = this.createPlatforms();
+    if (this.stage.special) this.createSpecialStageDecorations();
     this.createPlayer(platforms);
     this.createEnemies(platforms);
     this.createHud();
@@ -406,7 +436,9 @@ export class QuestScene extends Phaser.Scene {
     // atmospheric veil hides the join while the player scrolls through it.
     const panelWidth = 1280;
     const panelHeight = 520;
-    const panelCount = this.stage.special ? 11 : 5;
+    const panelCount = this.stage.special
+      ? Math.max(11, Math.ceil(this.worldWidth / 1_180) + 1)
+      : 5;
     const panelStep = (this.worldWidth - panelWidth) / (panelCount - 1);
     const maskKeys = this.createMapPanelBlendMasks(panelWidth, panelHeight);
     for (let panel = 0; panel < panelCount; panel += 1) {
@@ -465,10 +497,9 @@ export class QuestScene extends Phaser.Scene {
     this.drawStageStructure(150, 390, 300, 132);
 
     if (this.stage.special) {
-      const eliteArenas = [
-        { left: 2_600, right: 4_200, id: `${this.stage.id}-named-guardian` },
-        { left: 6_200, right: 7_800, id: `${this.stage.id}-named-herald` },
-      ];
+      const eliteArenas = this.stage.enemies
+        .filter((enemy) => enemy.elite)
+        .map((enemy) => ({ left: enemy.left, right: enemy.right, id: enemy.id }));
       eliteArenas.forEach(({ left, right, id }) => {
         const width = right - left;
         addSolidGround(left + width / 2, BOSS_ARENA_TOP_Y, width);
@@ -506,13 +537,17 @@ export class QuestScene extends Phaser.Scene {
 
   private createSpecialStageDecorations(): void {
     const variant = this.stage.number - 31;
-    const routeDecorations = this.stage.platforms.filter((_, index) => index % 2 === variant % 2);
+    const decorationStride = this.stage.number >= 41 ? 8 : 2;
+    const routeDecorations = this.stage.platforms.filter((_, index) => index % decorationStride === variant % decorationStride);
     routeDecorations.forEach((platform, index) => {
       const side = (index + variant) % 2 === 0 ? -1 : 1;
       const x = platform.x + side * Math.max(28, platform.width * 0.3);
       const baseY = platform.y - 6;
       const graphic = this.add.graphics().setDepth(3);
-      const motif = (variant + index) % 5;
+      const rawMotif = (variant + index) % 5;
+      // The tall obelisk placeholder read as a door-sized debug panel in play.
+      // Apex stages use the circular sigil instead and keep decorations sparse.
+      const motif = this.stage.number >= 41 && rawMotif === 1 ? 3 : rawMotif;
       if (motif === 0) {
         graphic.fillStyle(0x080512, 0.92).fillTriangle(x - 24, baseY, x, baseY - 76, x + 24, baseY);
         graphic.lineStyle(4, this.stage.accentColor, 0.9).strokeTriangle(x - 24, baseY, x, baseY - 76, x + 24, baseY);
@@ -1028,7 +1063,7 @@ export class QuestScene extends Phaser.Scene {
   private bossAnimationKey(name: 'idle' | 'move' | 'jump' | 'attack' | 'hit' | 'death', visualKind: EnemyState['visualKind'] = 'standard'): string {
     return visualKind === 'standard' || visualKind === 'final'
       ? `boss-${this.bossAssetKey}-${name}`
-      : `boss-special-${visualKind}-${name}`;
+      : `boss-special-${this.stage.number}-${visualKind}-${name}`;
   }
 
   private registerCurrentBossAnimations(): void {
@@ -1042,8 +1077,8 @@ export class QuestScene extends Phaser.Scene {
     ] as const;
     const sheets: readonly { kind: EnemyState['visualKind']; texture: string }[] = this.stage.special
       ? [
-        { kind: 'guardian', texture: 'quest-special-guardian' },
-        { kind: 'herald', texture: 'quest-special-herald' },
+        { kind: 'guardian', texture: `quest-special-${this.stage.number}-guardian` },
+        { kind: 'herald', texture: `quest-special-${this.stage.number}-herald` },
         { kind: 'final', texture: `quest-${this.bossAssetKey}` },
       ]
       : [{ kind: 'standard', texture: `quest-${this.bossAssetKey}` }];
@@ -1128,7 +1163,7 @@ export class QuestScene extends Phaser.Scene {
         : definition.id.endsWith('named-herald') ? 'herald' : definition.elite ? 'guardian' : 'standard';
       const bossUsesAnimatedSheet = true;
       const textureKey = namedEnemy
-        ? (visualKind === 'standard' || visualKind === 'final' ? `quest-${this.bossAssetKey}` : `quest-special-${visualKind}`)
+        ? (visualKind === 'standard' || visualKind === 'final' ? `quest-${this.bossAssetKey}` : `quest-special-${this.stage.number}-${visualKind}`)
         : `quest-minion-hd-${this.stage.number}`;
       const sprite = this.physics.add.sprite(definition.x, definition.y, textureKey, 0);
       sprite.setScale(definition.boss ? BOSS_VISUAL_SCALE : definition.elite ? ELITE_VISUAL_SCALE : 0.42).setCollideWorldBounds(true).setBounce(0.05).setDepth(7);
@@ -1392,10 +1427,14 @@ export class QuestScene extends Phaser.Scene {
       this.cameras.main.shake(360, 0.008);
       this.cameras.main.flash(180, 40, 40, 70, false);
     }
-    if (enemy.elite) this.showEliteArrivalBanner(enemy.id.endsWith('named-herald') ? 'NAMED HERALD' : 'NAMED GUARDIAN');
+    if (enemy.elite) this.showEliteArrivalBanner(
+      enemy.id.endsWith('named-herald')
+        ? this.combatPresentation.heraldName
+        : this.combatPresentation.guardianName,
+    );
   }
 
-  private showEliteArrivalBanner(rank: 'NAMED GUARDIAN' | 'NAMED HERALD'): void {
+  private showEliteArrivalBanner(rank: string): void {
     const banner = this.add.text(this.cameras.main.centerX, 142, `${rank}  //  ARENA SEALED`, {
       color: '#ffdae5', fontFamily: 'monospace', fontSize: '22px', fontStyle: 'bold', stroke: '#26000d', strokeThickness: 7,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(40).setAlpha(0);
@@ -1438,7 +1477,7 @@ export class QuestScene extends Phaser.Scene {
         this.spawnPatternTelegraph('ordered-cells', x, targetY + 32, skill.telegraphMs + index * 120, index + 1, index === safeIndex);
         if (index !== safeIndex) this.time.delayedCall(
           skill.telegraphMs + index * 120,
-          () => enemy.health > 0 && this.dropBossProjectile(x, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+          () => enemy.health > 0 && this.fireAimedSkyMinionProjectile(enemy, x, index),
         );
       });
       return;
@@ -1482,7 +1521,7 @@ export class QuestScene extends Phaser.Scene {
       this.spawnPatternTelegraph('target-ring', targetX, targetY + 28, skill.telegraphMs, variant + 1, false);
       this.time.delayedCall(
         skill.telegraphMs,
-        () => enemy.health > 0 && this.dropBossProjectile(targetX, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+        () => enemy.health > 0 && this.fireAimedSkyMinionProjectile(enemy, targetX, variant),
       );
       return;
     }
@@ -1502,18 +1541,14 @@ export class QuestScene extends Phaser.Scene {
     this.spawnPatternTelegraph('target-ring', echoX, targetY + 28, skill.telegraphMs, 1, false);
     this.time.delayedCall(
       skill.telegraphMs,
-      () => enemy.health > 0 && this.dropBossProjectile(echoX, this.difficulty.hostileProjectileSpeedPxPerSec, 'minion'),
+      () => enemy.health > 0 && this.fireAimedSkyMinionProjectile(enemy, echoX, 0),
     );
     this.time.delayedCall(skill.telegraphMs + 900, () => {
       if (enemy.health <= 0) return;
       this.spawnPatternTelegraph('target-ring', echoX + direction * 120, targetY + 28, 340, 2, false);
       this.time.delayedCall(
         340,
-        () => enemy.health > 0 && this.dropBossProjectile(
-          echoX + direction * 120,
-          this.difficulty.hostileProjectileSpeedPxPerSec,
-          'minion',
-        ),
+        () => enemy.health > 0 && this.fireAimedSkyMinionProjectile(enemy, echoX + direction * 120, 1),
       );
     });
   }
@@ -1530,6 +1565,28 @@ export class QuestScene extends Phaser.Scene {
     projectile.setRotation(angle);
     this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + 2_600, lastTrailAt: 0 });
     this.spawnSkillImpactBurst(enemy.sprite.x, enemy.sprite.y - 10, this.stage.accentColor, 0.42);
+  }
+
+  private fireAimedSkyMinionProjectile(enemy: EnemyState, sourceAnchorX: number, sequence: number): void {
+    const targetX = Phaser.Math.Clamp(this.player.x, enemy.leftBound + 38, enemy.rightBound - 38);
+    const targetY = this.player.y + 20;
+    const side = sequence % 2 === 0 ? 1 : -1;
+    const launchX = Phaser.Math.Clamp(
+      sourceAnchorX + side * (145 + (sequence % 3) * 28),
+      enemy.leftBound + 28,
+      enemy.rightBound - 28,
+    );
+    const launchY = Math.max(38, targetY - 350 - (sequence % 2) * 42);
+    const projectile = this.createHostileProjectile(launchX, launchY, 54, 54, 'minion');
+    const angle = Phaser.Math.Angle.Between(launchX, launchY, targetX, targetY);
+    this.physics.velocityFromRotation(
+      angle,
+      this.difficulty.hostileProjectileSpeedPxPerSec,
+      projectile.body?.velocity,
+    );
+    projectile.setRotation(angle);
+    this.bossProjectiles.push({ sprite: projectile, expiresAt: this.time.now + 2_800, lastTrailAt: 0 });
+    this.spawnSkillImpactBurst(launchX, launchY, this.stage.accentColor, 0.5);
   }
 
   private updateBossSkills(time: number): void {
@@ -1561,20 +1618,21 @@ export class QuestScene extends Phaser.Scene {
     boss.patternIndex = 0;
     boss.nextSkillAt = this.time.now + 1_150;
     boss.actionLockedUntil = this.time.now + 900;
-    boss.sprite.setVelocity(0, 0).setTintFill(nextPhase === 4 ? 0xffffff : this.stage.accentColor);
+    const finalPhase = nextPhase === phaseCount;
+    boss.sprite.setVelocity(0, 0).setTintFill(finalPhase ? 0xffffff : this.stage.accentColor);
     this.time.delayedCall(520, () => boss.health > 0 && boss.sprite.setTint(this.bossTint));
     const phaseAnchor = this.combatProfile.boss.signatureMechanics[(nextPhase - 1) % this.combatProfile.boss.signatureMechanics.length] ?? 'pattern-shift';
     const banner = this.add.text(this.cameras.main.centerX, 145, `PHASE ${nextPhase}  //  ${phaseAnchor.replaceAll('-', ' ').toUpperCase()}`, {
-      color: nextPhase === 4 ? '#ffffff' : '#ffd0df',
+      color: finalPhase ? '#ffffff' : '#ffd0df',
       fontFamily: 'monospace',
-      fontSize: nextPhase === 4 ? '28px' : '23px',
+      fontSize: finalPhase ? '28px' : '23px',
       fontStyle: 'bold',
       stroke: '#26000d',
       strokeThickness: 7,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(40).setAlpha(0);
     this.tweens.add({ targets: banner, alpha: 1, scale: 1.08, duration: 220, yoyo: true, hold: 850, onComplete: () => banner.destroy() });
     this.spawnSkillImpactBurst(boss.sprite.x, boss.sprite.y, this.stage.accentColor, 2.4 + nextPhase * 0.3);
-    this.cameras.main.flash(260, 255, nextPhase === 4 ? 255 : 70, nextPhase === 4 ? 255 : 110, false);
+    this.cameras.main.flash(260, 255, finalPhase ? 255 : 70, finalPhase ? 255 : 110, false);
     this.cameras.main.shake(520, 0.018 + nextPhase * 0.004);
   }
 
@@ -1629,10 +1687,23 @@ export class QuestScene extends Phaser.Scene {
 
   private castBossPattern(boss: EnemyState): number {
     const phase = this.combatProfile.boss.phases[boss.bossPhase - 1] ?? this.combatProfile.boss.phases[0]!;
-    const firstCycleLength = phase.firstCycle.length;
+    const eliteExecutors = boss.visualKind === 'guardian'
+      ? GUARDIAN_PATTERN_EXECUTORS
+      : boss.visualKind === 'herald'
+        ? HERALD_PATTERN_EXECUTORS
+        : undefined;
+    const filteredFirstCycle = eliteExecutors
+      ? phase.firstCycle.filter((entry) => eliteExecutors.has(entry.executorId))
+      : phase.firstCycle;
+    const filteredRepeatDeck = eliteExecutors
+      ? phase.repeatDeck.filter((entry) => eliteExecutors.has(entry.executorId))
+      : phase.repeatDeck;
+    const firstCycle = filteredFirstCycle.length > 0 ? filteredFirstCycle : phase.firstCycle;
+    const repeatDeck = filteredRepeatDeck.length > 0 ? filteredRepeatDeck : phase.repeatDeck;
+    const firstCycleLength = firstCycle.length;
     const entry = boss.patternIndex < firstCycleLength
-      ? phase.firstCycle[boss.patternIndex]
-      : phase.repeatDeck[(boss.patternIndex - firstCycleLength) % phase.repeatDeck.length];
+      ? firstCycle[boss.patternIndex]
+      : repeatDeck[(boss.patternIndex - firstCycleLength) % repeatDeck.length];
     boss.patternIndex += 1;
     if (!entry) return 1_200;
 
@@ -1649,6 +1720,80 @@ export class QuestScene extends Phaser.Scene {
     const targetY = this.player.y + 24;
     const variant = boss.patternIndex;
     const safeIndex = (this.stage.number + boss.bossPhase + variant) % 5;
+
+    if (entry.executorId === 'axiom-crossfire') {
+      const safeLane = safeIndex % 3;
+      [260, 335, 410].forEach((laneY, lane) => {
+        this.spawnPatternTelegraph('sweep-line', (boss.leftBound + boss.rightBound) / 2, laneY, entry.telegraphMs, lane + 1, lane === safeLane);
+        if (lane === safeLane) return;
+        this.time.delayedCall(entry.telegraphMs + lane * 75, () => {
+          if (boss.health <= 0) return;
+          const left = this.createHostileProjectile(boss.leftBound + 65, laneY, 88, 46).setVelocityX(250);
+          const right = this.createHostileProjectile(boss.rightBound - 65, laneY, 88, 46).setVelocityX(-250);
+          this.bossProjectiles.push(
+            { sprite: left, expiresAt: this.time.now + 3_000, lastTrailAt: 0 },
+            { sprite: right, expiresAt: this.time.now + 3_000, lastTrailAt: 0 },
+          );
+        });
+      });
+      this.spawnPatternTelegraph('target-ring', targetX, targetY, entry.telegraphMs + 260, 4, false);
+      this.time.delayedCall(entry.telegraphMs + 260, () => boss.health > 0 && this.dropBossProjectile(targetX, 250));
+      return totalDuration + 260;
+    }
+
+    if (entry.executorId === 'fractured-orbit') {
+      this.spawnPatternTelegraph('target-ring', boss.sprite.x, boss.sprite.y, entry.telegraphMs, 1, false);
+      this.centeredOffsets(3, 0.26).forEach((angleOffset, index) => {
+        this.time.delayedCall(entry.telegraphMs + index * 130, () => {
+          if (boss.health > 0) this.fireGuidedBossProjectile(boss, angleOffset);
+        });
+      });
+      return totalDuration + 260;
+    }
+
+    if (entry.executorId === 'gravity-shear') {
+      const arenaCenter = (boss.leftBound + boss.rightBound) / 2;
+      const destinationX = boss.sprite.x <= arenaCenter
+        ? boss.rightBound - 125
+        : boss.leftBound + 125;
+      const laneWidth = Math.abs(destinationX - boss.sprite.x);
+      const lane = this.add.rectangle(
+        (destinationX + boss.sprite.x) / 2,
+        BOSS_ARENA_TOP_Y - 42,
+        laneWidth,
+        118,
+        this.stage.accentColor,
+        0.1,
+      ).setStrokeStyle(5, this.stage.accentColor, 0.9).setDepth(10);
+      this.tweens.add({
+        targets: lane,
+        alpha: 0.3,
+        duration: Math.max(120, Math.round(entry.telegraphMs / 3)),
+        yoyo: true,
+        repeat: 2,
+        onComplete: () => lane.destroy(),
+      });
+      this.time.delayedCall(entry.telegraphMs, () => {
+        if (boss.health <= 0) return;
+        this.spawnBossBlinkFlash(boss.sprite.x, boss.sprite.y);
+        boss.bossMotion = 'jump';
+        boss.bossMotionUntil = this.time.now + entry.activeMs;
+        this.tweens.add({
+          targets: boss.sprite,
+          x: destinationX,
+          duration: Math.max(360, entry.activeMs),
+          ease: 'Cubic.InOut',
+          onComplete: () => {
+            if (boss.health <= 0) return;
+            boss.sprite.setVelocity(0, 0);
+            this.spawnBossBlinkFlash(boss.sprite.x, boss.sprite.y);
+            this.spawnSkillImpactBurst(boss.sprite.x, BOSS_ARENA_TOP_Y - 18, this.stage.accentColor, 1.8);
+            this.fanAngles(3, 0.24).forEach((angle) => this.fireBossProjectile(boss, angle));
+          },
+        });
+      });
+      return totalDuration;
+    }
 
     if (entry.executorId === 'ordered-sigils' || entry.executorId === 'collapsing-floor') {
       this.centeredOffsets(5, 118).forEach((offset, index) => {
@@ -1914,6 +2059,32 @@ export class QuestScene extends Phaser.Scene {
     this.cameras.main.shake(80, 0.0025);
   }
 
+  private fireGuidedBossProjectile(boss: EnemyState, angleOffset = 0): void {
+    boss.bossMotion = 'cast';
+    boss.bossMotionUntil = this.time.now + 520;
+    const attackKey = this.bossAnimationKey('attack', boss.visualKind);
+    if (boss.sprite.anims.currentAnim?.key !== attackKey || !boss.sprite.anims.isPlaying) {
+      boss.sprite.play(attackKey, true);
+    }
+    const projectile = this.createHostileProjectile(boss.sprite.x, boss.sprite.y - 12, 86);
+    if (projectile.body instanceof Phaser.Physics.Arcade.Body) projectile.body.setSize(58, 52, true);
+    const angle = Phaser.Math.Angle.Between(projectile.x, projectile.y, this.player.x, this.player.y) + angleOffset;
+    const speed = this.difficulty.hostileProjectileSpeedPxPerSec;
+    this.physics.velocityFromRotation(angle, speed, projectile.body?.velocity);
+    projectile.setRotation(angle);
+    this.bossProjectiles.push({
+      sprite: projectile,
+      expiresAt: this.time.now + BOSS_PROJECTILE_LIFETIME_MS,
+      lastTrailAt: 0,
+      motion: 'homing',
+      motionSpeed: speed,
+      turnRateRadPerSec: 1.85,
+      homingUntil: this.time.now + 950,
+      lastMotionAt: this.time.now,
+    });
+    this.spawnCrossTwinkle(projectile.x, projectile.y, this.stage.accentColor, 1.1);
+  }
+
   private dropBossProjectile(
     x: number,
     speed = this.difficulty.hostileProjectileSpeedPxPerSec,
@@ -1935,6 +2106,30 @@ export class QuestScene extends Phaser.Scene {
   private updateBossProjectiles(time: number): void {
     this.bossProjectiles = this.bossProjectiles.filter((projectile) => {
       if (!projectile.sprite.active) return false;
+      if (projectile.motion === 'homing' && time <= (projectile.homingUntil ?? 0)) {
+        const lastMotionAt = projectile.lastMotionAt ?? time;
+        const deltaSeconds = Phaser.Math.Clamp((time - lastMotionAt) / 1_000, 0, 0.05);
+        projectile.lastMotionAt = time;
+        const velocity = projectile.sprite.body?.velocity;
+        if (velocity && deltaSeconds > 0) {
+          const currentAngle = Math.atan2(velocity.y, velocity.x);
+          const targetAngle = Phaser.Math.Angle.Between(
+            projectile.sprite.x,
+            projectile.sprite.y,
+            this.player.x,
+            this.player.y,
+          );
+          const maxTurn = (projectile.turnRateRadPerSec ?? 0) * deltaSeconds;
+          const angleDelta = Phaser.Math.Clamp(
+            Phaser.Math.Angle.Wrap(targetAngle - currentAngle),
+            -maxTurn,
+            maxTurn,
+          );
+          const nextAngle = currentAngle + angleDelta;
+          this.physics.velocityFromRotation(nextAngle, projectile.motionSpeed ?? 250, velocity);
+          projectile.sprite.setRotation(nextAngle);
+        }
+      }
       if (time - projectile.lastTrailAt >= 55) {
         projectile.lastTrailAt = time;
         const trail = this.add.image(projectile.sprite.x, projectile.sprite.y, projectile.sprite.texture.key, projectile.sprite.frame.name)
@@ -4409,7 +4604,9 @@ export class QuestScene extends Phaser.Scene {
     if (!this.objectiveText) return;
     const elite = this.enemies.find((enemy) => enemy.elite && enemy.health > 0);
     if (elite) {
-      const rank = elite.id.endsWith('named-herald') ? 'NAMED HERALD' : 'NAMED GUARDIAN';
+      const rank = elite.id.endsWith('named-herald')
+        ? this.combatPresentation.heraldName
+        : this.combatPresentation.guardianName;
       this.objectiveText.setText(`${rank}: ${elite.health} / ${elite.maxHealth}`);
       return;
     }
@@ -4557,7 +4754,7 @@ export class QuestScene extends Phaser.Scene {
   }
 
   private alignHeroAnimationBaseline(animation: string): void {
-    if (this.characterId !== 'warrior' && this.characterId !== 'mage' && this.characterId !== 'brawler' && this.characterId !== 'ssaulabi' && this.characterId !== 'hammerguard' && this.characterId !== 'assettycoon') return;
+    if (this.characterId !== 'warrior' && this.characterId !== 'mage' && this.characterId !== 'dualblade' && this.characterId !== 'brawler' && this.characterId !== 'ssaulabi' && this.characterId !== 'hammerguard' && this.characterId !== 'assettycoon') return;
     const warriorBaselines: Readonly<Record<string, number>> = {
       idle: 149, walk: 145, run: 133, dash: 133, jump: 138, attack: 142, skill: 130, hit: 122, death: 120,
     };
@@ -4573,7 +4770,13 @@ export class QuestScene extends Phaser.Scene {
     const hammerguardBaselines: Readonly<Record<string, number>> = {
       idle: 132, walk: 133, run: 150, dash: 150, jump: 150, attack: 122, skill: 122, hit: 136, death: 154,
     };
-    const targetBaseline = this.characterId === 'warrior' ? 149 : this.characterId === 'mage' ? 145 : 144;
+    const targetBaseline = this.characterId === 'warrior'
+      ? 149
+      : this.characterId === 'mage'
+        ? 145
+        : this.characterId === 'dualblade'
+          ? DUALBLADE_TARGET_BASELINE_PX
+          : 144;
     const assetTycoonBaselines: Readonly<Record<string, number>> = {
       idle: 144, walk: 144, run: 144, dash: 144, jump: 144, attack: 144, skill: 144, hit: 144, death: 144,
     };
@@ -4581,6 +4784,8 @@ export class QuestScene extends Phaser.Scene {
       ? warriorBaselines
       : this.characterId === 'mage'
         ? mageBaselines
+        : this.characterId === 'dualblade'
+          ? DUALBLADE_FRAME_BASELINES_PX
         : this.characterId === 'ssaulabi'
           ? ssaulabiBaselines
         : this.characterId === 'hammerguard'
@@ -4652,6 +4857,9 @@ export class QuestScene extends Phaser.Scene {
       'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord',
       'eclipse-executioner', 'paradox-machinist', 'blood-moon-tyrant', 'infinite-tempest', 'godfall-arbiter',
       'chronos-warden', 'astral-gravekeeper', 'hellfire-origin', 'absolute-zero', 'eternity-devourer',
+      'unwritten-sovereign', 'shattered-halo', 'bone-tide-leviathan', 'clockwork-oracle',
+      'crimson-moon-beast', 'storm-executioner', 'void-archivist', 'glacial-war-engine',
+      'reality-duelist', 'apocalypse-dragon-emperor',
     ][this.stage.number - 1] ?? 'goblin-warlord';
   }
 

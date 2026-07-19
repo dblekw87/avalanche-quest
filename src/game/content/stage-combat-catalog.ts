@@ -12,7 +12,10 @@ export type BossPatternExecutorId =
   | 'tether-guide'
   | 'rotating-gates'
   | 'collapsing-floor'
-  | 'lane-synthesis';
+  | 'lane-synthesis'
+  | 'axiom-crossfire'
+  | 'fractured-orbit'
+  | 'gravity-shear';
 
 export type PatternDecisionKind =
   | 'position'
@@ -177,6 +180,16 @@ const STAGE_COMBAT_SEEDS = [
   ['hellfire-nexus', 'Hellfire', 'Hellfire Origin', ['temper-cycle', 'forge-runes', 'origin-forge'], 'fuse-network', 'network-interrupt', ['bomber', 'trapper'], 'Break the overheated fuse junction or retreat to the marked safe bay.'],
   ['absolute-zero', 'Absolute Zero', 'Absolute Zero', ['heat-sharing', 'thaw-beacons', 'thermal-death'], 'thermal-memory', 'platform-memory', ['ritualist', 'echo'], 'Repeat the warm platform sequence during the whiteout.'],
   ['end-of-eternity', 'Eternity', 'Eternity Devourer', ['era-lanes', 'memory-devour', 'end-of-eternity'], 'eternity-palindrome', 'palindrome-memory', ['bulwark', 'echo', 'ritualist'], 'Resolve A-B-C-C-B-A across the safe and interrupt nodes.'],
+  ['unwritten-citadel', 'Unwritten Axiom', 'The Unwritten Sovereign', ['unwritten-law', 'crown-of-zero', 'axiom-collapse'], 'cipher-hunt', 'crossfire-memory', ['conductor', 'echo', 'charger'], 'Read the numbered cipher gaps, bait the echo outside the route, then break through before the crossfire closes.'],
+  ['shattered-halo-cathedral', 'Shattered Halo', 'The Shattered Halo', ['halo-sever', 'cathedral-lanes', 'saintfall'], 'halo-hunt', 'converging-crossfire', ['marksman', 'conductor', 'charger'], 'Read the broken halo segment, then cut across before its converging bolts meet.'],
+  ['bone-tide-necropolis', 'Bone Tide', 'The Bone-Tide Leviathan', ['tide-fangs', 'rib-cage', 'necrotic-deluge'], 'marrow-current', 'guided-tide', ['summoner', 'echo', 'trapper'], 'Bait the marrow current away from the open rib gate, then reverse through it.'],
+  ['oracle-clockworks', 'Clockwork Oracle', 'The Clockwork Oracle', ['future-mark', 'hourglass-turn', 'zero-second'], 'future-gear', 'ordered-forecast', ['ritualist', 'conductor', 'warden'], 'Memorize the forecast order and cross the gear lane before the second hand returns.'],
+  ['crimson-moon-hunt', 'Crimson Moon', 'The Crimson Moon Beast', ['lunar-pounce', 'blood-crescent', 'red-eclipse'], 'moon-scent', 'pursuit-echo', ['charger', 'echo', 'bomber'], 'Drop the moon scent at the edge and dodge through the delayed crescent pursuit.'],
+  ['storm-judgment-spire', 'Storm Judgment', 'The Storm Executioner', ['thunder-sentence', 'winged-gallows', 'whiteout-verdict'], 'storm-brand', 'lane-execution', ['marksman', 'conductor', 'bulwark'], 'Follow the uncharged lane and move again when the delayed sentence flashes.'],
+  ['void-archive', 'Void Archive', 'The Void Archivist', ['forbidden-index', 'rune-orbit', 'archive-erasure'], 'index-seal', 'orbit-memory', ['ritualist', 'summoner', 'echo'], 'Break the indexed seal, then enter the gap left by the recalled rune tablet.'],
+  ['glacial-war-foundry', 'Glacial Foundry', 'The Glacial War Engine', ['furnace-ram', 'ice-barrage', 'absolute-overdrive'], 'frost-fuse', 'crossfire-overheat', ['charger', 'bomber', 'warden'], 'Bait the furnace ram into frost, then cross while the overheated cannons vent.'],
+  ['reality-rift-palace', 'Reality Rift', 'The Reality Duelist', ['crescent-cut', 'mirror-step', 'world-divider'], 'rift-feint', 'mirrored-crossing', ['echo', 'marksman', 'trapper'], 'Dodge the first crescent, remember its mirror, and occupy the seam between both cuts.'],
+  ['last-apocalypse-throne', 'Last Apocalypse', 'The Apocalypse Dragon-Emperor', ['dragon-law', 'singularity-crown', 'last-world-collapse'], 'apocalypse-brand', 'terminal-crossfire', ['conductor', 'charger', 'ritualist'], 'Read the crown order, outrun the guided singularities, and break the final law before collapse.'],
 ] as const satisfies readonly (readonly [
   string,
   string,
@@ -201,6 +214,21 @@ const BOSS_EXECUTORS: readonly BossPatternExecutorId[] = [
   'rotating-gates',
   'collapsing-floor',
   'lane-synthesis',
+];
+
+const APEX_BOSS_EXECUTORS: readonly BossPatternExecutorId[] = [
+  'axiom-crossfire',
+  'fractured-orbit',
+  'gravity-shear',
+  'ordered-sigils',
+  'baited-impact',
+  'moving-sanctuary',
+  'interrupt-ritual',
+  'weakpoint-break',
+  'line-of-sight',
+  'delayed-echo',
+  'marked-pursuit',
+  'rotating-gates',
 ];
 
 const DECISIONS: readonly PatternDecisionKind[] = [
@@ -269,13 +297,14 @@ function createBossEntry(
   const difficulty = getStageDifficulty(stageNumber);
   const anchor = seed.bossAnchors[(entryIndex + phaseNumber - 1) % seed.bossAnchors.length] ?? seed.bossAnchors[0];
   const variant = ENTRY_VARIANTS[entryIndex] ?? 'lesson';
+  const executorPool = stageNumber >= 41 ? APEX_BOSS_EXECUTORS : BOSS_EXECUTORS;
   const executorIndex = (
     stageNumber * 7
     + phaseNumber * 3
     + entryIndex * 5
     + ((stageNumber >> (entryIndex % 5)) & 0b11)
-  ) % BOSS_EXECUTORS.length;
-  const executorId = BOSS_EXECUTORS[executorIndex] ?? 'ordered-sigils';
+  ) % executorPool.length;
+  const executorId = executorPool[executorIndex] ?? 'ordered-sigils';
   const decisionKind = DECISIONS[(
     stageNumber
     + phaseNumber
@@ -295,6 +324,7 @@ function createBossEntry(
     hard: 760,
     extreme: 720,
     cataclysm: 700,
+    apocalypse: 700,
   }[difficulty.tier];
   const phasePressureMs = Math.max(0, (4 - phaseNumber) * (difficulty.tier === 'cataclysm' ? 0 : 35));
   const recoveryBaseMs = {
@@ -303,7 +333,9 @@ function createBossEntry(
     hard: 560,
     extreme: 520,
     cataclysm: 500,
+    apocalypse: 500,
   }[difficulty.tier];
+  const recoveryStepMs = difficulty.tier === 'apocalypse' ? 45 : 80;
   return {
     id: `${namespace}.v1`,
     name: `${seed.theme} ${titleCase(anchor)}: ${titleCase(variant)}`,
@@ -312,7 +344,12 @@ function createBossEntry(
     decisionKind,
     telegraphMs: tierTelegraphBase + phasePressureMs + (entryIndex % 3) * 55,
     activeMs: 420 + (entryIndex % 4) * 110,
-    recoveryMs: recoveryBaseMs + ((entryIndex + phaseNumber) % 5) * 80,
+    recoveryMs: Math.max(
+      difficulty.tier === 'apocalypse' ? 320 : recoveryBaseMs,
+      recoveryBaseMs
+        + ((entryIndex + phaseNumber) % 5) * recoveryStepMs
+        - Math.max(0, stageNumber - 41) * 18,
+    ),
     geometry,
     safeZoneRule: `${seed.stageId}.${anchor}.${geometry}.safe`,
     counterplayRule: `Read ${titleCase(anchor)}, then resolve by ${decisionKind}.`,
@@ -357,7 +394,9 @@ function createBossPhase(
 function createEnemySignature(seed: StageCombatSeed, stageNumber: number): EnemySignatureSkill {
   const difficulty = getStageDifficulty(stageNumber);
   const namespace = `enemy.skill.s${String(stageNumber).padStart(2, '0')}.${seed.enemySkill}`;
-  const geometry = GEOMETRIES[(stageNumber * 5) % GEOMETRIES.length] ?? 'lane';
+  const geometry = stageNumber >= 41
+    ? 'ordered-cells'
+    : GEOMETRIES[(stageNumber * 5) % GEOMETRIES.length] ?? 'lane';
   return {
     id: `${namespace}.v1`,
     name: `${seed.theme} ${titleCase(seed.enemySkill)}`,
@@ -369,9 +408,10 @@ function createEnemySignature(seed: StageCombatSeed, stageNumber: number): Enemy
       hard: 730,
       extreme: 710,
       cataclysm: 700,
+      apocalypse: 700,
     }[difficulty.tier] + (stageNumber % 3) * 35,
     activeMs: 420 + (stageNumber % 3) * 100,
-    recoveryMs: 500 + (stageNumber % 3) * 45,
+    recoveryMs: Math.max(350, 500 + (stageNumber % 3) * 45 - Math.max(0, stageNumber - 41) * 20),
     targetRuleId: `${seed.stageId}.${seed.enemySkill}.target`,
     safeZoneRuleId: `${seed.stageId}.${seed.enemySkill}.safe`,
     movementPlanId: `${seed.stageId}.${seed.enemySkill}.movement`,
@@ -389,7 +429,7 @@ function createEnemySignature(seed: StageCombatSeed, stageNumber: number): Enemy
 function createStageCombatProfile(tuple: (typeof STAGE_COMBAT_SEEDS)[number], index: number): StageCombatProfile {
   const seed = seedFromTuple(tuple);
   const stageNumber = index + 1;
-  const phaseCount = stageNumber >= 31 ? 4 : 3;
+  const phaseCount = stageNumber >= 41 ? 5 : stageNumber >= 31 ? 4 : 3;
   const signature = createEnemySignature(seed, stageNumber);
   const maxCombineAlive = stageNumber >= 31 ? 4 : 3;
   const stageKey = String(stageNumber).padStart(2, '0');
@@ -400,8 +440,8 @@ function createStageCombatProfile(tuple: (typeof STAGE_COMBAT_SEEDS)[number], in
     boss: {
       id: `boss.s${stageKey}.${seed.stageId}.v1`,
       name: seed.bossName,
-      baselineSpeedPxPerSec: 72 + ((stageNumber - 1) % 8) * 4,
-      preferredRangePx: 230 + (stageNumber % 4) * 25,
+      baselineSpeedPxPerSec: stageNumber >= 41 ? 105 : 72 + ((stageNumber - 1) % 8) * 4,
+      preferredRangePx: stageNumber >= 41 ? 290 : 230 + (stageNumber % 4) * 25,
       identityTags: [seed.theme.toLowerCase().replaceAll(' ', '-'), ...seed.bossAnchors],
       signatureMechanics: seed.bossAnchors,
       ultimateId: `boss.s${stageKey}.${seed.bossAnchors[2]}.ultimate.v1`,

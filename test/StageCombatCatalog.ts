@@ -6,6 +6,10 @@ import { describe, it } from 'node:test';
 import sharp from 'sharp';
 
 import { getStageDifficulty } from '../src/game/config/difficulty.js';
+import {
+  DUALBLADE_FRAME_BASELINES_PX,
+  DUALBLADE_TARGET_BASELINE_PX,
+} from '../src/game/config/character-visuals.js';
 import { STAGE_COMBAT_PRESENTATIONS } from '../src/game/content/combat-presentation-manifest.js';
 import {
   canonicalBossFingerprint,
@@ -17,18 +21,18 @@ import { stageIds, stages } from '../src/game/config/stages.js';
 
 describe('stage combat catalog', () => {
   it('defines one ordered combat identity for every stage', () => {
-    assert.equal(STAGE_COMBAT_PROFILES.length, 40);
+    assert.equal(STAGE_COMBAT_PROFILES.length, 50);
     assert.deepEqual(
       STAGE_COMBAT_PROFILES.map((profile) => profile.stageNumber),
-      Array.from({ length: 40 }, (_, index) => index + 1),
+      Array.from({ length: 50 }, (_, index) => index + 1),
     );
-    assert.equal(new Set(STAGE_COMBAT_PROFILES.map((profile) => profile.stageId)).size, 40);
-    assert.equal(new Set(STAGE_COMBAT_PROFILES.map((profile) => profile.boss.id)).size, 40);
+    assert.equal(new Set(STAGE_COMBAT_PROFILES.map((profile) => profile.stageId)).size, 50);
+    assert.equal(new Set(STAGE_COMBAT_PROFILES.map((profile) => profile.boss.id)).size, 50);
   });
 
-  it('gives every boss three or four phases with 12 named patterns per phase', () => {
+  it('gives every boss three, four, or five phases with 12 named patterns per phase', () => {
     STAGE_COMBAT_PROFILES.forEach((profile) => {
-      assert.equal(profile.boss.phases.length, profile.stageNumber >= 31 ? 4 : 3);
+      assert.equal(profile.boss.phases.length, profile.stageNumber >= 41 ? 5 : profile.stageNumber >= 31 ? 4 : 3);
       const mechanicFamilies = new Set(profile.boss.phases.flatMap((phase) => (
         phase.firstCycle.map((entry) => entry.executorId)
       )));
@@ -40,7 +44,7 @@ describe('stage combat catalog', () => {
         phase.firstCycle.forEach((entry) => {
           assert.ok(entry.name.length > 8);
           assert.ok(entry.telegraphMs >= 700);
-          assert.ok(entry.recoveryMs >= 500);
+          assert.ok(entry.recoveryMs >= (profile.stageNumber >= 41 ? 320 : 500));
           assert.match(entry.presentationId, new RegExp(`boss\\.s${String(profile.stageNumber).padStart(2, '0')}\\.`));
         });
       });
@@ -51,9 +55,9 @@ describe('stage combat catalog', () => {
     const bossFingerprints = STAGE_COMBAT_PROFILES.map(canonicalBossFingerprint);
     const mechanicalFingerprints = STAGE_COMBAT_PROFILES.map(canonicalBossMechanicalFingerprint);
     const enemyFingerprints = STAGE_COMBAT_PROFILES.map(canonicalEnemyFingerprint);
-    assert.equal(new Set(bossFingerprints).size, 40);
-    assert.equal(new Set(mechanicalFingerprints).size, 40);
-    assert.equal(new Set(enemyFingerprints).size, 40);
+    assert.equal(new Set(bossFingerprints).size, 50);
+    assert.equal(new Set(mechanicalFingerprints).size, 50);
+    assert.equal(new Set(enemyFingerprints).size, 50);
   });
 
   it('keeps ordinary locomotion slow and makes charge a named mechanic only', () => {
@@ -74,7 +78,7 @@ describe('stage combat catalog', () => {
     STAGE_COMBAT_PROFILES.forEach((profile) => {
       const { signature, encounters } = profile.enemies;
       assert.ok(signature.telegraphMs >= 700);
-      assert.ok(signature.recoveryMs >= 500);
+      assert.ok(signature.recoveryMs >= (profile.stageNumber >= 41 ? 350 : 500));
       assert.deepEqual(encounters.map((encounter) => encounter.lesson), ['teach', 'test', 'combine']);
       assert.equal(new Set(encounters.map((encounter) => encounter.seed)).size, 3);
       assert.ok(encounters.every((encounter) => encounter.signatureSkillId === signature.id));
@@ -84,17 +88,19 @@ describe('stage combat catalog', () => {
       skillIds.add(signature.id);
       presentationIds.add(signature.presentationId);
     });
-    assert.equal(skillIds.size, 40);
-    assert.equal(presentationIds.size, 40);
+    assert.equal(skillIds.size, 50);
+    assert.equal(presentationIds.size, 50);
   });
 
   it('links production actor/projectile art and keeps projectile art unique', () => {
-    assert.equal(STAGE_COMBAT_PRESENTATIONS.length, 40);
-    assert.equal(new Set(STAGE_COMBAT_PRESENTATIONS.map((manifest) => manifest.telegraphShapeSignature)).size, 40);
+    assert.equal(STAGE_COMBAT_PRESENTATIONS.length, 50);
+    assert.equal(new Set(STAGE_COMBAT_PRESENTATIONS.map((manifest) => manifest.telegraphShapeSignature)).size, 50);
     STAGE_COMBAT_PRESENTATIONS.forEach((manifest) => {
-      assert.equal(manifest.stageNumber >= 1 && manifest.stageNumber <= 40, true);
+      assert.equal(manifest.stageNumber >= 1 && manifest.stageNumber <= 50, true);
       assert.equal(existsSync(join(process.cwd(), 'public', manifest.bossActorSrc.slice(1))), true);
       assert.equal(existsSync(join(process.cwd(), 'public', manifest.minionActorSrc.slice(1))), true);
+      assert.equal(existsSync(join(process.cwd(), 'public', manifest.guardianActorSrc.slice(1))), true);
+      assert.equal(existsSync(join(process.cwd(), 'public', manifest.heraldActorSrc.slice(1))), true);
       assert.equal(existsSync(join(process.cwd(), 'public', manifest.bossProjectileSrc.slice(1))), true);
       assert.equal(existsSync(join(process.cwd(), 'public', manifest.minionProjectileSrc.slice(1))), true);
       assert.equal(manifest.bossActorStatus, 'production');
@@ -109,8 +115,8 @@ describe('stage combat catalog', () => {
       .map((manifest) => createHash('sha256')
         .update(readFileSync(join(process.cwd(), 'public', manifest.minionProjectileSrc.slice(1))))
         .digest('hex'));
-    assert.equal(new Set(projectileHashes).size, 40);
-    assert.equal(new Set(minionProjectileHashes).size, 40);
+    assert.equal(new Set(projectileHashes).size, 50);
+    assert.equal(new Set(minionProjectileHashes).size, 50);
   });
 
   it('keeps every boss, mid-boss, and minion projectile frame off a rectangular background', async () => {
@@ -154,7 +160,7 @@ describe('stage combat catalog', () => {
     ]));
   });
 
-  it('exports stage 31-40 boss and minion sheets on the runtime frame grid', async () => {
+  it('exports stage 31-50 boss and minion sheets on the runtime frame grid', async () => {
     const specialPresentations = STAGE_COMBAT_PRESENTATIONS.filter((manifest) => manifest.stageNumber >= 31);
     await Promise.all(specialPresentations.flatMap(async (manifest) => {
       const bossPath = join(process.cwd(), 'public', manifest.bossActorSrc.slice(1));
@@ -176,13 +182,13 @@ describe('stage combat catalog', () => {
     }));
   });
 
-  it('uses bounded stage placements instead of late-stage speed and count inflation', () => {
+  it('uses bounded movement speeds and long-form placements', () => {
     stageIds.forEach((stageId) => {
       const stage = stages[stageId];
       const normalEnemies = stage.enemies.filter((enemy) => !enemy.boss && !enemy.elite);
       const boss = stage.enemies.find((enemy) => enemy.boss);
       assert.ok(boss);
-      assert.ok(normalEnemies.length >= 5 && normalEnemies.length <= 12);
+      assert.ok(normalEnemies.length >= 5 && normalEnemies.length <= (stage.number >= 41 ? 98 : 12));
       normalEnemies.forEach((enemy) => {
         assert.ok(enemy.speed >= 38 && enemy.speed <= 70);
         assert.ok(enemy.archetypeId);
@@ -194,12 +200,39 @@ describe('stage combat catalog', () => {
     });
   });
 
+  it('builds stages 41-50 as five-times-long routes with dense monsters, two mid-bosses, and one final boss', () => {
+    stageIds.filter((stageId) => stages[stageId].number >= 41).forEach((stageId) => {
+      const stage = stages[stageId];
+      const elites = stage.enemies.filter((enemy) => enemy.elite);
+      const boss = stage.enemies.find((enemy) => enemy.boss);
+      const normalEnemies = stage.enemies.filter((enemy) => !enemy.boss && !enemy.elite);
+      assert.equal(stage.worldWidth, 58_000);
+      assert.equal(stage.bossArenaStartX, 56_000);
+      assert.equal(elites.length, 2);
+      assert.ok(elites[0]!.x > 18_000 && elites[0]!.x < 20_000);
+      assert.ok(elites[1]!.x > 37_000 && elites[1]!.x < 39_000);
+      assert.ok(boss && boss.x > stage.bossArenaStartX);
+      assert.ok(normalEnemies.length >= 80 && normalEnemies.length <= 98);
+      assert.ok(stage.platforms.length > 120);
+      assert.equal(
+        existsSync(join(process.cwd(), 'public', 'assets', 'maps-special', `stage-${stage.number}-v2.png`)),
+        true,
+      );
+      assert.equal(
+        existsSync(join(process.cwd(), 'public', 'assets', 'platforms-special', `stage-${stage.number}.png`)),
+        true,
+      );
+    });
+  });
+
   it('applies the requested progression tiers, health floors, damage, and faster cadence', () => {
     assert.equal(getStageDifficulty(1).recommendedSkillLevel, 2);
     assert.equal(getStageDifficulty(11).recommendedSkillLevel, 4);
     assert.equal(getStageDifficulty(21).tier, 'hard');
     assert.equal(getStageDifficulty(31).tier, 'extreme');
     assert.equal(getStageDifficulty(37).tier, 'cataclysm');
+    assert.equal(getStageDifficulty(41).tier, 'apocalypse');
+    assert.equal(getStageDifficulty(50).tier, 'apocalypse');
 
     stageIds.forEach((stageId) => {
       const stage = stages[stageId];
@@ -221,5 +254,21 @@ describe('stage combat catalog', () => {
       'utf8',
     );
     assert.doesNotMatch(questSceneSource, /Math\.ceil\(enemy\.maxHealth\s*\/\s*3\)/);
+  });
+
+  it('grounds every dualblade animation against the same 149px foot line', () => {
+    assert.equal(DUALBLADE_TARGET_BASELINE_PX, 149);
+    assert.deepEqual(
+      Object.keys(DUALBLADE_FRAME_BASELINES_PX),
+      ['idle', 'walk', 'run', 'dash', 'jump', 'attack', 'skill', 'hit', 'death'],
+    );
+    Object.values(DUALBLADE_FRAME_BASELINES_PX).forEach((baseline) => {
+      assert.ok(baseline <= DUALBLADE_TARGET_BASELINE_PX);
+      assert.ok(DUALBLADE_TARGET_BASELINE_PX - baseline <= 42);
+    });
+    assert.equal(
+      DUALBLADE_TARGET_BASELINE_PX - DUALBLADE_FRAME_BASELINES_PX.idle!,
+      10,
+    );
   });
 });

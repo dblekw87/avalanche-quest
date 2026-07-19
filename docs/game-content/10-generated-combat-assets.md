@@ -2,7 +2,7 @@
 
 Generation date: 2026-07-19
 Mode: built-in image generation tool, one call per distinct asset
-Target: boss projectile/VFX plus stage 31–40 boss/minion/projectile actor packs
+Target: boss projectile/VFX plus stage 31–50 boss/minion/projectile actor packs and stage 41–50 maps
 Runtime: current-stage-only loading through `combat-presentation-manifest.ts`
 
 ## Shared prompt constraints
@@ -79,3 +79,38 @@ Stages 31–40 now use stage-specific final-boss and normal-monster sheets.
 Guardian/herald actor animations remain shared; their stage-specific boss
 projectile presentation is production. Generated sprite alignment still needs
 an independent in-game overlay review on every frame before a release build.
+
+## Stage 41–50 apocalypse campaign
+
+Mode: built-in image generation, one call for each distinct source atlas or
+standalone asset. The project-side pipeline used Sharp plus the imagegen skill's
+`remove_chroma_key.py` helper.
+
+Stage 41 used separate prompts for:
+
+- `stage-41-v2.png`: inverted cathedral and forbidden clockwork citadel,
+  black/cyan/crimson lighting, side-scrolling traversal band.
+- `unwritten-sovereign.png`: 4×4 pack with eight sovereign poses, four
+  Null-Script Stalker poses and four signature projectile poses on `#00ff00`.
+- `null-choir-sentinel.png` and `axiom-butcher.png`: one 4×4 mid-boss pack
+  with avian crystal sentinel and quadruped siege construct silhouettes.
+- `unwritten-sovereign.png` boss projectile: bone-and-cyan crescent singularity.
+  A second edit pass scaled and centered the object before a 46px transparent
+  runtime margin was added, addressing the reported clipped edge.
+
+Stages 42–50 used two source-atlas prompts:
+
+- Boss atlas: exact 3×3 green-screen layout containing Shattered Halo,
+  Bone-Tide Leviathan, Clockwork Oracle, Crimson Moon Beast, Storm Executioner,
+  Void Archivist, Glacial War Engine, Reality Duelist and Apocalypse
+  Dragon-Emperor. Every cell required full-body side view and at least 18%
+  boundary padding.
+- Environment atlas: exact 3×3 opaque layout with matching cathedral,
+  necropolis, clockworks, lunar citadel, storm platform, void archive, glacial
+  foundry, reality palace and apocalypse throne environments.
+
+The runtime processor crops each atlas cell, creates an eight-frame 2048×256
+boss sheet with safe alpha margins, exports four-frame normal-monster and
+projectile sheets, and writes stage-specific 1776×888 map art. Boss projectiles
+reuse the corrected padded silhouette with stage-specific rotation and material
+color treatment; automated tests require transparent corners and unique hashes.

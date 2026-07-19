@@ -6,6 +6,10 @@ export type StageCombatPresentationManifest = Readonly<{
   bossActorStatus: CombatPresentationStatus;
   minionActorSrc: string;
   minionActorStatus: CombatPresentationStatus;
+  guardianActorSrc: string;
+  guardianName: string;
+  heraldActorSrc: string;
+  heraldName: string;
   bossProjectileSrc: string;
   bossProjectileStatus: 'production';
   minionProjectileSrc: string;
@@ -23,6 +27,19 @@ const BOSS_KEYS = [
   'gravity-colossus', 'ruin-sovereign', 'chaos-auditor', 'extinction-dragon', 'compound-overlord',
   'eclipse-executioner', 'paradox-machinist', 'blood-moon-tyrant', 'infinite-tempest', 'godfall-arbiter',
   'chronos-warden', 'astral-gravekeeper', 'hellfire-origin', 'absolute-zero', 'eternity-devourer',
+  'unwritten-sovereign', 'shattered-halo', 'bone-tide-leviathan', 'clockwork-oracle',
+  'crimson-moon-beast', 'storm-executioner', 'void-archivist', 'glacial-war-engine',
+  'reality-duelist', 'apocalypse-dragon-emperor',
+] as const;
+
+const APEX_GUARDIAN_NAMES = [
+  'NULL CHOIR SENTINEL', 'HALO CANTOR', 'MARROW WATCHER', 'SECOND-HAND JUDGE', 'MOONFANG STALKER',
+  'THUNDER BAILIFF', 'FORBIDDEN CURATOR', 'FROST-FUSE COLOSSUS', 'MIRROR CRESCENT', 'FIRST EXTINCTION',
+] as const;
+
+const APEX_HERALD_NAMES = [
+  'AXIOM BUTCHER', 'CATHEDRAL BREAKER', 'OSSUARY DREADNOUGHT', 'PARADOX EXECUTOR', 'BLOOD ORACLE',
+  'WHITEOUT SERAPH', 'INDEX DEVOURER', 'FURNACE TYRANT', 'RIFT SWORDMASTER', 'FINAL OMEN',
 ] as const;
 
 export const STAGE_COMBAT_PRESENTATIONS: readonly StageCombatPresentationManifest[] = BOSS_KEYS.map(
@@ -41,6 +58,18 @@ export const STAGE_COMBAT_PRESENTATIONS: readonly StageCombatPresentationManifes
         ? `/assets/minions-special/${bossKey}.png`
         : `/assets/minions-hd/stage-${stageAssetKey}.png`,
       minionActorStatus: 'production',
+      guardianActorSrc: stageNumber >= 41
+        ? '/assets/midbosses-special/null-choir-sentinel.png'
+        : '/assets/special-stage/guardian.png',
+      guardianName: stageNumber >= 41
+        ? APEX_GUARDIAN_NAMES[stageNumber - 41] ?? 'APEX GUARDIAN'
+        : 'NAMED GUARDIAN',
+      heraldActorSrc: stageNumber >= 41
+        ? '/assets/midbosses-special/axiom-butcher.png'
+        : '/assets/special-stage/herald.png',
+      heraldName: stageNumber >= 41
+        ? APEX_HERALD_NAMES[stageNumber - 41] ?? 'APEX HERALD'
+        : 'NAMED HERALD',
       bossProjectileSrc: special
         ? `/assets/boss-projectiles-special-alpha/${bossKey}.png`
         : `/assets/boss-projectiles-alpha/${bossKey}.png`,

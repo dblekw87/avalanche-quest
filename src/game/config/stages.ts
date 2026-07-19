@@ -16,6 +16,9 @@ export const stageIds = [
   'gravity-vault', 'broken-fortune', 'chaos-ledger', 'extinction-market', 'last-compound',
   'eclipse-gate', 'paradox-foundry', 'blood-moon-citadel', 'infinite-tempest', 'godfall-chasm',
   'chronos-prison', 'astral-graveyard', 'hellfire-nexus', 'absolute-zero', 'end-of-eternity',
+  'unwritten-citadel', 'shattered-halo-cathedral', 'bone-tide-necropolis', 'oracle-clockworks',
+  'crimson-moon-hunt', 'storm-judgment-spire', 'void-archive', 'glacial-war-foundry',
+  'reality-rift-palace', 'last-apocalypse-throne',
 ] as const;
 
 export type StageId = (typeof stageIds)[number];
@@ -59,6 +62,9 @@ const bossNames = [
   'Gravity Colossus', 'Ruin Sovereign', 'Chaos Auditor', 'Extinction Dragon', 'Compound Overlord',
   'Eclipse Executioner', 'Paradox Machinist', 'Blood Moon Tyrant', 'Infinite Tempest', 'Godfall Arbiter',
   'Chronos Warden', 'Astral Gravekeeper', 'Hellfire Origin', 'Absolute Zero', 'Eternity Devourer',
+  'The Unwritten Sovereign', 'The Shattered Halo', 'The Bone-Tide Leviathan', 'The Clockwork Oracle',
+  'The Crimson Moon Beast', 'The Storm Executioner', 'The Void Archivist', 'The Glacial War Engine',
+  'The Reality Duelist', 'The Apocalypse Dragon-Emperor',
 ] as const;
 
 const stageNames = [
@@ -70,6 +76,9 @@ const stageNames = [
   'Gravity Vault', 'Broken Fortune', 'Chaos Ledger', 'Extinction Market', 'Last Compound',
   'Eclipse Gate', 'Paradox Foundry', 'Blood Moon Citadel', 'Infinite Tempest', 'Godfall Chasm',
   'Chronos Prison', 'Astral Graveyard', 'Hellfire Nexus', 'Absolute Zero', 'End of Eternity',
+  'The Unwritten Citadel', 'Shattered Halo Cathedral', 'Bone-Tide Necropolis', 'Oracle Clockworks',
+  'Crimson Moon Hunt', 'Storm Judgment Spire', 'Void Archive', 'Glacial War Foundry',
+  'Reality Rift Palace', 'Last Apocalypse Throne',
 ] as const;
 
 const palettes = [
@@ -88,7 +97,16 @@ const palettes = [
   [0x030d18, 0x123e62, 0x42cfff], [0x100d05, 0x493713, 0xffdf62], [0x08041a, 0x24104f, 0xa97cff],
   [0x080b12, 0x293246, 0xe5edff], [0x1c0602, 0x551509, 0xff5b21], [0x020b12, 0x143c53, 0x92efff],
   [0x030305, 0x24242c, 0xffffff],
+  [0x02070a, 0x111a1d, 0x7ff7ff],
+  [0x02070d, 0x101a24, 0x4cecff], [0x05080a, 0x182126, 0xb9e8f5], [0x0c0905, 0x2b2114, 0x67dfff],
+  [0x160306, 0x3c1015, 0xff4659], [0x04070b, 0x17222d, 0xf4fbff], [0x02090a, 0x10282a, 0x55ffe4],
+  [0x061016, 0x1a3440, 0xff8a3d], [0x0a0609, 0x251b22, 0xff4bd8], [0x090303, 0x2c0c0a, 0x72f5ff],
 ] as const;
+
+const APEX_WORLD_WIDTH = 58_000;
+const APEX_BOSS_ARENA_START_X = 56_000;
+const APEX_GUARDIAN_ARENA = { left: 18_400, right: 19_600 } as const;
+const APEX_HERALD_ARENA = { left: 37_400, right: 38_600 } as const;
 
 function createSeededRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -136,7 +154,38 @@ function createSpecialPlatforms(stageNumber: number): PlatformDefinition[] {
   });
 }
 
+function createApexPlatforms(stageNumber: number): PlatformDefinition[] {
+  const random = createSeededRandom(stageNumber * 65_537 + 4_141);
+  const platforms: PlatformDefinition[] = [];
+  let cursor = 340;
+  let tier = stageNumber % 3;
+
+  while (cursor < APEX_BOSS_ARENA_START_X - 420) {
+    const arena = cursor >= APEX_GUARDIAN_ARENA.left - 260 && cursor <= APEX_GUARDIAN_ARENA.right
+      ? APEX_GUARDIAN_ARENA
+      : cursor >= APEX_HERALD_ARENA.left - 260 && cursor <= APEX_HERALD_ARENA.right
+        ? APEX_HERALD_ARENA
+        : null;
+    if (arena) {
+      cursor = arena.right + 230;
+      continue;
+    }
+
+    if (random() < 0.34) tier += random() < 0.5 ? -1 : 1;
+    tier = Math.max(0, Math.min(3, tier));
+    const width = 162 + Math.floor(random() * 78);
+    platforms.push({
+      x: Math.round(cursor + width / 2),
+      y: 387 - tier * 45,
+      width,
+    });
+    cursor += width + 72 + Math.floor(random() * 46);
+  }
+  return platforms;
+}
+
 function createPlatforms(stageNumber: number) {
+  if (stageNumber >= 41) return createApexPlatforms(stageNumber);
   if (stageNumber >= 31) return createSpecialPlatforms(stageNumber);
   const random = createSeededRandom(stageNumber * 9_973 + 41);
   let x = 320 + Math.floor(random() * 45);
@@ -166,12 +215,15 @@ function createStage(id: StageId, index: number): StageDefinition {
   const random = createSeededRandom(number * 13_337 + 97);
   const introductoryStage = number <= 5;
   const specialStage = number >= 31;
-  const regularCount = introductoryStage ? 5 + Math.floor((number - 1) / 2) : 9 + ((number - 1) % 4);
+  const apexStage = number >= 41;
+  const regularCount = apexStage ? 80 + (number - 41) * 2 : introductoryStage ? 5 + Math.floor((number - 1) / 2) : 9 + ((number - 1) % 4);
   const regularEnemyPlatforms = specialStage
     ? platforms.filter((platform) => !(
-      (platform.x >= 2_400 && platform.x <= 4_400)
-      || (platform.x >= 5_900 && platform.x <= 7_900)
-      || platform.x >= 9_700
+      (platform.x >= (apexStage ? APEX_GUARDIAN_ARENA.left - 200 : 2_400)
+        && platform.x <= (apexStage ? APEX_GUARDIAN_ARENA.right + 200 : 4_400))
+      || (platform.x >= (apexStage ? APEX_HERALD_ARENA.left - 200 : 5_900)
+        && platform.x <= (apexStage ? APEX_HERALD_ARENA.right + 200 : 7_900))
+      || platform.x >= (apexStage ? APEX_BOSS_ARENA_START_X - 300 : 9_700)
     ))
     : platforms;
   const enemies: Array<StageDefinition['enemies'][number]> = Array.from({ length: regularCount }, (_, enemyIndex) => {
@@ -192,7 +244,9 @@ function createStage(id: StageId, index: number): StageDefinition {
       ? 1
       : introductoryStage
         ? 2 + Math.floor(number / 3)
-        : 4 + Math.floor((number - 1) / 8) + (enemyIndex % 2);
+        : apexStage
+          ? 16 + (number - 41) + (enemyIndex % 4)
+          : 4 + Math.floor((number - 1) / 8) + (enemyIndex % 2);
     return {
       id: `${id}-monster-${enemyIndex + 1}`,
       x,
@@ -202,7 +256,7 @@ function createStage(id: StageId, index: number): StageDefinition {
         difficulty.normalHealthPermille,
         difficulty.minimumNormalHealth,
       ),
-      speed: 42 + ((number + enemyIndex) % 6) * 5,
+      speed: apexStage ? 58 + (enemyIndex % 4) * 4 : 42 + ((number + enemyIndex) % 6) * 5,
       left,
       right,
       boss: false,
@@ -214,44 +268,55 @@ function createStage(id: StageId, index: number): StageDefinition {
   if (specialStage) {
     enemies.push(
       {
-        id: `${id}-named-guardian`, x: 3_400, y: 250,
+        id: `${id}-named-guardian`,
+        x: apexStage ? (APEX_GUARDIAN_ARENA.left + APEX_GUARDIAN_ARENA.right) / 2 : 3_400,
+        y: 250,
         health: scaleStageHealth(
-          48 + (number - 31) * 4,
+          apexStage ? 118 + (number - 41) * 18 : 48 + (number - 31) * 4,
           difficulty.eliteHealthPermille,
           difficulty.minimumEliteHealth,
         ),
-        speed: 82,
-        left: 2_600, right: 4_200, boss: false, elite: true,
+        speed: apexStage ? 96 : 82,
+        left: apexStage ? APEX_GUARDIAN_ARENA.left : 2_600,
+        right: apexStage ? APEX_GUARDIAN_ARENA.right : 4_200,
+        boss: false, elite: true,
         combatDefinitionId: combatProfile.boss.id,
       },
       {
-        id: `${id}-named-herald`, x: 7_000, y: 250,
+        id: `${id}-named-herald`,
+        x: apexStage ? (APEX_HERALD_ARENA.left + APEX_HERALD_ARENA.right) / 2 : 7_000,
+        y: 250,
         health: scaleStageHealth(
-          64 + (number - 31) * 5,
+          apexStage ? 154 + (number - 41) * 22 : 64 + (number - 31) * 5,
           difficulty.eliteHealthPermille,
           difficulty.minimumEliteHealth,
         ),
-        speed: 90,
-        left: 6_200, right: 7_800, boss: false, elite: true,
+        speed: apexStage ? 105 : 90,
+        left: apexStage ? APEX_HERALD_ARENA.left : 6_200,
+        right: apexStage ? APEX_HERALD_ARENA.right : 7_800,
+        boss: false, elite: true,
         combatDefinitionId: combatProfile.boss.id,
       },
     );
   }
   const baseBossHealth = number <= 3
     ? 7 + number * 2
-    : specialStage
+    : apexStage
+      ? 720 + (number - 41) * 110
+      : specialStage
       ? 180 + (number - 31) * 18
       : 18 + number * 5;
   enemies.push({
     id: id === 'avalanche-throne' ? 'avalanche-emperor' : `${id}-boss`,
-    x: specialStage ? 10_700 : 4_880, y: 250,
+    x: apexStage ? 57_050 : specialStage ? 10_700 : 4_880, y: 250,
     health: scaleStageHealth(
       baseBossHealth,
       difficulty.bossHealthPermille,
       difficulty.minimumBossHealth,
     ),
     speed: combatProfile.boss.baselineSpeedPxPerSec,
-    left: specialStage ? 9_850 : 4_380, right: specialStage ? 11_520 : 5_100,
+    left: apexStage ? APEX_BOSS_ARENA_START_X + 50 : specialStage ? 9_850 : 4_380,
+    right: apexStage ? APEX_WORLD_WIDTH - 80 : specialStage ? 11_520 : 5_100,
     boss: true,
     combatDefinitionId: combatProfile.boss.id,
   });
@@ -260,12 +325,12 @@ function createStage(id: StageId, index: number): StageDefinition {
   const name = stageNames[index] ?? `Stage ${number}`;
   return {
     id, number, name,
-    subtitle: `${difficulty.label} · Skill +${difficulty.recommendedSkillLevel} recommended · Defeat ${bossName} through ${specialStage ? 'four' : 'three'} escalating phases.`,
+    subtitle: `${difficulty.label} · Skill +${difficulty.recommendedSkillLevel} recommended · Defeat ${bossName} through ${combatProfile.boss.phases.length} escalating phases.`,
     worldLabel: name.toUpperCase(),
     backgroundColor: palette[0], groundColor: palette[1], accentColor: palette[2],
     assetNumber: specialStage ? 21 + ((number - 31) % 10) : number,
-    worldWidth: specialStage ? 11_600 : 5_200,
-    bossArenaStartX: specialStage ? 9_800 : 4_180,
+    worldWidth: apexStage ? APEX_WORLD_WIDTH : specialStage ? 11_600 : 5_200,
+    bossArenaStartX: apexStage ? APEX_BOSS_ARENA_START_X : specialStage ? 9_800 : 4_180,
     special: specialStage,
     platforms, enemies,
   };
